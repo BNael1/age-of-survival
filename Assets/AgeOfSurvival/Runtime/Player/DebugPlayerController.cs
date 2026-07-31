@@ -1,5 +1,7 @@
 using AgeOfSurvival.Core.Characters;
+using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Simulation;
+using AgeOfSurvival.Runtime.Inventory;
 using AgeOfSurvival.Runtime.Rendering;
 using AgeOfSurvival.Runtime.Resources;
 using UnityEngine;
@@ -41,6 +43,8 @@ namespace AgeOfSurvival.Runtime.Player
         private KeyControl _rightKey;
 
         public PlayerState Player => _player;
+        public double CurrentLoadRatio { get; private set; }
+        public double CurrentMovementMultiplier { get; private set; } = 1.0;
 
         private void OnEnable()
         {
@@ -71,6 +75,7 @@ namespace AgeOfSurvival.Runtime.Player
 
             _player = new PlayerState(new WorldPosition(startPosition.x, startPosition.y));
             _clock = new FixedTickClock(ticksPerSecond, maxTicksPerFrame);
+            SynchronizeMovementState();
 
             CreateVisual();
             SynchronizeVisual();
@@ -84,9 +89,11 @@ namespace AgeOfSurvival.Runtime.Player
                 return;
             }
 
+            SynchronizeMovementState();
             Vector2 screenDirection = ReadScreenDirection();
             Vector2 worldDirection = ScreenToWorldDirection(screenDirection);
             double tickDuration = _clock.TickDurationSeconds;
+            double movementMultiplier = CurrentMovementMultiplier;
 
             _clock.Advance(Time.deltaTime, () =>
             {
@@ -95,6 +102,7 @@ namespace AgeOfSurvival.Runtime.Player
                     worldDirection.x,
                     worldDirection.y,
                     movementSpeed,
+                    movementMultiplier,
                     tickDuration);
                 resourceInteraction?.SimulateTick(
                     _player.Position,
@@ -124,6 +132,15 @@ namespace AgeOfSurvival.Runtime.Player
             return new Vector2(
                 screenDirection.y + screenDirection.x,
                 screenDirection.y - screenDirection.x);
+        }
+
+        private void SynchronizeMovementState()
+        {
+            InventoryPrototypeSession session =
+                resourceInteraction?.PrototypeSession ?? InventoryPrototypeSessionProvider.Current;
+            EncumbranceMovementState movementState = session.MovementState;
+            CurrentLoadRatio = movementState.LoadRatio;
+            CurrentMovementMultiplier = movementState.SpeedMultiplier;
         }
 
         private Vector2 ReadScreenDirection()

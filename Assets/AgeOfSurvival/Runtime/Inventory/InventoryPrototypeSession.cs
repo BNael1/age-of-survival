@@ -74,6 +74,8 @@ namespace AgeOfSurvival.Runtime.Inventory
         public TransferActionState TransferAction { get; private set; }
         public long CurrentTick { get; private set; }
         public WorldPosition CurrentPlayerPosition { get; private set; }
+        public EncumbranceMovementState MovementState =>
+            EncumbranceMovementOperations.Calculate(Inventory);
 
         public long BeginSimulationTick(WorldPosition playerPosition)
         {

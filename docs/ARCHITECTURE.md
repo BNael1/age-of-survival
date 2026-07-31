@@ -211,3 +211,32 @@ Chaque adaptateur conserve son rendu géométrique généré au runtime comme
 solution de repli lorsque les textures temporaires sont absentes. Cette couche
 est donc réversible et remplaçable sans changement du Core, des identifiants,
 de l'entrée ou de la simulation.
+
+## Surcharge progressive et déplacement
+
+Le lot 5D conserve la règle dans le Core. `EncumbranceMovementOperations` reçoit
+la charge perçue et la capacité principale, puis produit un ratio de charge et
+un multiplicateur de vitesse. La courbe est bornée et linéaire par morceaux :
+
+```text
+100 % -> ×1,00
+125 % -> ×0,81
+150 % -> ×0,63
+175 % -> ×0,44
+200 % et plus -> ×0,25
+```
+
+La capacité de référence est celle du conteneur principal du joueur. La charge
+utilisée est la charge perçue calculée par `CarriedLoadOperations`, donc les
+réductions des conteneurs équipés s'appliquent avant la pénalité de déplacement.
+Les unités d'encombrement restent entières ; seul le ratio dérivé et son
+multiplicateur sont des `double`.
+
+`PlayerMovement` accepte un multiplicateur explicite sans connaître
+l'inventaire. `DebugPlayerController` lit l'état de mouvement de la session du
+prototype à chaque frame, puis le transmet à chaque tick fixe. L'interface ne
+recalcule aucune règle : elle affiche les valeurs produites par le Core.
+
+Sprint, endurance, dégâts de surcharge et effets d'animation sont reportés. Ils
+pourront consommer le même ratio sans modifier la courbe ni déplacer la source
+de vérité vers Unity.

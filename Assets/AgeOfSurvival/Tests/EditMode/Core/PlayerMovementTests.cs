@@ -59,6 +59,16 @@ namespace AgeOfSurvival.Core.Tests
         }
 
         [Test]
+        public void MovementMultiplierScalesTravelDistance()
+        {
+            var player = CreatePlayer();
+
+            PlayerMovement.Step(player, 1.0, 0.0, 4.0, 0.25, 2.0);
+
+            AssertPosition(player, 6.5, 4.5);
+        }
+
+        [Test]
         public void RepeatedFixedStepsProduceExpectedPosition()
         {
             var player = CreatePlayer();
@@ -84,6 +94,8 @@ namespace AgeOfSurvival.Core.Tests
                 () => PlayerMovement.Step(player, 0.0, 0.0, -1.0, 1.0));
             Assert.Throws<ArgumentOutOfRangeException>(
                 () => PlayerMovement.Step(player, 0.0, 0.0, 1.0, -1.0));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => PlayerMovement.Step(player, 0.0, 0.0, 1.0, -0.1, 1.0));
             Assert.Throws<ArgumentOutOfRangeException>(
                 () => new WorldPosition(double.PositiveInfinity, 0.0));
         }

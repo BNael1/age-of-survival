@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using AgeOfSurvival.Core.Inventory;
 
 namespace AgeOfSurvival.Runtime.Inventory
@@ -54,6 +55,8 @@ namespace AgeOfSurvival.Runtime.Inventory
             string grossLoadText,
             string perceivedLoadText,
             string reductionText,
+            string movementLoadText,
+            string movementMultiplierText,
             string transferStatusText,
             double transferProgress)
         {
@@ -64,6 +67,8 @@ namespace AgeOfSurvival.Runtime.Inventory
             GrossLoadText = grossLoadText;
             PerceivedLoadText = perceivedLoadText;
             ReductionText = reductionText;
+            MovementLoadText = movementLoadText;
+            MovementMultiplierText = movementMultiplierText;
             TransferStatusText = transferStatusText;
             TransferProgress = transferProgress;
         }
@@ -75,6 +80,8 @@ namespace AgeOfSurvival.Runtime.Inventory
         public string GrossLoadText { get; }
         public string PerceivedLoadText { get; }
         public string ReductionText { get; }
+        public string MovementLoadText { get; }
+        public string MovementMultiplierText { get; }
         public string TransferStatusText { get; }
         public double TransferProgress { get; }
     }
@@ -108,6 +115,9 @@ namespace AgeOfSurvival.Runtime.Inventory
             if (inventory == null) throw new ArgumentNullException(nameof(inventory));
             ContainerState bag = inventory.FindContainer(InventoryPrototypeCatalog.BagContainerId);
             CarriedLoad load = CarriedLoadOperations.Calculate(inventory);
+            EncumbranceMovementState movement = EncumbranceMovementOperations.Calculate(
+                load.Perceived,
+                inventory.MainContainer.Definition.Capacity);
 
             var equipment = new List<string>(StableSlots.Length);
             for (int index = 0; index < StableSlots.Length; index++)
@@ -132,6 +142,8 @@ namespace AgeOfSurvival.Runtime.Inventory
                 load.Gross.ToString(),
                 load.Perceived.ToString(),
                 $"{InventoryPrototypeCatalog.EquippedBagReductionPercent}% while backpack is equipped",
+                FormatLoadPercentage(movement.LoadRatio),
+                FormatMovementMultiplier(movement.SpeedMultiplier),
                 TransferStatus(action),
                 action?.ProgressAt(currentTick) ?? 0.0);
         }
@@ -143,6 +155,20 @@ namespace AgeOfSurvival.Runtime.Inventory
             if (ground == null)
                 return new InventoryContainerViewModel(default, "Nearby ground", "No items", Array.Empty<InventoryRowViewModel>());
             return BuildContainer(inventory, ground.Container);
+        }
+
+        private static string FormatLoadPercentage(double loadRatio)
+        {
+            return (loadRatio * 100.0).ToString("0.#", CultureInfo.InvariantCulture) + "%";
+        }
+
+        private static string FormatMovementMultiplier(double movementMultiplier)
+        {
+            decimal rounded = Math.Round(
+                (decimal)movementMultiplier,
+                2,
+                MidpointRounding.AwayFromZero);
+            return "×" + rounded.ToString("0.00", CultureInfo.InvariantCulture);
         }
 
         private static string TransferStatus(TransferActionState action)

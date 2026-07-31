@@ -146,7 +146,7 @@ après la durée, reste exact de trois branches, interruption par déplacement s
 mutation, reprise ultérieure et disparition du marqueur seulement lorsque la
 source est vide. La Console est propre après retrait du helper temporaire.
 
-## Lot 5V — validation requise
+## Lot 5V — validation réalisée
 
 Le lot 5V ajoute trois cas EditMode Runtime :
 
@@ -154,9 +154,30 @@ Le lot 5V ajoute trois cas EditMode Runtime :
 - utilisation de trois sprites distincts pour les catégories du sol ;
 - visibilité du rayon d'interaction, du reste au sol et de la progression active.
 
-Total attendu après import : **116/116 cas EditMode** dans le Test Runner
-graphique et en batchmode. La validation Play Mode doit vérifier que le joueur,
-les ressources, les piles au sol, la cible, le rayon et la progression restent
+Validation du 31 juillet 2026 : **116/116 cas EditMode** dans le Test Runner
+graphique et en batchmode. La validation Play Mode confirme que le joueur, les
+ressources, les piles au sol, la cible, le rayon et la progression restent
 lisibles pendant le déplacement et les transferts, sans changement de portée,
-de durée, de quantités ou de contrôles. La Console doit rester sans erreur ni
-avertissement provenant du projet.
+de durée, de quantités ou de contrôles. La Console est propre.
+
+## Lot 5D — validation requise
+
+Le lot 5D ajoute seize cas EditMode :
+
+- quatorze cas Core sur la vitesse normale sous capacité, les quatre points de
+  contrôle, la borne supérieure, les quatre interpolations, l'utilisation de la
+  charge perçue et le refus d'une capacité nulle ;
+- un cas Core vérifiant que `PlayerMovement` applique le multiplicateur à la
+  distance ;
+- un cas Runtime vérifiant que la session suit immédiatement l'équipement du
+  sac.
+
+Les tests Runtime existants vérifient aussi les textes `112.5 % / ×0.91` puis
+`95 % / ×1.00`, ainsi que leur présence dans l'UI Toolkit. Total attendu après
+import : **132/132 cas EditMode** dans le Test Runner graphique et en
+batchmode.
+
+La validation Play Mode doit confirmer la légère pénalité initiale, le retour à
+la vitesse normale lorsque le sac est équipé, la mise à jour immédiate des deux
+libellés et une transition sans saut perceptible lors d'une augmentation de
+charge. Sprint, endurance et dégâts ne doivent pas apparaître dans ce lot.

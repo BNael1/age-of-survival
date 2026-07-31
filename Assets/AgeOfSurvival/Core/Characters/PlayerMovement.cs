@@ -15,6 +15,23 @@ namespace AgeOfSurvival.Core.Characters
             double speedUnitsPerSecond,
             double deltaSeconds)
         {
+            Step(
+                player,
+                inputX,
+                inputY,
+                speedUnitsPerSecond,
+                1.0,
+                deltaSeconds);
+        }
+
+        public static void Step(
+            PlayerState player,
+            double inputX,
+            double inputY,
+            double speedUnitsPerSecond,
+            double movementMultiplier,
+            double deltaSeconds)
+        {
             if (player == null)
             {
                 throw new ArgumentNullException(nameof(player));
@@ -23,6 +40,7 @@ namespace AgeOfSurvival.Core.Characters
             ValidateFinite(inputX, nameof(inputX));
             ValidateFinite(inputY, nameof(inputY));
             ValidateFinite(speedUnitsPerSecond, nameof(speedUnitsPerSecond));
+            ValidateFinite(movementMultiplier, nameof(movementMultiplier));
             ValidateFinite(deltaSeconds, nameof(deltaSeconds));
 
             if (speedUnitsPerSecond < 0.0)
@@ -31,6 +49,14 @@ namespace AgeOfSurvival.Core.Characters
                     nameof(speedUnitsPerSecond),
                     speedUnitsPerSecond,
                     "Movement speed must be non-negative.");
+            }
+
+            if (movementMultiplier < 0.0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(movementMultiplier),
+                    movementMultiplier,
+                    "Movement multiplier must be non-negative.");
             }
 
             if (deltaSeconds < 0.0)
@@ -42,7 +68,10 @@ namespace AgeOfSurvival.Core.Characters
             }
 
             double magnitudeSquared = (inputX * inputX) + (inputY * inputY);
-            if (magnitudeSquared <= 0.0 || speedUnitsPerSecond == 0.0 || deltaSeconds == 0.0)
+            if (magnitudeSquared <= 0.0
+                || speedUnitsPerSecond == 0.0
+                || movementMultiplier == 0.0
+                || deltaSeconds == 0.0)
             {
                 return;
             }
@@ -54,7 +83,7 @@ namespace AgeOfSurvival.Core.Characters
                 inputY *= inverseMagnitude;
             }
 
-            double distance = speedUnitsPerSecond * deltaSeconds;
+            double distance = speedUnitsPerSecond * movementMultiplier * deltaSeconds;
             player.Translate(inputX * distance, inputY * distance);
         }
 

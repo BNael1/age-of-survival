@@ -21,8 +21,9 @@ Lots validés et commités :
 - `1a1f280` — `feat: add resource interaction` ;
 - `f44bae1` — `feat: add core inventory containers` ;
 - `6d5b4dd` — `feat: add inventory equipment UI` ;
-- `dbcd442` — `feat: connect timed resource transfers`;
-- `93870f1` — `fix: harden inventory transfer invariants`.
+- `dbcd442` — `feat: connect timed resource transfers` ;
+- `93870f1` — `fix: harden inventory transfer invariants` ;
+- `25fd671` — `feat: improve prototype visual readability`.
 
 État validé au commit `26a1a27` :
 
@@ -102,11 +103,21 @@ transfert et les sélections Runtime dans le commit `93870f1`. La suite validée
 est désormais de **113/113 cas EditMode** dans l'éditeur et en batchmode, avec
 Play Mode fonctionnel et Console propre.
 
-Le lot 5V est préparé mais pas encore validé localement. Il ajoute uniquement
-une couche de lisibilité visuelle temporaire : sol isométrique distinct, joueur,
-ressource, reste au sol, cible, rayon d'interaction et progression en pixel art.
-Les PNG sont produits dans le projet, remplaçables et sans dépendance tierce. Le
-Core, les règles de gameplay et les contrôles ne changent pas.
+Le lot 5V est validé et commité sous `25fd671`. Il ajoute uniquement une couche
+de lisibilité visuelle temporaire : sol isométrique distinct, joueur, ressource,
+reste au sol, cible, rayon d'interaction et progression en pixel art. Les PNG
+sont produits dans le projet, remplaçables et sans dépendance tierce. Le Core,
+les règles de gameplay et les contrôles ne changent pas. Les 116/116 cas
+EditMode passent et le rendu Play Mode a été validé.
+
+Le lot 5D est préparé mais pas encore validé localement. Il ajoute dans le Core
+une courbe progressive de surcharge basée sur la charge perçue rapportée à la
+capacité principale : `100 % → ×1,00`, `125 % → ×0,81`, `150 % → ×0,63`,
+`175 % → ×0,44`, `200 % et plus → ×0,25`, avec interpolation linéaire.
+`DebugPlayerController` applique le multiplicateur au déplacement à tick fixe et
+l'interface affiche le pourcentage de charge et la vitesse résultante. Sprint,
+endurance et dégâts restent hors périmètre. Le total attendu est 132 cas
+EditMode après import.
 
 ## Limites techniques connues
 
@@ -120,11 +131,14 @@ Core, les règles de gameplay et les contrôles ne changent pas.
 
 ## Prochaine action
 
-1. Importer et compiler le lot 5V dans Unity 6000.3.19f1.
-2. Obtenir 116/116 cas EditMode en batchmode et dans le Test Runner graphique.
-3. Vérifier visuellement déplacement, ciblage, rayon, reste au sol et progression,
-   puis commiter séparément le lot de lisibilité.
-4. Cadrer ensuite le profil de surcharge progressif du lot 5D avec Naël.
+1. Appliquer le patch du lot 5D sur `25fd671` et laisser Unity importer les deux
+   nouveaux scripts et leurs métadonnées.
+2. Obtenir 132/132 cas EditMode en batchmode et dans le Test Runner graphique.
+3. Vérifier en Play Mode la vitesse initiale à environ `×0,91`, le retour à
+   `×1,00` lorsque le sac est équipé, puis au moins un état de surcharge plus
+   sévère sans rupture visible entre les points de contrôle.
+4. Examiner le diff et commiter séparément sous
+   `feat: add progressive encumbrance movement penalty`.
 
 ## Dépôts archivés
 

@@ -122,3 +122,19 @@ multi-acteurs et concurrence réseau sont reportées.
 `30` ticks par unité d'encombrement affichée, minimum `15` ticks, portée `1,5`
 et rendement de `6` branches par ressource. Elles sont centralisées et ne
 constituent pas un équilibrage final.
+
+## ADR-0011 — Pénalité de surcharge progressive
+
+**Statut : active**
+**Date : 31 juillet 2026**
+
+La vitesse de déplacement dépend de la charge perçue divisée par la capacité du
+conteneur principal. Jusqu'à `100 %`, le multiplicateur reste `×1,00`. Les
+points de contrôle sont `125 % → ×0,81`, `150 % → ×0,63`,
+`175 % → ×0,44` et `200 % → ×0,25`. Les valeurs intermédiaires utilisent une
+interpolation linéaire ; au-delà de `200 %`, le minimum reste `×0,25`.
+
+Cette adaptation reprend la sévérité générale de Project Zomboid sans ses
+ruptures de paliers. La courbe appartient au Core et reste indépendante de
+l'entrée et du rendu. Le lot initial n'ajoute ni sprint, ni endurance, ni dégâts
+de surcharge.

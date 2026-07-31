@@ -18,6 +18,8 @@ namespace AgeOfSurvival.Runtime.Inventory
         private readonly Label _grossLoad;
         private readonly Label _perceivedLoad;
         private readonly Label _reductionInfo;
+        private readonly Label _movementLoad;
+        private readonly Label _movementMultiplier;
         private readonly Label[] _equipmentLabels = new Label[3];
         private readonly ListView _mainList;
         private readonly ListView _bagList;
@@ -68,8 +70,19 @@ namespace AgeOfSurvival.Runtime.Inventory
             _reductionInfo = new Label();
             _reductionInfo.tooltip = "Equipped-container reduction changes perceived load only; raw bag capacity never changes.";
             _reductionInfo.style.color = new Color(0.72f, 0.83f, 0.73f);
-            _reductionInfo.style.marginBottom = 8;
+            _reductionInfo.style.marginBottom = 6;
             _panel.Add(_reductionInfo);
+
+            var movementRow = new VisualElement();
+            movementRow.style.flexDirection = FlexDirection.Row;
+            movementRow.style.marginBottom = 8;
+            _movementLoad = CreateInfoLabel();
+            _movementLoad.name = "movement-load";
+            _movementMultiplier = CreateInfoLabel();
+            _movementMultiplier.name = "movement-multiplier";
+            movementRow.Add(_movementLoad);
+            movementRow.Add(_movementMultiplier);
+            _panel.Add(movementRow);
 
             _transferStatus = new Label();
             _transferStatus.style.unityFontStyleAndWeight = FontStyle.Bold;
@@ -153,6 +166,8 @@ namespace AgeOfSurvival.Runtime.Inventory
             _grossLoad.text = $"Gross carried: {viewModel.GrossLoadText}";
             _perceivedLoad.text = $"Perceived carried: {viewModel.PerceivedLoadText}";
             _reductionInfo.text = viewModel.ReductionText;
+            _movementLoad.text = $"Movement load: {viewModel.MovementLoadText}";
+            _movementMultiplier.text = $"Movement speed: {viewModel.MovementMultiplierText}";
             _transferStatus.text = viewModel.TransferStatusText;
             _transferProgress.value = (float)(viewModel.TransferProgress * 100.0);
             for (int index = 0; index < _equipmentLabels.Length; index++)
