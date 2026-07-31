@@ -38,3 +38,12 @@ Chaque lot doit avoir un comportement attendu, des tests, un diff lisible et un 
 Utiliser la Tilemap isométrique officielle de Unity pour la première représentation du monde. La Tilemap reste un adaptateur de présentation alimenté par des données du Core ; elle ne devient pas la source de vérité de la simulation.
 
 Le lot initial utilise des tuiles et couleurs générées au runtime comme visuels de débogage. Elles ne constituent pas une décision de direction artistique.
+
+## ADR-0006 — Déplacement continu et entrée ZQSD minimale
+
+**Statut : active**
+**Date : 31 juillet 2026**
+
+Le premier joueur utilise une position continue dans le Core et un déplacement à huit directions normalisé. Le lot initial lit uniquement ZQSD avec le package officiel Unity Input System, en recherchant les caractères produits par la disposition active du clavier.
+
+Cette lecture directe des touches est un adaptateur minimal et réversible. Une architecture d’actions reconfigurables sera décidée lorsqu’un second périphérique, les menus de remappage ou plusieurs contextes d’entrée deviendront nécessaires. Les flèches ne sont pas ajoutées comme raccourci redondant dans ce lot.

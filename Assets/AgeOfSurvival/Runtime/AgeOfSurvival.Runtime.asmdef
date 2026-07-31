@@ -2,7 +2,8 @@
   "name": "AgeOfSurvival.Runtime",
   "rootNamespace": "AgeOfSurvival.Runtime",
   "references": [
-    "GUID:34f4281227b457e9df0427ea4d1386b4"
+    "GUID:34f4281227b457e9df0427ea4d1386b4",
+    "Unity.InputSystem"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

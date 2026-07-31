@@ -52,3 +52,12 @@ Le lot 2 ajoute trois cas EditMode :
 - reconstruction sans duplication de hiérarchie.
 
 Validation du 31 juillet 2026 : **17/17 cas réussis** dans l’éditeur et **17/17 cas réussis** en batchmode. La grille isométrique 10 × 10 a également été vérifiée manuellement dans la Game View.
+
+## Lot 3 — validation réalisée
+
+Le lot 3 ajoute onze cas EditMode :
+
+- sept cas sur l’état continu et la règle de déplacement du Core ;
+- quatre cas paramétrés sur la conversion des directions écran vers le plan isométrique.
+
+Validation du 31 juillet 2026 : **28/28 cas réussis** dans l’éditeur et **28/28 cas réussis** en batchmode, avec un code de sortie 0. Le déplacement ZQSD dans huit directions, la normalisation diagonale et la caméra fixe ont également été vérifiés manuellement dans la Game View.

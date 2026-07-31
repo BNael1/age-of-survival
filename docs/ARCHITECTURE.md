@@ -56,3 +56,22 @@ Le lot 2 introduit `AgeOfSurvival.Runtime`, qui dépend de `AgeOfSurvival.Core`.
 - il ne définit ni terrain de production, ni gameplay, ni sauvegarde.
 
 Cette preuve d’intégration pourra être remplacée sans modifier les primitives du Core.
+
+## Premier état de joueur et adaptateur d’entrée
+
+Le lot 3 introduit un état de joueur continu dans `AgeOfSurvival.Core` :
+
+- `WorldPosition` stocke deux coordonnées `double` finies sur le plan de simulation ;
+- `PlayerState` possède cette position mutable ;
+- `PlayerMovement` applique une direction, une vitesse et une durée sans dépendre de Unity ;
+- les directions dont la magnitude dépasse un sont normalisées, ce qui évite un gain de vitesse en diagonale.
+
+`DebugPlayerController` reste un adaptateur Unity temporaire :
+
+- il lit ZQSD avec le package Input System ;
+- il transforme les directions écran vers les axes du plan isométrique ;
+- il fait avancer le Core à tick fixe ;
+- il synchronise un marqueur généré au runtime avec la position logique ;
+- il ne possède ni collision, ni animation, ni caméra suiveuse, ni règle de terrain.
+
+Le clavier et le marqueur peuvent être remplacés sans modifier la règle de déplacement du Core.

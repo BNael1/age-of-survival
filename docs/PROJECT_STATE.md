@@ -11,43 +11,49 @@ Dernière mise à jour : 31 juillet 2026
 
 ## État actuel
 
-Le dépôt Unity est initialisé sur `main`.
+Le dépôt Unity est initialisé sur `main`. Le lot 3 est appliqué et validé localement, mais pas encore commité.
 
-Lot 1 validé et commité :
+Lots validés et commités :
 
-- commit `20633e2` — `chore: bootstrap Unity project foundation` ;
+- `20633e2` — `chore: bootstrap Unity project foundation` ;
+- `977ac30` — `feat: add isometric debug world`.
+
+État validé au commit `977ac30` :
+
 - assembly `AgeOfSurvival.Core` en C# pur, sans référence à `UnityEngine` ;
-- primitives `GridPosition`, `GridBounds`, `DenseGrid<T>` et `FixedTickClock` ;
-- 14/14 cas EditMode réussis dans l’éditeur et en batchmode ;
-- arbre de travail propre après le commit.
+- assembly `AgeOfSurvival.Runtime` dépendant du Core ;
+- primitives de grille et horloge fixe ;
+- Tilemap isométrique 10 × 10 pilotée par `DenseGrid<byte>` ;
+- 17/17 cas EditMode réussis dans l’éditeur et en batchmode ;
+- grille vérifiée dans la Game View ;
+- arbre de travail propre.
 
-Le lot 2 est appliqué et validé localement, mais pas encore commité. Il ajoute :
+Le lot 3 ajoute :
 
-- une assembly `AgeOfSurvival.Runtime` séparée du Core ;
-- un adaptateur Unity qui lit une `DenseGrid<byte>` du Core et la rend dans une Tilemap isométrique ;
-- une texture en losange et une palette neutre générées au runtime, uniquement comme visuels de débogage ;
-- trois nouveaux cas EditMode d’intégration ;
-- une scène `SampleScene` configurée pour afficher une grille 10 × 10 en mode Play ;
-- le tri transparent isométrique `(0, 1, 0)` dans les réglages graphiques.
+- état du joueur dans le Core C# pur ;
+- position continue ;
+- déplacement à huit directions avec normalisation diagonale ;
+- ZQSD uniquement, lu par un adaptateur utilisant le package Input System ;
+- marqueur temporaire généré au runtime ;
+- caméra fixe ;
+- aucune collision, interaction, animation, sauvegarde ou gestion d’inventaire.
 
-Validation locale du lot 2 :
+Validation locale du lot 3 :
 
-- 17/17 cas EditMode réussis dans l’éditeur ;
-- 17/17 cas EditMode réussis en batchmode ;
-- grille isométrique 10 × 10 vérifiée dans la Game View ;
-- caméra centrée, bordure complète et aucune tuile manquante visible ;
+- 28/28 cas EditMode réussis dans l’éditeur ;
+- 28/28 cas EditMode réussis en batchmode, code de sortie 0 ;
+- déplacement ZQSD vérifié dans huit directions ;
+- normalisation diagonale et caméra fixe vérifiées ;
 - `git diff --check` sans erreur ;
 - fichiers modifiés conformes au périmètre du lot.
 
-Aucun déplacement, inventaire, sauvegarde, construction ou règle de terrain de production n’est ajouté dans ce lot.
-
 ## Prochaine action
 
-1. Mettre à jour la documentation avec les résultats réels du lot 2.
+1. Mettre à jour la documentation avec les résultats réels du lot 3.
 2. Placer tous les fichiers du lot dans l’index Git.
 3. Examiner le diff indexé et créer un commit dédié.
 4. Vérifier que l’arbre de travail est propre.
-5. Définir ensuite le lot 3 ; tout choix visible de joueur, déplacement ou contrôles doit être confirmé par Naël avant implémentation.
+5. Définir ensuite le lot 4, limité à une première interaction avec une ressource.
 
 ## Dépôts archivés
 
