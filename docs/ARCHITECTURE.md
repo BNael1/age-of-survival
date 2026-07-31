@@ -107,3 +107,31 @@ paramètres de débogage temporaires, pas des décisions d'équilibrage ou d'art
 des tests EditMode. La construction automatique, l'abonnement aux entrées et la
 boucle `Update` sont bloqués hors Play Mode. `Rebuild()` reste une opération
 explicite de débogage et de test, pas un outil de création de contenu persistant.
+
+## Inventaire et conteneurs Core
+
+Le lot 5A ajoute un domaine d'inventaire entièrement contenu dans
+`AgeOfSurvival.Core` :
+
+- `ItemDefinitionId`, `ItemInstanceId` et `ContainerId` sont des identifiants
+  ordinaux stables dont la valeur par défaut est invalide et sûre ;
+- `EncumbranceValue` stocke des unités entières (`1000` unités internes =
+  `1,000` affiché) afin d'éviter les dérives de capacité en virgule flottante ;
+- `ItemDefinition` et `ContainerDefinition` portent les données éditoriales
+  immuables ;
+- `StackedItemState`, `UniqueItemState` et `ContainerState` portent l'état
+  mutable, sans l'exposer par une collection modifiable ;
+- un objet unique peut référencer un `ContainerId` stable, ce qui distingue
+  l'identité du sac de l'identité de son contenu ;
+- `InventoryOperations` est l'unique frontière de mutation pour les ajouts,
+  retraits et transferts synchrones.
+
+Les entrées conservent leur ordre d'insertion. Un ajout fusionne d'abord une
+pile compatible ; les objets uniques ne fusionnent jamais. Un transfert ajoute
+d'abord ce qui rentre dans la destination, puis retire exactement cette quantité
+de la source. La somme des quantités reste donc conservée, y compris lors d'un
+transfert partiel ou vers une destination pleine.
+
+Ce lot ne contient ni `MonoBehaviour`, ni rendu, ni UI, ni état possédé par un
+`GameObject`. Les adaptateurs Unity et l'équipement sont introduits dans les lots
+suivants sans déplacer la source de vérité hors du Core.

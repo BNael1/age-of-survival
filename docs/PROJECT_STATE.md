@@ -11,14 +11,14 @@ Dernière mise à jour : 31 juillet 2026
 
 ## État actuel
 
-Le dépôt Unity est sur `main`. Le lot 4 est implémenté et validé localement,
-mais pas encore commité.
+Le dépôt Unity est sur la branche locale `codex/lot5-inventory-sequence`.
 
 Lots validés et commités :
 
 - `20633e2` — `chore: bootstrap Unity project foundation` ;
 - `977ac30` — `feat: add isometric debug world` ;
-- `26a1a27` — `feat: add player movement`.
+- `26a1a27` — `feat: add player movement` ;
+- `1a1f280` — `feat: add resource interaction`.
 
 État validé au commit `26a1a27` :
 
@@ -30,7 +30,7 @@ Lots validés et commités :
 - 28/28 cas EditMode réussis dans l’éditeur et en batchmode ;
 - arbre de travail propre.
 
-Le lot 4 local ajoute :
+Le lot 4 ajoute :
 
 - identifiants de ressources stables et reproductibles dans le Core ;
 - états `Available` et `Harvested` ;
@@ -49,13 +49,27 @@ Validation locale du lot 4 :
   absence de mutation hors portée et Console sans erreur ;
 - `git diff --check` sans erreur ;
 - Test Runner graphique : 45/45 réussis, zéro échec et zéro cas ignoré ;
-- revue complète du patch non indexé réalisée avant commit.
+- revue complète du patch réalisée avant commit.
+
+Le lot 5A ajoute :
+
+- identifiants stables pour définitions, instances et conteneurs ;
+- encombrement déterministe entier avec `1000` unités internes par unité
+  affichée ;
+- définitions séparées de l'état mutable ;
+- piles de matériaux et instances uniques ;
+- objets conteneurs uniques reliés à un `ContainerId` stable ;
+- capacités brutes, ajouts complets ou partiels et retraits atomiques ;
+- transferts complets ou partiels sans perte ni duplication ;
+- collections publiques en lecture seule et ordre d'entrée stable ;
+- 19 nouveaux cas EditMode, soit 64/64 réussis dans l'éditeur et en batchmode.
 
 ## Prochaine action
 
-1. Indexer les fichiers du lot 4.
-2. Vérifier le diff indexé et l’absence de fichier inattendu.
-3. Créer un commit dédié si le dépôt reste conforme.
+1. Rechercher les solutions UI Toolkit et assets temporaires pertinents.
+2. Concevoir l'équipement logique minimal du lot 5B.
+3. Ajouter l'interface runtime prototype sans déplacer l'état métier hors du
+   Core.
 
 ## Dépôts archivés
 

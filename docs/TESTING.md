@@ -80,3 +80,27 @@ La validation Play Mode a confirmé le ciblage unique, la disparition et le
 changement de cible sur trois récoltes successives, l'absence de cible et de
 mutation hors portée, ainsi qu'une Console à zéro erreur. Le Test Runner
 graphique a également terminé à **45/45**, sans échec ni cas ignoré.
+
+## Lot 5A — validation réalisée
+
+Le lot 5A ajoute dix-neuf cas EditMode Core :
+
+- valeurs par défaut, égalité, comparaison et hash des identifiants ;
+- représentation entière et formatage de l'encombrement ;
+- capacité exacte, dépassement, ajout total et ajout partiel ;
+- refus lorsque la capacité restante est inférieure à une unité ;
+- fusion des piles et ordre stable ;
+- distinction et retrait des objets uniques ;
+- protection de la collection publique ;
+- retrait total et retrait impossible atomique ;
+- transferts complets, partiels, vers une destination pleine et vers le même
+  conteneur ;
+- conservation de la somme source + destination ;
+- stabilité du `ContainerId` d'un objet conteneur ;
+- absence de référence Unity dans l'assembly Core.
+
+Validation du 31 juillet 2026 : **64/64 cas réussis** dans le Test Runner
+graphique et en batchmode, zéro échec, zéro cas ignoré et code de sortie 0. Le
+journal ne contient aucune erreur de compilation ni avertissement C# ; les
+messages de reconnexion de licence précèdent l'exécution et relèvent de
+l'environnement Unity local.

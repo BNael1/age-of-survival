@@ -64,3 +64,23 @@ générés au runtime.
 
 Une interaction réussie passe une seule ressource à `Harvested`. Ce lot ne crée
 aucune récompense et ne se connecte pas à un inventaire.
+
+## ADR-0008 — Inventaire en liste et encombrement entier
+
+**Statut : active**
+**Date : 31 juillet 2026**
+
+L'inventaire propriétaire utilise une liste ordonnée d'entrées, sans grille ni
+nombre de cases. Les matériaux homogènes sont empilables ; les outils,
+vêtements, récipients et objets possédant leur propre état restent des instances
+uniques.
+
+L'encombrement et les capacités sont représentés par `EncumbranceValue` avec
+`1000` unités internes pour `1,000` unité affichée. Les comparaisons de capacité
+n'utilisent pas de `float`. Un ajout peut accepter partiellement une quantité,
+mais un retrait standard impossible reste atomique. Un transfert retire de la
+source uniquement ce que la destination a réellement accepté.
+
+Les collections mutables restent privées au Core. Les définitions éditoriales
+et l'état mutable sont séparés afin de préserver une future sérialisation
+versionnée et la possibilité de remplacer les adaptateurs Unity.

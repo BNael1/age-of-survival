@@ -15,3 +15,13 @@ Ce fichier contient les idées volontairement reportées. Une entrée ici n’es
 - outils de réparation avancée des sauvegardes.
 
 Les règles de construction, de refuges et de familiarité déjà validées ne sont pas des idées futures, mais leur portage Unity attend la validation du socle.
+
+## Reporté après le socle d'inventaire
+
+- conteneurs imbriqués arbitraires et prévention des cycles ;
+- filtres par catégorie et règles d'acceptation propres aux conteneurs ;
+- nourriture, nutrition et péremption ;
+- liquides, mélanges et récipients partiellement remplis ;
+- durabilité et états complexes des objets ;
+- tri, recherche et regroupements avancés ;
+- format de sauvegarde versionné, migrations et réparation de données.
