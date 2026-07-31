@@ -1,0 +1,21 @@
+{
+  "name": "AgeOfSurvival.Core.Tests",
+  "rootNamespace": "AgeOfSurvival.Core.Tests",
+  "references": [
+    "GUID:34f4281227b457e9df0427ea4d1386b4"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "noEngineReferences": false
+}
