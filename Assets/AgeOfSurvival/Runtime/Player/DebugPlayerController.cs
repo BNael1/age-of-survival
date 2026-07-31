@@ -95,7 +95,9 @@ namespace AgeOfSurvival.Runtime.Player
                     worldDirection.y,
                     movementSpeed,
                     tickDuration);
-                resourceInteraction?.SimulateTick(_player.Position);
+                resourceInteraction?.SimulateTick(
+                    _player.Position,
+                    worldDirection.sqrMagnitude > 0.0001f);
             });
 
             SynchronizeVisual();

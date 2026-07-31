@@ -160,3 +160,27 @@ La scène ne contient qu'un `InventoryPrototypeUiBehaviour`, chargé de créer l
 `UIDocument`, d'appliquer le thème runtime officiel Unity et de relier la vue à
 la session. Les formes, couleurs et textes restent un prototype généré dans le
 projet et sont remplaçables sans modifier les règles métier.
+
+## Rendements au sol et transferts temporisés
+
+Le lot 5C relie les ressources au domaine d'inventaire :
+
+- `GroundContainerState` associe un identifiant stable, une `WorldPosition` Core
+  et un `ContainerState` servant de source métier ;
+- `ResourceYieldOperations` récolte la cible selon la règle existante, crée un
+  conteneur de sol dérivé de son `ResourceId` et y dépose le rendement ;
+- `TransferActionState` mémorise source, destination, définition, quantités,
+  tick de départ, durée, progression, statut et raison finale ;
+- `TransferActionOperations` ne réserve ni ne retire rien au démarrage. Au tick
+  final, source et capacité sont relues avant un transfert conservatif ;
+- un déplacement significatif ou un éloignement interrompt l'action sans
+  modifier la source.
+
+`InventoryPrototypeSession` possède désormais les ressources, conteneurs de sol
+et l'unique action active du prototype. `DebugResourceInteraction` ne fait que
+lire `E`, avancer la session depuis le tick fixe et refléter ressources et restes
+au sol. Le marqueur Unity reste présent tant que le conteneur Core n'est pas vide.
+
+La troisième `ListView` et la barre de progression consomment le view-model de
+session. La progression affichée est calculée depuis les ticks du Core ; aucune
+durée métier ne dépend de `Time.deltaTime`.

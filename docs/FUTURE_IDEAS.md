@@ -28,4 +28,7 @@ Les règles de construction, de refuges et de familiarité déjà validées ne s
 - emplacements d'équipement éditoriaux ou extensibles au-delà des deux mains et
   du dos ;
 - thème visuel définitif, icônes, portraits et navigation manette ;
+- file d'actions, réservations multi-acteurs et résolution réseau concurrente ;
+- regroupement spatial, fusion et persistance des conteneurs de sol ;
+- durées propres aux catégories d'objets, compétences et animations ;
 - format de sauvegarde versionné, migrations et réparation de données.

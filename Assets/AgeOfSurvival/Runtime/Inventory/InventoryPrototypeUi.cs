@@ -21,8 +21,12 @@ namespace AgeOfSurvival.Runtime.Inventory
         private readonly Label[] _equipmentLabels = new Label[3];
         private readonly ListView _mainList;
         private readonly ListView _bagList;
+        private readonly ListView _groundList;
         private readonly Label _mainCapacity;
         private readonly Label _bagCapacity;
+        private readonly Label _groundCapacity;
+        private readonly Label _transferStatus;
+        private readonly ProgressBar _transferProgress;
         private readonly Button _transferButton;
         private readonly Button[] _equipButtons = new Button[3];
         private readonly Button[] _unequipButtons = new Button[3];
@@ -67,6 +71,13 @@ namespace AgeOfSurvival.Runtime.Inventory
             _reductionInfo.style.marginBottom = 8;
             _panel.Add(_reductionInfo);
 
+            _transferStatus = new Label();
+            _transferStatus.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _panel.Add(_transferStatus);
+            _transferProgress = new ProgressBar { title = "Timed transfer", lowValue = 0f, highValue = 100f };
+            _transferProgress.style.marginBottom = 8;
+            _panel.Add(_transferProgress);
+
             var equipment = new VisualElement();
             equipment.name = "equipment-slots";
             equipment.style.flexDirection = FlexDirection.Row;
@@ -103,8 +114,10 @@ namespace AgeOfSurvival.Runtime.Inventory
             containers.style.flexGrow = 1;
             _mainList = CreateContainerPanel(containers, "main-container", out _mainCapacity);
             _bagList = CreateContainerPanel(containers, "bag-container", out _bagCapacity);
-            ConfigureSelection(_mainList, _bagList);
-            ConfigureSelection(_bagList, _mainList);
+            _groundList = CreateContainerPanel(containers, "ground-container", out _groundCapacity);
+            ConfigureSelection(_mainList, _bagList, _groundList);
+            ConfigureSelection(_bagList, _mainList, _groundList);
+            ConfigureSelection(_groundList, _mainList, _bagList);
             _panel.Add(containers);
 
             var footer = new VisualElement();
@@ -121,6 +134,7 @@ namespace AgeOfSurvival.Runtime.Inventory
 
         public ListView MainList => _mainList;
         public ListView BagList => _bagList;
+        public ListView GroundList => _groundList;
         public Button TransferButton => _transferButton;
         public IReadOnlyList<Button> EquipButtons => _equipButtons;
         public IReadOnlyList<Button> UnequipButtons => _unequipButtons;
@@ -135,10 +149,12 @@ namespace AgeOfSurvival.Runtime.Inventory
         public void Refresh()
         {
             InventoryPrototypeViewModel viewModel =
-                InventoryPrototypeViewModelBuilder.Build(_session.Inventory);
+                InventoryPrototypeViewModelBuilder.Build(_session);
             _grossLoad.text = $"Gross carried: {viewModel.GrossLoadText}";
             _perceivedLoad.text = $"Perceived carried: {viewModel.PerceivedLoadText}";
             _reductionInfo.text = viewModel.ReductionText;
+            _transferStatus.text = viewModel.TransferStatusText;
+            _transferProgress.value = (float)(viewModel.TransferProgress * 100.0);
             for (int index = 0; index < _equipmentLabels.Length; index++)
             {
                 _equipmentLabels[index].text = viewModel.EquipmentLabels[index];
@@ -146,11 +162,21 @@ namespace AgeOfSurvival.Runtime.Inventory
 
             BindContainer(_mainList, _mainCapacity, viewModel.Main);
             BindContainer(_bagList, _bagCapacity, viewModel.Bag);
+            BindContainer(_groundList, _groundCapacity, viewModel.Ground);
             RefreshButtons();
         }
 
         private void TransferSelected()
         {
+            GroundContainerState ground = _session.FindGround(_selection.SourceContainerId);
+            if (ground != null)
+            {
+                int quantity = InventoryOperations.Count(ground.Container, _selection.DefinitionId);
+                _session.StartGroundTransfer(ground, quantity, _session.CurrentTick);
+                ClearSelection();
+                Refresh();
+                return;
+            }
             ContainerId destination = _selection.SourceContainerId.Equals(InventoryPrototypeCatalog.MainContainerId)
                 ? InventoryPrototypeCatalog.BagContainerId
                 : InventoryPrototypeCatalog.MainContainerId;
@@ -184,6 +210,7 @@ namespace AgeOfSurvival.Runtime.Inventory
             _selection = default;
             _mainList.ClearSelection();
             _bagList.ClearSelection();
+            _groundList.ClearSelection();
         }
 
         private void RefreshButtons()
@@ -191,7 +218,10 @@ namespace AgeOfSurvival.Runtime.Inventory
             ContainerId destination = _selection.SourceContainerId.Equals(InventoryPrototypeCatalog.MainContainerId)
                 ? InventoryPrototypeCatalog.BagContainerId
                 : InventoryPrototypeCatalog.MainContainerId;
-            _transferButton.SetEnabled(_session.Commands.CanTransfer(_selection, destination));
+            GroundContainerState ground = _session.FindGround(_selection.SourceContainerId);
+            _transferButton.SetEnabled(ground != null
+                ? _session.CanStartGroundTransfer(ground)
+                : _session.Commands.CanTransfer(_selection, destination));
 
             EquipmentSlot[] slots = StableSlots();
             for (int index = 0; index < slots.Length; index++)
@@ -203,7 +233,8 @@ namespace AgeOfSurvival.Runtime.Inventory
 
         private void ConfigureSelection(
             ListView list,
-            ListView otherList)
+            ListView otherList,
+            ListView secondOtherList)
         {
             list.selectionChanged += selectedItems =>
             {
@@ -217,6 +248,7 @@ namespace AgeOfSurvival.Runtime.Inventory
                 if (selected == null) return;
                 _selection = selected.Selection;
                 otherList.ClearSelection();
+                secondOtherList.ClearSelection();
                 RefreshButtons();
             };
         }

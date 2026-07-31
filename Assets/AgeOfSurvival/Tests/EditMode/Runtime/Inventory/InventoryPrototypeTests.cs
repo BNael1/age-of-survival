@@ -1,5 +1,6 @@
 using System.Linq;
 using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Runtime.Inventory;
 using NUnit.Framework;
 using UnityEngine.UIElements;
@@ -148,6 +149,68 @@ namespace AgeOfSurvival.Runtime.Tests.Inventory
         public void PrototypeSessionOwnerIsNotAMonoBehaviour()
         {
             Assert.That(typeof(InventoryPrototypeSession).IsSubclassOf(typeof(UnityEngine.MonoBehaviour)), Is.False);
+        }
+
+        [Test]
+        public void HarvestCreatesGroundAndOneTimedAction()
+        {
+            var session = new InventoryPrototypeSession();
+            long tick = session.BeginSimulationTick(new WorldPosition(4.5, 4.5));
+            var result = session.HarvestAndStartTransfer(new WorldPosition(4.5, 4.5), 1.5, tick);
+
+            Assert.That(result.Succeeded, Is.True);
+            Assert.That(session.GroundContainers, Has.Count.EqualTo(1));
+            Assert.That(session.TransferAction.Status, Is.EqualTo(TransferActionStatus.Active));
+            Assert.That(session.TransferAction.PlannedQuantity, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void TimedHarvestTransfersOnlyCapacityAndLeavesExactGroundRemainder()
+        {
+            var session = new InventoryPrototypeSession();
+            WorldPosition position = new WorldPosition(4.5, 4.5);
+            session.HarvestAndStartTransfer(position, 1.5, 1);
+            session.AdvanceTransfer(61, position, false);
+
+            Assert.That(session.TransferAction.Status, Is.EqualTo(TransferActionStatus.Completed));
+            Assert.That(session.TransferAction.TransferredQuantity, Is.EqualTo(3));
+            Assert.That(InventoryOperations.Count(session.MainContainer, InventoryPrototypeCatalog.Branches.Id), Is.EqualTo(9));
+            Assert.That(InventoryOperations.Count(session.GroundContainers[0].Container, InventoryPrototypeCatalog.Branches.Id), Is.EqualTo(3));
+        }
+
+        [Test]
+        public void MovementInterruptsSessionActionWithoutMovingYield()
+        {
+            var session = new InventoryPrototypeSession();
+            WorldPosition position = new WorldPosition(4.5, 4.5);
+            session.HarvestAndStartTransfer(position, 1.5, 1);
+            session.AdvanceTransfer(2, position, true);
+            Assert.That(session.TransferAction.Status, Is.EqualTo(TransferActionStatus.Interrupted));
+            Assert.That(InventoryOperations.Count(session.GroundContainers[0].Container, InventoryPrototypeCatalog.Branches.Id), Is.EqualTo(6));
+        }
+
+        [Test]
+        public void SessionRejectsSecondActiveTransfer()
+        {
+            var session = new InventoryPrototypeSession();
+            WorldPosition position = new WorldPosition(4.5, 4.5);
+            session.HarvestAndStartTransfer(position, 1.5, 1);
+            TransferActionResult second = session.StartGroundTransfer(session.GroundContainers[0], 1, 2);
+            Assert.That(second.Reason, Is.EqualTo(TransferActionReason.AnotherActionActive));
+        }
+
+        [Test]
+        public void ViewModelShowsNearbyGroundAndCoreProgress()
+        {
+            var session = new InventoryPrototypeSession();
+            WorldPosition position = new WorldPosition(4.5, 4.5);
+            session.HarvestAndStartTransfer(position, 1.5, 1);
+            for (int i = 0; i < 30; i++) session.BeginSimulationTick(position);
+            InventoryPrototypeViewModel view = InventoryPrototypeViewModelBuilder.Build(session);
+            Assert.That(view.Ground.Rows, Has.Count.EqualTo(1));
+            Assert.That(view.Ground.Rows[0].Quantity, Is.EqualTo(6));
+            Assert.That(view.TransferStatusText, Does.Contain("3 planned"));
+            Assert.That(view.TransferProgress, Is.GreaterThan(0.4).And.LessThan(0.6));
         }
 
         private static InventorySelection FindSelection(

@@ -19,7 +19,8 @@ Lots validés et commités :
 - `977ac30` — `feat: add isometric debug world` ;
 - `26a1a27` — `feat: add player movement` ;
 - `1a1f280` — `feat: add resource interaction` ;
-- `f44bae1` — `feat: add core inventory containers`.
+- `f44bae1` — `feat: add core inventory containers` ;
+- `6d5b4dd` — `feat: add inventory equipment UI`.
 
 État validé au commit `26a1a27` :
 
@@ -79,11 +80,26 @@ Le lot 5B ajoute :
 - 20 nouveaux cas EditMode, soit 84/84 réussis dans l'éditeur et en batchmode ;
 - 16 assertions Play Mode réussies au travers des boutons UI réels.
 
+Le lot 5C ajoute :
+
+- conteneurs de sol Core identifiés et positionnés de façon stable ;
+- rendement prototype de six branches créé intégralement au sol ;
+- actions de transfert temporisées en ticks, progressives et à application
+  unique ;
+- revalidation finale de la source et de la capacité sans réservation
+  destructive ;
+- interruption par mouvement ou éloignement, sans perte ;
+- troisième liste UI, barre de progression, quantité transférée/restante et
+  marqueur de sol portant la quantité ;
+- maintien du reste exact au sol puis reprise ultérieure ;
+- 19 nouveaux cas EditMode, soit 103/103 réussis graphiquement et en batchmode ;
+- 12 assertions Play Mode sur le cycle complet du lot.
+
 ## Prochaine action
 
-1. Concevoir la connexion récolte → inventaire du lot 5C.
-2. Définir une récompense déterministe sans dépendance à la scène.
-3. Étendre le prototype runtime en conservant le Core comme source de vérité.
+1. Définir le profil de surcharge progressif du lot 5D.
+2. Appliquer son multiplicateur au déplacement Core existant.
+3. Exposer niveau, vitesse et possibilité de course dans l'interface prototype.
 
 ## Dépôts archivés
 

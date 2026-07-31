@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Resources;
+using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Runtime.Inventory;
 using AgeOfSurvival.Runtime.Rendering;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -23,20 +25,11 @@ namespace AgeOfSurvival.Runtime.Resources
         private const int MarkerSizePixels = 24;
         private const int IndicatorSizePixels = 32;
         private const float PixelsPerUnit = 64f;
-        private static readonly Vector2[] DefaultResourcePositions =
-        {
-            new Vector2(5.25f, 4.5f),
-            new Vector2(4.5f, 5.75f),
-            new Vector2(3.25f, 4.5f)
-        };
-
         [SerializeField] private DebugIsometricWorld worldRenderer;
         [SerializeField, Min(0f)] private float interactionRadius = 1.5f;
         [SerializeField] private float visualYOffset = 0.14f;
-        [SerializeField] private Vector2[] resourcePositions;
-
-        private readonly List<ResourceState> _resources = new List<ResourceState>();
         private readonly List<ResourceMarker> _markers = new List<ResourceMarker>();
+        private InventoryPrototypeSession _session;
 
         private Transform _generatedRoot;
         private Texture2D _bodyTexture;
@@ -48,7 +41,12 @@ namespace AgeOfSurvival.Runtime.Resources
         private bool _interactionRequested;
         private bool _inputSubscribed;
 
-        public IReadOnlyList<ResourceState> Resources => _resources;
+        public IReadOnlyList<ResourceState> Resources => _session?.Resources
+            ?? (IReadOnlyList<ResourceState>)System.Array.Empty<ResourceState>();
+        public IReadOnlyList<GroundContainerState> GroundContainers => _session?.GroundContainers
+            ?? (IReadOnlyList<GroundContainerState>)System.Array.Empty<GroundContainerState>();
+        public TransferActionState TransferAction => _session?.TransferAction;
+        public InventoryPrototypeSession PrototypeSession => _session;
         public ResourceId? CurrentTargetId { get; private set; }
         public ResourceInteractionResult? LastInteractionResult { get; private set; }
         public int MarkerCount => _markers.Count;
@@ -152,18 +150,19 @@ namespace AgeOfSurvival.Runtime.Resources
         {
             DestroyGeneratedHierarchy();
             DestroyGeneratedAssets();
-            _resources.Clear();
             _markers.Clear();
             _interactionRequested = false;
             CurrentTargetId = null;
             LastInteractionResult = null;
+            _session = Application.isPlaying
+                ? InventoryPrototypeSessionProvider.Current
+                : new InventoryPrototypeSession();
 
             if (worldRenderer == null)
             {
                 worldRenderer = GetComponent<DebugIsometricWorld>();
             }
 
-            BuildCoreResources();
             CreateGeneratedAssets();
             CreateMarkers();
             SynchronizeVisuals(null);
@@ -180,38 +179,32 @@ namespace AgeOfSurvival.Runtime.Resources
         /// </summary>
         public void SimulateTick(WorldPosition playerPosition)
         {
+            SimulateTick(playerPosition, false);
+        }
+
+        public void SimulateTick(WorldPosition playerPosition, bool playerMoved)
+        {
+            long simulationTick = _session.BeginSimulationTick(playerPosition);
             if (_interactionRequested)
             {
                 _interactionRequested = false;
-                LastInteractionResult = ResourceInteraction.Apply(
-                    new ResourceInteractionCommand(),
-                    _resources,
+                ResourceYieldResult yield = _session.HarvestAndStartTransfer(
                     playerPosition,
-                    interactionRadius);
+                    interactionRadius,
+                    simulationTick);
+                LastInteractionResult = yield.Interaction;
             }
 
+            if (_session.TransferAction != null
+                && _session.TransferAction.Status == TransferActionStatus.Active)
+                _session.AdvanceTransfer(simulationTick, playerPosition, playerMoved);
+
             ResourceState target = ResourceTargeting.FindNearestAvailable(
-                _resources,
+                _session.Resources,
                 playerPosition,
                 interactionRadius);
             CurrentTargetId = target != null ? target.Id : (ResourceId?)null;
             SynchronizeVisuals(target);
-        }
-
-        private void BuildCoreResources()
-        {
-            Vector2[] positions = resourcePositions != null
-                && resourcePositions.Length > 0
-                    ? resourcePositions
-                    : DefaultResourcePositions;
-
-            for (int index = 0; index < positions.Length; index++)
-            {
-                Vector2 position = positions[index];
-                _resources.Add(new ResourceState(
-                    new ResourceId($"debug-resource-{index + 1:00}"),
-                    new WorldPosition(position.x, position.y)));
-            }
         }
 
         private void CreateGeneratedAssets()
@@ -242,9 +235,9 @@ namespace AgeOfSurvival.Runtime.Resources
             rootObject.transform.SetParent(transform, false);
             _generatedRoot = rootObject.transform;
 
-            for (int index = 0; index < _resources.Count; index++)
+            for (int index = 0; index < _session.Resources.Count; index++)
             {
-                ResourceState resource = _resources[index];
+                ResourceState resource = _session.Resources[index];
                 var markerObject = new GameObject($"Resource {resource.Id}");
                 markerObject.transform.SetParent(_generatedRoot, false);
 
@@ -259,10 +252,21 @@ namespace AgeOfSurvival.Runtime.Resources
                 targetRenderer.sortingOrder = 89;
                 targetObject.SetActive(false);
 
+                var quantityObject = new GameObject("Ground Quantity");
+                quantityObject.transform.SetParent(markerObject.transform, false);
+                quantityObject.transform.localPosition = new Vector3(0.32f, 0.18f, 0f);
+                var quantityLabel = quantityObject.AddComponent<TextMesh>();
+                quantityLabel.fontSize = 28;
+                quantityLabel.characterSize = 0.035f;
+                quantityLabel.color = Color.white;
+                quantityLabel.anchor = TextAnchor.MiddleLeft;
+                quantityLabel.GetComponent<MeshRenderer>().sortingOrder = 92;
+
                 _markers.Add(new ResourceMarker(
                     resource,
                     markerObject,
-                    targetObject));
+                    targetObject,
+                    quantityLabel));
             }
         }
 
@@ -271,13 +275,18 @@ namespace AgeOfSurvival.Runtime.Resources
             for (int index = 0; index < _markers.Count; index++)
             {
                 ResourceMarker marker = _markers[index];
-                bool available =
-                    marker.Resource.Availability == ResourceAvailability.Available;
-                marker.Root.SetActive(available);
+                bool available = marker.Resource.Availability == ResourceAvailability.Available;
+                GroundContainerState ground = FindGroundFor(marker.Resource);
+                int groundQuantity = ground == null ? 0 : InventoryOperations.Count(
+                    ground.Container, InventoryPrototypeCatalog.Branches.Id);
+                bool visible = available || groundQuantity > 0;
+                marker.Root.SetActive(visible);
                 marker.TargetIndicator.SetActive(
                     available && ReferenceEquals(marker.Resource, target));
+                marker.QuantityLabel.gameObject.SetActive(groundQuantity > 0);
+                marker.QuantityLabel.text = groundQuantity > 0 ? $"Branches x{groundQuantity}" : string.Empty;
 
-                if (available && worldRenderer != null)
+                if (visible && worldRenderer != null)
                 {
                     marker.Root.transform.position =
                         worldRenderer.LogicalToWorldPosition(
@@ -286,6 +295,16 @@ namespace AgeOfSurvival.Runtime.Resources
                             -0.05f);
                 }
             }
+        }
+
+        private GroundContainerState FindGroundFor(ResourceState resource)
+        {
+            for (int index = 0; index < _session.GroundContainers.Count; index++)
+            {
+                GroundContainerState ground = _session.GroundContainers[index];
+                if (ground.Position.Equals(resource.Position)) return ground;
+            }
+            return null;
         }
 
         private void ResolveInteractionKey()
@@ -453,16 +472,19 @@ namespace AgeOfSurvival.Runtime.Resources
             public ResourceMarker(
                 ResourceState resource,
                 GameObject root,
-                GameObject targetIndicator)
+                GameObject targetIndicator,
+                TextMesh quantityLabel)
             {
                 Resource = resource;
                 Root = root;
                 TargetIndicator = targetIndicator;
+                QuantityLabel = quantityLabel;
             }
 
             public ResourceState Resource { get; }
             public GameObject Root { get; }
             public GameObject TargetIndicator { get; }
+            public TextMesh QuantityLabel { get; }
         }
     }
 }

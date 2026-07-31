@@ -1,8 +1,10 @@
 using System.Linq;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Resources;
+using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Runtime.Rendering;
 using AgeOfSurvival.Runtime.Resources;
+using AgeOfSurvival.Runtime.Inventory;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -49,7 +51,7 @@ namespace AgeOfSurvival.Runtime.Tests
         }
 
         [Test]
-        public void HarvestedResourceIsNoLongerRendered()
+        public void HarvestedResourceLeavesVisibleGroundYieldUntilTransferCompletes()
         {
             GameObject root = CreateAdapter(out DebugResourceInteraction adapter);
 
@@ -59,7 +61,8 @@ namespace AgeOfSurvival.Runtime.Tests
                 adapter.SimulateTick(StartPosition);
 
                 Assert.That(adapter.LastInteractionResult.Value.Succeeded, Is.True);
-                Assert.That(adapter.RenderedMarkerCount, Is.EqualTo(2));
+                Assert.That(adapter.RenderedMarkerCount, Is.EqualTo(3));
+                Assert.That(adapter.GroundContainers, Has.Count.EqualTo(1));
                 Assert.That(
                     adapter.Resources.Count(resource =>
                         resource.Availability == ResourceAvailability.Harvested),
@@ -127,6 +130,36 @@ namespace AgeOfSurvival.Runtime.Tests
 
                 Assert.That(adapter.LastInteractionResult, Is.Not.Null);
                 Assert.That(adapter.LastInteractionResult.Value.Succeeded, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void GroundMarkerRemainsForPartialRemainderThenHidesWhenEmpty()
+        {
+            GameObject root = CreateAdapter(out DebugResourceInteraction adapter);
+            try
+            {
+                adapter.QueueInteraction();
+                adapter.SimulateTick(StartPosition);
+                for (int index = 0; index < 60; index++) adapter.SimulateTick(StartPosition);
+
+                Assert.That(adapter.TransferAction.Status, Is.EqualTo(TransferActionStatus.Completed));
+                Assert.That(adapter.RenderedMarkerCount, Is.EqualTo(3));
+                GroundContainerState ground = adapter.GroundContainers[0];
+                Assert.That(InventoryOperations.Count(ground.Container, InventoryPrototypeCatalog.Branches.Id), Is.EqualTo(3));
+
+                InventorySelection branches = InventoryPrototypeViewModelBuilder.Build(adapter.PrototypeSession.Inventory)
+                    .Main.Rows.Single(row => row.DisplayName == "Branches").Selection;
+                adapter.PrototypeSession.Commands.Transfer(branches, adapter.PrototypeSession.BagContainer.Id);
+                adapter.PrototypeSession.StartGroundTransfer(ground, 3, adapter.PrototypeSession.CurrentTick);
+                for (int index = 0; index < 60; index++) adapter.SimulateTick(StartPosition);
+
+                Assert.That(ground.IsEmpty, Is.True);
+                Assert.That(adapter.RenderedMarkerCount, Is.EqualTo(2));
             }
             finally
             {

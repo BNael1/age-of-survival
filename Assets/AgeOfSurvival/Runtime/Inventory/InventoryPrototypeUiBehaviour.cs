@@ -45,6 +45,11 @@ namespace AgeOfSurvival.Runtime.Inventory
             }
         }
 
+        private void Update()
+        {
+            _ui?.Refresh();
+        }
+
         private void BuildUi()
         {
             _ui = new InventoryPrototypeUiDocument(

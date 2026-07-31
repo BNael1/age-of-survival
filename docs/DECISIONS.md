@@ -101,3 +101,24 @@ API officielle déjà disponible dans Unity 6000.3.19f1, est retenu pour le
 prototype runtime en listes. La vue reçoit des view-models en lecture seule et
 appelle des commandes validées pour transférer, équiper ou déséquiper. Ce choix
 n'impose ni framework tiers, ni drag-and-drop, ni grille de cases.
+
+## ADR-0010 — Transfert temporisé sans réservation destructive
+
+**Statut : active**
+**Date : 31 juillet 2026**
+
+Une récolte crée d'abord tout son rendement dans un conteneur de sol stable.
+Le transfert vers l'inventaire est une action Core distincte, exprimée en ticks
+entiers. Son démarrage calcule une quantité planifiée mais ne retire et ne
+réserve aucun objet. La source et la destination sont revalidées à la fin ; seule
+la quantité encore disponible et admissible est déplacée.
+
+Le prototype autorise une seule action de transfert active par joueur. Tout
+déplacement significatif ou dépassement de la portée l'interrompt. Cette règle
+est volontairement locale au prototype ; files d'actions, réservations
+multi-acteurs et concurrence réseau sont reportées.
+
+À 60 ticks par seconde, les valeurs temporaires sont : `15` ticks de base,
+`30` ticks par unité d'encombrement affichée, minimum `15` ticks, portée `1,5`
+et rendement de `6` branches par ressource. Elles sont centralisées et ne
+constituent pas un équilibrage final.

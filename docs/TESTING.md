@@ -125,3 +125,23 @@ capacité brute inchangée, activation des boutons, équipement/déséquipement 
 sac et transfert de six branches. Les trois états ont été inspectés dans la Game
 View avec le thème runtime Unity chargé et des textes lisibles. Le helper de
 validation n'est pas conservé dans le produit.
+
+## Lot 5C — validation réalisée
+
+Le lot 5C ajoute dix-neuf cas EditMode :
+
+- treize cas Core sur le rendement au sol, la capacité validée avant récolte,
+  les identifiants distincts, le calcul
+  de durée, la progression, la fin unique, les interruptions, la destination
+  pleine et les modifications de source ou capacité pendant l'action ;
+- six cas Runtime sur la session partagée, l'action unique, le transfert
+  partiel, le view-model et la visibilité du marqueur jusqu'au vidage exact.
+
+Validation du 31 juillet 2026 : **103/103 cas réussis** dans le Test Runner
+graphique et en batchmode, zéro échec, zéro cas ignoré et code de sortie 0.
+
+La validation Play Mode dans `SampleScene` a confirmé **12/12 assertions** :
+commande `E`, rendement au sol, progression visible, transfert de trois branches
+après la durée, reste exact de trois branches, interruption par déplacement sans
+mutation, reprise ultérieure et disparition du marqueur seulement lorsque la
+source est vide. La Console est propre après retrait du helper temporaire.

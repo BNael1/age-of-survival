@@ -1,4 +1,5 @@
 using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Core.Characters;
 
 namespace AgeOfSurvival.Runtime.Inventory
 {
@@ -10,6 +11,25 @@ namespace AgeOfSurvival.Runtime.Inventory
         public const long MainCapacityUnits = 12000;
         public const long BagCapacityUnits = 20000;
         public const int EquippedBagReductionPercent = 70;
+        public const int ResourceYieldQuantity = 6;
+        public const long GroundCapacityUnits = 100000;
+        public const double GroundTransferMaximumDistance = 1.5;
+        public const int TransferBaseTicks = 15;
+        public const int TransferTicksPerEncumbranceUnit = 30;
+
+        public static readonly TransferTimingDefinition TransferTiming =
+            new TransferTimingDefinition(
+                TransferBaseTicks,
+                TransferTicksPerEncumbranceUnit,
+                (int)EncumbranceValue.UnitsPerDisplayedUnit,
+                TransferBaseTicks);
+
+        public static readonly WorldPosition[] ResourcePositions =
+        {
+            new WorldPosition(5.25, 4.5),
+            new WorldPosition(4.5, 5.75),
+            new WorldPosition(3.25, 4.5)
+        };
 
         public static readonly ContainerId MainContainerId = new ContainerId("player-main");
         public static readonly ContainerId BagContainerId = new ContainerId("prototype-bag-container");

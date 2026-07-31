@@ -49,25 +49,34 @@ namespace AgeOfSurvival.Runtime.Inventory
         public InventoryPrototypeViewModel(
             InventoryContainerViewModel main,
             InventoryContainerViewModel bag,
+            InventoryContainerViewModel ground,
             IReadOnlyList<string> equipmentLabels,
             string grossLoadText,
             string perceivedLoadText,
-            string reductionText)
+            string reductionText,
+            string transferStatusText,
+            double transferProgress)
         {
             Main = main;
             Bag = bag;
+            Ground = ground;
             EquipmentLabels = equipmentLabels;
             GrossLoadText = grossLoadText;
             PerceivedLoadText = perceivedLoadText;
             ReductionText = reductionText;
+            TransferStatusText = transferStatusText;
+            TransferProgress = transferProgress;
         }
 
         public InventoryContainerViewModel Main { get; }
         public InventoryContainerViewModel Bag { get; }
+        public InventoryContainerViewModel Ground { get; }
         public IReadOnlyList<string> EquipmentLabels { get; }
         public string GrossLoadText { get; }
         public string PerceivedLoadText { get; }
         public string ReductionText { get; }
+        public string TransferStatusText { get; }
+        public double TransferProgress { get; }
     }
 
     public static class InventoryPrototypeViewModelBuilder
@@ -80,6 +89,21 @@ namespace AgeOfSurvival.Runtime.Inventory
         };
 
         public static InventoryPrototypeViewModel Build(PlayerInventoryState inventory)
+        {
+            return Build(inventory, null, 0);
+        }
+
+        public static InventoryPrototypeViewModel Build(InventoryPrototypeSession session)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            return Build(session.Inventory, session.FirstNonEmptyGround(), session.CurrentTick, session.TransferAction);
+        }
+
+        private static InventoryPrototypeViewModel Build(
+            PlayerInventoryState inventory,
+            GroundContainerState ground,
+            long currentTick,
+            TransferActionState action = null)
         {
             if (inventory == null) throw new ArgumentNullException(nameof(inventory));
             ContainerState bag = inventory.FindContainer(InventoryPrototypeCatalog.BagContainerId);
@@ -103,10 +127,38 @@ namespace AgeOfSurvival.Runtime.Inventory
             return new InventoryPrototypeViewModel(
                 BuildContainer(inventory, inventory.MainContainer),
                 BuildContainer(inventory, bag),
+                BuildGroundContainer(inventory, ground),
                 equipment.AsReadOnly(),
                 load.Gross.ToString(),
                 load.Perceived.ToString(),
-                $"{InventoryPrototypeCatalog.EquippedBagReductionPercent}% while backpack is equipped");
+                $"{InventoryPrototypeCatalog.EquippedBagReductionPercent}% while backpack is equipped",
+                TransferStatus(action),
+                action?.ProgressAt(currentTick) ?? 0.0);
+        }
+
+        private static InventoryContainerViewModel BuildGroundContainer(
+            PlayerInventoryState inventory,
+            GroundContainerState ground)
+        {
+            if (ground == null)
+                return new InventoryContainerViewModel(default, "Nearby ground", "No items", Array.Empty<InventoryRowViewModel>());
+            return BuildContainer(inventory, ground.Container);
+        }
+
+        private static string TransferStatus(TransferActionState action)
+        {
+            if (action == null) return "Transfer: idle";
+            switch (action.Status)
+            {
+                case TransferActionStatus.Active:
+                    return $"Transfer: {action.PlannedQuantity} planned, {action.RequestedQuantity} requested";
+                case TransferActionStatus.Completed:
+                    return $"Transferred {action.TransferredQuantity}; {action.RemainingQuantity} remaining";
+                case TransferActionStatus.Interrupted:
+                    return $"Transfer interrupted: {action.Reason}";
+                default:
+                    return $"Transfer failed: {action.Reason}";
+            }
         }
 
         private static InventoryContainerViewModel BuildContainer(
