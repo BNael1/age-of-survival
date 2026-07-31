@@ -18,7 +18,8 @@ Lots validés et commités :
 - `20633e2` — `chore: bootstrap Unity project foundation` ;
 - `977ac30` — `feat: add isometric debug world` ;
 - `26a1a27` — `feat: add player movement` ;
-- `1a1f280` — `feat: add resource interaction`.
+- `1a1f280` — `feat: add resource interaction` ;
+- `f44bae1` — `feat: add core inventory containers`.
 
 État validé au commit `26a1a27` :
 
@@ -64,12 +65,25 @@ Le lot 5A ajoute :
 - collections publiques en lecture seule et ordre d'entrée stable ;
 - 19 nouveaux cas EditMode, soit 64/64 réussis dans l'éditeur et en batchmode.
 
+Le lot 5B ajoute :
+
+- trois emplacements d'équipement fixes et des compatibilités explicites ;
+- une charge brute et une charge perçue calculées en unités entières ;
+- un sac à dos prototype dont le contenu reçoit `70 %` de réduction uniquement
+  lorsqu'il est équipé au dos ;
+- une session d'inventaire C# indépendante des `GameObject` ;
+- des commandes de transfert, équipement et déséquipement avec résultats
+  explicites ;
+- une interface runtime UI Toolkit en deux listes avec capacités, charges,
+  emplacements et actions dont l'état activé reflète la validité des commandes ;
+- 20 nouveaux cas EditMode, soit 84/84 réussis dans l'éditeur et en batchmode ;
+- 16 assertions Play Mode réussies au travers des boutons UI réels.
+
 ## Prochaine action
 
-1. Rechercher les solutions UI Toolkit et assets temporaires pertinents.
-2. Concevoir l'équipement logique minimal du lot 5B.
-3. Ajouter l'interface runtime prototype sans déplacer l'état métier hors du
-   Core.
+1. Concevoir la connexion récolte → inventaire du lot 5C.
+2. Définir une récompense déterministe sans dépendance à la scène.
+3. Étendre le prototype runtime en conservant le Core comme source de vérité.
 
 ## Dépôts archivés
 

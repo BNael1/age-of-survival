@@ -24,4 +24,8 @@ Les règles de construction, de refuges et de familiarité déjà validées ne s
 - liquides, mélanges et récipients partiellement remplis ;
 - durabilité et états complexes des objets ;
 - tri, recherche et regroupements avancés ;
+- drag-and-drop, menus contextuels et raccourcis d'équipement ;
+- emplacements d'équipement éditoriaux ou extensibles au-delà des deux mains et
+  du dos ;
+- thème visuel définitif, icônes, portraits et navigation manette ;
 - format de sauvegarde versionné, migrations et réparation de données.

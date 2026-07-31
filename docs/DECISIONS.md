@@ -84,3 +84,20 @@ source uniquement ce que la destination a réellement accepté.
 Les collections mutables restent privées au Core. Les définitions éditoriales
 et l'état mutable sont séparés afin de préserver une future sérialisation
 versionnée et la possibilité de remplacer les adaptateurs Unity.
+
+## ADR-0009 — Équipement fixe et UI Toolkit comme adaptateur
+
+**Statut : active**
+**Date : 31 juillet 2026**
+
+Le premier équipement comporte trois emplacements fixes : main gauche, main
+droite et dos. Une définition déclare explicitement ses emplacements compatibles
+et une réduction entière éventuelle du poids du contenu lorsqu'elle représente
+un conteneur équipé. Le prototype de sac applique `70 %` uniquement au contenu
+du sac porté ; la capacité et les poids bruts restent inchangés.
+
+La session d'inventaire demeure un objet C# hors des `GameObject`. UI Toolkit,
+API officielle déjà disponible dans Unity 6000.3.19f1, est retenu pour le
+prototype runtime en listes. La vue reçoit des view-models en lecture seule et
+appelle des commandes validées pour transférer, équiper ou déséquiper. Ce choix
+n'impose ni framework tiers, ni drag-and-drop, ni grille de cases.

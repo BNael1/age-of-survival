@@ -135,3 +135,28 @@ transfert partiel ou vers une destination pleine.
 Ce lot ne contient ni `MonoBehaviour`, ni rendu, ni UI, ni état possédé par un
 `GameObject`. Les adaptateurs Unity et l'équipement sont introduits dans les lots
 suivants sans déplacer la source de vérité hors du Core.
+
+## Équipement et prototype d'inventaire
+
+Le lot 5B étend le domaine Core sans le coupler à Unity :
+
+- `EquipmentState` porte trois emplacements fixes (`LeftHand`, `RightHand`,
+  `Back`) et référence uniquement des `ItemInstanceId` ;
+- `EquipmentOperations` est la frontière de mutation explicite pour équiper et
+  déséquiper une instance unique compatible ;
+- `PlayerInventoryState` agrège conteneurs, définitions et équipement tout en
+  exposant des vues en lecture seule ;
+- `CarriedLoadOperations` distingue la charge brute de la charge perçue. Le
+  contenu d'un conteneur équipé peut recevoir une réduction entière, sans
+  modifier sa capacité brute ni sa propre masse.
+
+`InventoryPrototypeSession` est un objet C# ordinaire possédé par un fournisseur
+de session au niveau du processus. Aucun `GameObject` ne possède la source de
+vérité. La couche Runtime construit des view-models immuables, puis l'interface
+UI Toolkit émet des commandes via `InventoryPrototypeCommands`. Les `ListView`
+ne modifient jamais directement les collections du Core.
+
+La scène ne contient qu'un `InventoryPrototypeUiBehaviour`, chargé de créer le
+`UIDocument`, d'appliquer le thème runtime officiel Unity et de relier la vue à
+la session. Les formes, couleurs et textes restent un prototype généré dans le
+projet et sont remplaçables sans modifier les règles métier.

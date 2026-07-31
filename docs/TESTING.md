@@ -104,3 +104,24 @@ graphique et en batchmode, zéro échec, zéro cas ignoré et code de sortie 0. 
 journal ne contient aucune erreur de compilation ni avertissement C# ; les
 messages de reconnexion de licence précèdent l'exécution et relèvent de
 l'environnement Unity local.
+
+## Lot 5B — validation réalisée
+
+Le lot 5B ajoute vingt cas EditMode :
+
+- onze cas Core sur les compatibilités d'emplacements, l'occupation, les
+  échecs explicites, le déséquipement, les références stables, la capacité et
+  la réduction de charge active ou inactive ;
+- neuf cas Runtime sur les view-models, les copies en lecture seule, les
+  commandes, la prévention de l'auto-transfert d'un sac, l'état des boutons et
+  l'indépendance de la session vis-à-vis de `MonoBehaviour`.
+
+Validation du 31 juillet 2026 : **84/84 cas réussis** dans le Test Runner
+graphique et en batchmode, zéro échec, zéro cas ignoré et code de sortie 0.
+
+Une validation Play Mode automatisée dans `SampleScene` a confirmé **16/16
+assertions** : présence et contenu des deux listes, charges initiale et réduite,
+capacité brute inchangée, activation des boutons, équipement/déséquipement du
+sac et transfert de six branches. Les trois états ont été inspectés dans la Game
+View avec le thème runtime Unity chargé et des textes lisibles. Le helper de
+validation n'est pas conservé dans le produit.

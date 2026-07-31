@@ -17,7 +17,8 @@ namespace AgeOfSurvival.Core.Inventory
             ItemDefinitionId id,
             string displayName,
             ItemStateKind stateKind,
-            EncumbranceValue unitEncumbrance)
+            EncumbranceValue unitEncumbrance,
+            EquipmentDefinition equipment = null)
         {
             if (!id.IsValid)
             {
@@ -38,11 +39,13 @@ namespace AgeOfSurvival.Core.Inventory
             DisplayName = displayName;
             StateKind = stateKind;
             UnitEncumbrance = unitEncumbrance;
+            Equipment = equipment;
         }
 
         public ItemDefinitionId Id { get; }
         public string DisplayName { get; }
         public ItemStateKind StateKind { get; }
         public EncumbranceValue UnitEncumbrance { get; }
+        public EquipmentDefinition Equipment { get; }
     }
 }
