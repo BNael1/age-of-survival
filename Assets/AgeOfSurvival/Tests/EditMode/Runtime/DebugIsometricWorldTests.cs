@@ -22,6 +22,39 @@ namespace AgeOfSurvival.Runtime.Tests
         }
 
         [Test]
+        public void PrototypeVisualTexturesAreAvailableToRuntimeAdapters()
+        {
+            Assert.That(PrototypeVisualAssets.AllRequiredTexturesExist(), Is.True);
+        }
+
+        [Test]
+        public void Rebuild_UsesDistinctPrototypeGroundSprites()
+        {
+            var root = new GameObject("Prototype ground visual test");
+
+            try
+            {
+                var presenter = root.AddComponent<DebugIsometricWorld>();
+                presenter.Rebuild();
+
+                Assert.That(presenter.UsesPrototypeVisuals, Is.True);
+                Assert.That(
+                    presenter.Tilemap.GetSprite(new Vector3Int(3, 4, 0)).name,
+                    Is.EqualTo("Prototype Ground Grass"));
+                Assert.That(
+                    presenter.Tilemap.GetSprite(new Vector3Int(4, 4, 0)).name,
+                    Is.EqualTo("Prototype Ground Dirt"));
+                Assert.That(
+                    presenter.Tilemap.GetSprite(new Vector3Int(0, 5, 0)).name,
+                    Is.EqualTo("Prototype Ground Water"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
         public void Rebuild_CreatesOneIsometricTilemapWithOneTilePerCoreCell()
         {
             var root = new GameObject("Debug world test");

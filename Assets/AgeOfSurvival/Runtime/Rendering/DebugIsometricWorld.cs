@@ -7,7 +7,8 @@ namespace AgeOfSurvival.Runtime.Rendering
 {
     /// <summary>
     /// Temporary Unity adapter that renders a Core DenseGrid as an isometric Tilemap.
-    /// It generates neutral debug visuals at runtime and contains no production art or gameplay rules.
+    /// Project-owned prototype sprites improve readability while generated diamonds remain
+    /// available as a safe fallback. This adapter contains no gameplay rules.
     /// </summary>
     public sealed class DebugIsometricWorld : MonoBehaviour
     {
@@ -24,12 +25,18 @@ namespace AgeOfSurvival.Runtime.Rendering
 
         private Texture2D _generatedTexture;
         private Sprite _generatedSprite;
-        private Tile _generatedTile;
+        private Sprite _grassSprite;
+        private Sprite _dirtSprite;
+        private Sprite _waterSprite;
+        private Tile _baseTile;
+        private Tile _accentTile;
+        private Tile _borderTile;
         private DenseGrid<byte> _world;
         private Tilemap _tilemap;
 
         public DenseGrid<byte> World => _world;
         public Tilemap Tilemap => _tilemap;
+        public bool UsesPrototypeVisuals { get; private set; }
 
         public Vector3 LogicalToWorldPosition(
             WorldPosition logicalPosition,
@@ -79,7 +86,7 @@ namespace AgeOfSurvival.Runtime.Rendering
             _tilemap = tilemapObject.AddComponent<Tilemap>();
             tilemapObject.AddComponent<TilemapRenderer>();
 
-            CreateGeneratedTile();
+            CreateTiles();
             PopulateTilemap();
             ConfigureCamera();
         }
@@ -89,7 +96,48 @@ namespace AgeOfSurvival.Runtime.Rendering
             DestroyGeneratedAssets();
         }
 
-        private void CreateGeneratedTile()
+        private void CreateTiles()
+        {
+            _grassSprite = PrototypeVisualAssets.CreateSprite(
+                PrototypeVisualAssets.GroundGrass,
+                new Vector2(0.5f, 0.5f),
+                PrototypeVisualAssets.PixelsPerUnit,
+                "Prototype Ground Grass");
+            _dirtSprite = PrototypeVisualAssets.CreateSprite(
+                PrototypeVisualAssets.GroundDirt,
+                new Vector2(0.5f, 0.5f),
+                PrototypeVisualAssets.PixelsPerUnit,
+                "Prototype Ground Dirt");
+            _waterSprite = PrototypeVisualAssets.CreateSprite(
+                PrototypeVisualAssets.GroundWater,
+                new Vector2(0.5f, 0.5f),
+                PrototypeVisualAssets.PixelsPerUnit,
+                "Prototype Ground Water");
+
+            UsesPrototypeVisuals = _grassSprite != null
+                && _dirtSprite != null
+                && _waterSprite != null;
+
+            if (!UsesPrototypeVisuals)
+            {
+                PrototypeVisualAssets.DestroyRuntimeSprite(_grassSprite);
+                PrototypeVisualAssets.DestroyRuntimeSprite(_dirtSprite);
+                PrototypeVisualAssets.DestroyRuntimeSprite(_waterSprite);
+                _grassSprite = null;
+                _dirtSprite = null;
+                _waterSprite = null;
+                CreateGeneratedFallbackSprite();
+                _grassSprite = _generatedSprite;
+                _dirtSprite = _generatedSprite;
+                _waterSprite = _generatedSprite;
+            }
+
+            _baseTile = CreateTile("Prototype Base Ground Tile", _grassSprite);
+            _accentTile = CreateTile("Prototype Accent Ground Tile", _dirtSprite);
+            _borderTile = CreateTile("Prototype Border Ground Tile", _waterSprite);
+        }
+
+        private void CreateGeneratedFallbackSprite()
         {
             _generatedTexture = CreateDiamondTexture();
             _generatedSprite = Sprite.Create(
@@ -100,11 +148,15 @@ namespace AgeOfSurvival.Runtime.Rendering
                 0,
                 SpriteMeshType.FullRect);
             _generatedSprite.name = "Generated Debug Diamond";
+        }
 
-            _generatedTile = ScriptableObject.CreateInstance<Tile>();
-            _generatedTile.name = "Generated Debug Tile";
-            _generatedTile.sprite = _generatedSprite;
-            _generatedTile.colliderType = Tile.ColliderType.None;
+        private static Tile CreateTile(string name, Sprite sprite)
+        {
+            var tile = ScriptableObject.CreateInstance<Tile>();
+            tile.name = name;
+            tile.sprite = sprite;
+            tile.colliderType = Tile.ColliderType.None;
+            return tile;
         }
 
         private void PopulateTilemap()
@@ -117,14 +169,32 @@ namespace AgeOfSurvival.Runtime.Rendering
                 {
                     var logicalPosition = new GridPosition(x, y);
                     var cellPosition = new Vector3Int(x, y, 0);
+                    byte value = _world[logicalPosition];
 
-                    _tilemap.SetTile(cellPosition, _generatedTile);
+                    _tilemap.SetTile(cellPosition, TileFor(value));
                     _tilemap.SetTileFlags(cellPosition, TileFlags.None);
-                    _tilemap.SetColor(cellPosition, ColorFor(_world[logicalPosition]));
+                    _tilemap.SetColor(
+                        cellPosition,
+                        UsesPrototypeVisuals ? Color.white : ColorFor(value));
                 }
             }
 
             _tilemap.CompressBounds();
+        }
+
+        private Tile TileFor(byte value)
+        {
+            switch (value)
+            {
+                case DebugWorldPattern.BaseCell:
+                    return _baseTile;
+                case DebugWorldPattern.AccentCell:
+                    return _accentTile;
+                case DebugWorldPattern.BorderCell:
+                    return _borderTile;
+                default:
+                    return _baseTile;
+            }
         }
 
         private void ConfigureCamera()
@@ -137,13 +207,13 @@ namespace AgeOfSurvival.Runtime.Rendering
 
             Vector3 worldCenter = _tilemap.transform.TransformPoint(_tilemap.localBounds.center);
             camera.orthographic = true;
+            camera.backgroundColor = new Color32(30, 38, 43, 255);
             camera.transform.position = new Vector3(worldCenter.x, worldCenter.y, -10f);
 
             float safeAspect = Mathf.Max(camera.aspect, 0.01f);
             float verticalHalfSize = _tilemap.localBounds.extents.y;
             float horizontalHalfSizeAsVertical = _tilemap.localBounds.extents.x / safeAspect;
             camera.orthographicSize = Mathf.Max(verticalHalfSize, horizontalHalfSizeAsVertical) + cameraPadding;
-
         }
 
         private static Color ColorFor(byte value)
@@ -223,13 +293,31 @@ namespace AgeOfSurvival.Runtime.Rendering
 
         private void DestroyGeneratedAssets()
         {
-            DestroyUnityObject(_generatedTile);
-            DestroyUnityObject(_generatedSprite);
-            DestroyUnityObject(_generatedTexture);
+            DestroyUnityObject(_baseTile);
+            DestroyUnityObject(_accentTile);
+            DestroyUnityObject(_borderTile);
 
-            _generatedTile = null;
+            if (UsesPrototypeVisuals)
+            {
+                PrototypeVisualAssets.DestroyRuntimeSprite(_grassSprite);
+                PrototypeVisualAssets.DestroyRuntimeSprite(_dirtSprite);
+                PrototypeVisualAssets.DestroyRuntimeSprite(_waterSprite);
+            }
+            else
+            {
+                DestroyUnityObject(_generatedSprite);
+                DestroyUnityObject(_generatedTexture);
+            }
+
+            _baseTile = null;
+            _accentTile = null;
+            _borderTile = null;
+            _grassSprite = null;
+            _dirtSprite = null;
+            _waterSprite = null;
             _generatedSprite = null;
             _generatedTexture = null;
+            UsesPrototypeVisuals = false;
         }
 
         private static void DestroyUnityObject(Object target)

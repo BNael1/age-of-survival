@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using AgeOfSurvival.Core.Characters;
-using AgeOfSurvival.Core.Resources;
 using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Core.Resources;
 using AgeOfSurvival.Runtime.Inventory;
 using AgeOfSurvival.Runtime.Rendering;
 using UnityEngine;
@@ -25,21 +25,29 @@ namespace AgeOfSurvival.Runtime.Resources
         private const int MarkerSizePixels = 24;
         private const int IndicatorSizePixels = 32;
         private const float PixelsPerUnit = 64f;
+        private const float DefaultRadiusArtwork = 1.5f;
+        private const float ProgressFullScaleX = 8f;
+
         [SerializeField] private DebugIsometricWorld worldRenderer;
         [SerializeField, Min(0f)] private float interactionRadius = 1.5f;
         [SerializeField] private float visualYOffset = 0.14f;
+
         private readonly List<ResourceMarker> _markers = new List<ResourceMarker>();
         private InventoryPrototypeSession _session;
-
         private Transform _generatedRoot;
+        private GameObject _interactionRadiusObject;
         private Texture2D _bodyTexture;
         private Texture2D _indicatorTexture;
-        private Sprite _bodySprite;
+        private Sprite _resourceSprite;
+        private Sprite _groundSprite;
         private Sprite _indicatorSprite;
+        private Sprite _radiusSprite;
+        private Sprite _uiSprite;
         private Keyboard _keyboard;
         private KeyControl _interactionKey;
         private bool _interactionRequested;
         private bool _inputSubscribed;
+        private bool _hasPlayerPosition;
 
         public IReadOnlyList<ResourceState> Resources => _session?.Resources
             ?? (IReadOnlyList<ResourceState>)System.Array.Empty<ResourceState>();
@@ -49,6 +57,9 @@ namespace AgeOfSurvival.Runtime.Resources
         public InventoryPrototypeSession PrototypeSession => _session;
         public ResourceId? CurrentTargetId { get; private set; }
         public ResourceInteractionResult? LastInteractionResult { get; private set; }
+        public bool UsesPrototypeVisuals { get; private set; }
+        public bool InteractionRadiusVisible => _interactionRadiusObject != null
+            && _interactionRadiusObject.activeSelf;
         public int MarkerCount => _markers.Count;
         public int RenderedMarkerCount
         {
@@ -84,10 +95,45 @@ namespace AgeOfSurvival.Runtime.Resources
             }
         }
 
+        public int ActiveTransferProgressCount
+        {
+            get
+            {
+                int count = 0;
+                for (int index = 0; index < _markers.Count; index++)
+                {
+                    if (_markers[index].ProgressRoot.activeSelf)
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
+            }
+        }
+
+        public int RenderedGroundPileCount
+        {
+            get
+            {
+                int count = 0;
+                for (int index = 0; index < _markers.Count; index++)
+                {
+                    ResourceMarker marker = _markers[index];
+                    if (marker.Root.activeSelf && marker.BodyRenderer.sprite == _groundSprite)
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
+            }
+        }
+
         public GameObject GeneratedRoot => _generatedRoot != null
             ? _generatedRoot.gameObject
             : null;
-        public Sprite GeneratedBodySprite => _bodySprite;
+        public Sprite GeneratedBodySprite => _resourceSprite;
         public Sprite GeneratedIndicatorSprite => _indicatorSprite;
 
         private void Awake()
@@ -152,6 +198,7 @@ namespace AgeOfSurvival.Runtime.Resources
             DestroyGeneratedAssets();
             _markers.Clear();
             _interactionRequested = false;
+            _hasPlayerPosition = false;
             CurrentTargetId = null;
             LastInteractionResult = null;
             _session = Application.isPlaying
@@ -163,7 +210,7 @@ namespace AgeOfSurvival.Runtime.Resources
                 worldRenderer = GetComponent<DebugIsometricWorld>();
             }
 
-            CreateGeneratedAssets();
+            CreateVisualAssets();
             CreateMarkers();
             SynchronizeVisuals(null);
         }
@@ -185,6 +232,9 @@ namespace AgeOfSurvival.Runtime.Resources
         public void SimulateTick(WorldPosition playerPosition, bool playerMoved)
         {
             long simulationTick = _session.BeginSimulationTick(playerPosition);
+            _hasPlayerPosition = true;
+            SynchronizeInteractionRadius(playerPosition);
+
             if (_interactionRequested)
             {
                 _interactionRequested = false;
@@ -197,7 +247,9 @@ namespace AgeOfSurvival.Runtime.Resources
 
             if (_session.TransferAction != null
                 && _session.TransferAction.Status == TransferActionStatus.Active)
+            {
                 _session.AdvanceTransfer(simulationTick, playerPosition, playerMoved);
+            }
 
             ResourceState target = ResourceTargeting.FindNearestAvailable(
                 _session.Resources,
@@ -207,17 +259,56 @@ namespace AgeOfSurvival.Runtime.Resources
             SynchronizeVisuals(target);
         }
 
-        private void CreateGeneratedAssets()
+        private void CreateVisualAssets()
         {
+            _resourceSprite = PrototypeVisualAssets.CreateSprite(
+                PrototypeVisualAssets.ResourceShrub,
+                new Vector2(0.5f, 0.12f),
+                PrototypeVisualAssets.PixelsPerUnit,
+                "Prototype Resource Shrub");
+            _groundSprite = PrototypeVisualAssets.CreateSprite(
+                PrototypeVisualAssets.GroundBranches,
+                new Vector2(0.5f, 0.2f),
+                PrototypeVisualAssets.PixelsPerUnit,
+                "Prototype Ground Branches");
+            _indicatorSprite = PrototypeVisualAssets.CreateSprite(
+                PrototypeVisualAssets.TargetRing,
+                new Vector2(0.5f, 0.5f),
+                PrototypeVisualAssets.PixelsPerUnit,
+                "Prototype Target Ring");
+            _radiusSprite = PrototypeVisualAssets.CreateSprite(
+                PrototypeVisualAssets.InteractionRadius,
+                new Vector2(0.5f, 0.5f),
+                PrototypeVisualAssets.PixelsPerUnit,
+                "Prototype Interaction Radius");
+            _uiSprite = PrototypeVisualAssets.CreateSprite(
+                PrototypeVisualAssets.UiPixel,
+                new Vector2(0.5f, 0.5f),
+                PrototypeVisualAssets.PixelsPerUnit,
+                "Prototype UI Pixel");
+
+            UsesPrototypeVisuals = _resourceSprite != null
+                && _groundSprite != null
+                && _indicatorSprite != null
+                && _radiusSprite != null
+                && _uiSprite != null;
+
+            if (UsesPrototypeVisuals)
+            {
+                return;
+            }
+
+            DestroyPrototypeSprites();
             _bodyTexture = CreateDiamondTexture(
                 MarkerSizePixels,
                 new Color32(55, 83, 61, 255),
                 new Color32(127, 174, 101, 255));
             _bodyTexture.name = "Generated Debug Resource Texture";
-            _bodySprite = CreateSprite(
+            _resourceSprite = CreateSprite(
                 _bodyTexture,
                 MarkerSizePixels,
                 "Generated Debug Resource Sprite");
+            _groundSprite = _resourceSprite;
 
             _indicatorTexture = CreateDiamondOutlineTexture(
                 IndicatorSizePixels,
@@ -235,6 +326,8 @@ namespace AgeOfSurvival.Runtime.Resources
             rootObject.transform.SetParent(transform, false);
             _generatedRoot = rootObject.transform;
 
+            CreateInteractionRadius();
+
             for (int index = 0; index < _session.Resources.Count; index++)
             {
                 ResourceState resource = _session.Resources[index];
@@ -242,11 +335,12 @@ namespace AgeOfSurvival.Runtime.Resources
                 markerObject.transform.SetParent(_generatedRoot, false);
 
                 var bodyRenderer = markerObject.AddComponent<SpriteRenderer>();
-                bodyRenderer.sprite = _bodySprite;
+                bodyRenderer.sprite = _resourceSprite;
                 bodyRenderer.sortingOrder = 90;
 
                 var targetObject = new GameObject("Target Indicator");
                 targetObject.transform.SetParent(markerObject.transform, false);
+                targetObject.transform.localPosition = new Vector3(0f, -0.02f, 0f);
                 var targetRenderer = targetObject.AddComponent<SpriteRenderer>();
                 targetRenderer.sprite = _indicatorSprite;
                 targetRenderer.sortingOrder = 89;
@@ -254,37 +348,119 @@ namespace AgeOfSurvival.Runtime.Resources
 
                 var quantityObject = new GameObject("Ground Quantity");
                 quantityObject.transform.SetParent(markerObject.transform, false);
-                quantityObject.transform.localPosition = new Vector3(0.32f, 0.18f, 0f);
+                quantityObject.transform.localPosition = new Vector3(0.24f, 0.18f, 0f);
                 var quantityLabel = quantityObject.AddComponent<TextMesh>();
-                quantityLabel.fontSize = 28;
-                quantityLabel.characterSize = 0.035f;
-                quantityLabel.color = Color.white;
+                quantityLabel.fontSize = 30;
+                quantityLabel.fontStyle = FontStyle.Bold;
+                quantityLabel.characterSize = 0.032f;
+                quantityLabel.color = new Color32(250, 244, 215, 255);
                 quantityLabel.anchor = TextAnchor.MiddleLeft;
-                quantityLabel.GetComponent<MeshRenderer>().sortingOrder = 92;
+                quantityLabel.GetComponent<MeshRenderer>().sortingOrder = 94;
+
+                CreateProgressBar(
+                    markerObject.transform,
+                    out GameObject progressRoot,
+                    out SpriteRenderer progressFill);
 
                 _markers.Add(new ResourceMarker(
                     resource,
                     markerObject,
+                    bodyRenderer,
                     targetObject,
-                    quantityLabel));
+                    quantityLabel,
+                    progressRoot,
+                    progressFill));
             }
+        }
+
+        private void CreateInteractionRadius()
+        {
+            _interactionRadiusObject = new GameObject("Interaction Radius");
+            _interactionRadiusObject.transform.SetParent(_generatedRoot, false);
+            var renderer = _interactionRadiusObject.AddComponent<SpriteRenderer>();
+            renderer.sprite = _radiusSprite;
+            renderer.sortingOrder = 80;
+
+            float scale = interactionRadius <= 0f
+                ? 0f
+                : interactionRadius / DefaultRadiusArtwork * (4f / 3f);
+            _interactionRadiusObject.transform.localScale = new Vector3(scale, scale, 1f);
+            _interactionRadiusObject.SetActive(false);
+        }
+
+        private void CreateProgressBar(
+            Transform marker,
+            out GameObject progressRoot,
+            out SpriteRenderer progressFill)
+        {
+            progressRoot = new GameObject("Transfer Progress");
+            progressRoot.transform.SetParent(marker, false);
+            progressRoot.transform.localPosition = new Vector3(0f, 0.72f, 0f);
+
+            var backgroundObject = new GameObject("Background");
+            backgroundObject.transform.SetParent(progressRoot.transform, false);
+            var background = backgroundObject.AddComponent<SpriteRenderer>();
+            background.sprite = _uiSprite;
+            background.color = new Color32(24, 29, 31, 230);
+            background.sortingOrder = 95;
+            backgroundObject.transform.localScale = new Vector3(
+                ProgressFullScaleX + 0.8f,
+                1.6f,
+                1f);
+
+            var fillObject = new GameObject("Fill");
+            fillObject.transform.SetParent(progressRoot.transform, false);
+            progressFill = fillObject.AddComponent<SpriteRenderer>();
+            progressFill.sprite = _uiSprite;
+            progressFill.color = new Color32(235, 188, 79, 255);
+            progressFill.sortingOrder = 96;
+            SetProgress(progressFill, 0f);
+            progressRoot.SetActive(false);
+        }
+
+        private void SynchronizeInteractionRadius(WorldPosition playerPosition)
+        {
+            if (_interactionRadiusObject == null || worldRenderer == null)
+            {
+                return;
+            }
+
+            _interactionRadiusObject.SetActive(
+                _hasPlayerPosition && _radiusSprite != null && interactionRadius > 0f);
+            _interactionRadiusObject.transform.position =
+                worldRenderer.LogicalToWorldPosition(playerPosition, 0f, -0.01f);
         }
 
         private void SynchronizeVisuals(ResourceState target)
         {
+            TransferActionState action = _session.TransferAction;
+
             for (int index = 0; index < _markers.Count; index++)
             {
                 ResourceMarker marker = _markers[index];
                 bool available = marker.Resource.Availability == ResourceAvailability.Available;
                 GroundContainerState ground = FindGroundFor(marker.Resource);
                 int groundQuantity = ground == null ? 0 : InventoryOperations.Count(
-                    ground.Container, InventoryPrototypeCatalog.Branches.Id);
+                    ground.Container,
+                    InventoryPrototypeCatalog.Branches.Id);
                 bool visible = available || groundQuantity > 0;
                 marker.Root.SetActive(visible);
+                marker.BodyRenderer.sprite = available ? _resourceSprite : _groundSprite;
                 marker.TargetIndicator.SetActive(
                     available && ReferenceEquals(marker.Resource, target));
                 marker.QuantityLabel.gameObject.SetActive(groundQuantity > 0);
-                marker.QuantityLabel.text = groundQuantity > 0 ? $"Branches x{groundQuantity}" : string.Empty;
+                marker.QuantityLabel.text = groundQuantity > 0 ? $"x{groundQuantity}" : string.Empty;
+
+                bool activeTransferSource = visible
+                    && ground != null
+                    && action != null
+                    && action.Status == TransferActionStatus.Active
+                    && ground.Container.Id.Equals(action.SourceId);
+                marker.ProgressRoot.SetActive(activeTransferSource && _uiSprite != null);
+                if (activeTransferSource)
+                {
+                    SetProgress(marker.ProgressFill, (float)action.ProgressAt(_session.CurrentTick));
+                }
 
                 if (visible && worldRenderer != null)
                 {
@@ -297,14 +473,32 @@ namespace AgeOfSurvival.Runtime.Resources
             }
         }
 
+        private static void SetProgress(SpriteRenderer fill, float progress)
+        {
+            float clamped = Mathf.Clamp01(progress);
+            float visibleProgress = Mathf.Max(0.02f, clamped);
+            fill.transform.localScale = new Vector3(
+                ProgressFullScaleX * visibleProgress,
+                1f,
+                1f);
+            fill.transform.localPosition = new Vector3(
+                -0.25f + (0.25f * visibleProgress),
+                0f,
+                0f);
+        }
+
         private GroundContainerState FindGroundFor(ResourceState resource)
         {
             GroundContainerId expectedId = ResourceYieldOperations.GroundIdFor(resource.Id);
             for (int index = 0; index < _session.GroundContainers.Count; index++)
             {
                 GroundContainerState ground = _session.GroundContainers[index];
-                if (ground.Id.Equals(expectedId)) return ground;
+                if (ground.Id.Equals(expectedId))
+                {
+                    return ground;
+                }
             }
+
             return null;
         }
 
@@ -355,19 +549,46 @@ namespace AgeOfSurvival.Runtime.Resources
                 DestroyUnityObject(staleRoot.gameObject);
             }
 
+            _interactionRadiusObject = null;
             _markers.Clear();
         }
 
         private void DestroyGeneratedAssets()
         {
-            DestroyUnityObject(_bodySprite);
-            DestroyUnityObject(_indicatorSprite);
-            DestroyUnityObject(_bodyTexture);
-            DestroyUnityObject(_indicatorTexture);
-            _bodySprite = null;
-            _indicatorSprite = null;
+            if (UsesPrototypeVisuals)
+            {
+                DestroyPrototypeSprites();
+            }
+            else
+            {
+                DestroyUnityObject(_resourceSprite);
+                DestroyUnityObject(_indicatorSprite);
+                DestroyUnityObject(_bodyTexture);
+                DestroyUnityObject(_indicatorTexture);
+                _resourceSprite = null;
+                _groundSprite = null;
+                _indicatorSprite = null;
+            }
+
+            _radiusSprite = null;
+            _uiSprite = null;
             _bodyTexture = null;
             _indicatorTexture = null;
+            UsesPrototypeVisuals = false;
+        }
+
+        private void DestroyPrototypeSprites()
+        {
+            PrototypeVisualAssets.DestroyRuntimeSprite(_resourceSprite);
+            PrototypeVisualAssets.DestroyRuntimeSprite(_groundSprite);
+            PrototypeVisualAssets.DestroyRuntimeSprite(_indicatorSprite);
+            PrototypeVisualAssets.DestroyRuntimeSprite(_radiusSprite);
+            PrototypeVisualAssets.DestroyRuntimeSprite(_uiSprite);
+            _resourceSprite = null;
+            _groundSprite = null;
+            _indicatorSprite = null;
+            _radiusSprite = null;
+            _uiSprite = null;
         }
 
         private static Sprite CreateSprite(
@@ -473,19 +694,28 @@ namespace AgeOfSurvival.Runtime.Resources
             public ResourceMarker(
                 ResourceState resource,
                 GameObject root,
+                SpriteRenderer bodyRenderer,
                 GameObject targetIndicator,
-                TextMesh quantityLabel)
+                TextMesh quantityLabel,
+                GameObject progressRoot,
+                SpriteRenderer progressFill)
             {
                 Resource = resource;
                 Root = root;
+                BodyRenderer = bodyRenderer;
                 TargetIndicator = targetIndicator;
                 QuantityLabel = quantityLabel;
+                ProgressRoot = progressRoot;
+                ProgressFill = progressFill;
             }
 
             public ResourceState Resource { get; }
             public GameObject Root { get; }
+            public SpriteRenderer BodyRenderer { get; }
             public GameObject TargetIndicator { get; }
             public TextMesh QuantityLabel { get; }
+            public GameObject ProgressRoot { get; }
+            public SpriteRenderer ProgressFill { get; }
         }
     }
 }

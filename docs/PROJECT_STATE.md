@@ -21,7 +21,8 @@ Lots validés et commités :
 - `1a1f280` — `feat: add resource interaction` ;
 - `f44bae1` — `feat: add core inventory containers` ;
 - `6d5b4dd` — `feat: add inventory equipment UI` ;
-- `dbcd442` — `feat: connect timed resource transfers`.
+- `dbcd442` — `feat: connect timed resource transfers`;
+- `93870f1` — `fix: harden inventory transfer invariants`.
 
 État validé au commit `26a1a27` :
 
@@ -96,6 +97,17 @@ Le lot 5C ajoute :
 - 19 nouveaux cas EditMode, soit 103/103 réussis graphiquement et en batchmode ;
 - 12 assertions Play Mode sur le cycle complet du lot.
 
+La revue indépendante des lots 5A à 5C a ensuite renforcé les contrats de
+transfert et les sélections Runtime dans le commit `93870f1`. La suite validée
+est désormais de **113/113 cas EditMode** dans l'éditeur et en batchmode, avec
+Play Mode fonctionnel et Console propre.
+
+Le lot 5V est préparé mais pas encore validé localement. Il ajoute uniquement
+une couche de lisibilité visuelle temporaire : sol isométrique distinct, joueur,
+ressource, reste au sol, cible, rayon d'interaction et progression en pixel art.
+Les PNG sont produits dans le projet, remplaçables et sans dépendance tierce. Le
+Core, les règles de gameplay et les contrôles ne changent pas.
+
 ## Limites techniques connues
 
 - `InventoryOperations` garantit l'identité unique à l'intérieur d'un conteneur,
@@ -108,9 +120,11 @@ Le lot 5C ajoute :
 
 ## Prochaine action
 
-1. Définir le profil de surcharge progressif du lot 5D.
-2. Appliquer son multiplicateur au déplacement Core existant.
-3. Exposer niveau, vitesse et possibilité de course dans l'interface prototype.
+1. Importer et compiler le lot 5V dans Unity 6000.3.19f1.
+2. Obtenir 116/116 cas EditMode en batchmode et dans le Test Runner graphique.
+3. Vérifier visuellement déplacement, ciblage, rayon, reste au sol et progression,
+   puis commiter séparément le lot de lisibilité.
+4. Cadrer ensuite le profil de surcharge progressif du lot 5D avec Naël.
 
 ## Dépôts archivés
 

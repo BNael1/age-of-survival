@@ -51,6 +51,31 @@ namespace AgeOfSurvival.Runtime.Tests
         }
 
         [Test]
+        public void PrototypeVisualsShowInteractionRadiusAndActiveTransferProgress()
+        {
+            GameObject root = CreateAdapter(out DebugResourceInteraction adapter);
+
+            try
+            {
+                adapter.SimulateTick(StartPosition);
+
+                Assert.That(adapter.UsesPrototypeVisuals, Is.True);
+                Assert.That(adapter.InteractionRadiusVisible, Is.True);
+                Assert.That(adapter.ActiveTransferProgressCount, Is.EqualTo(0));
+
+                adapter.QueueInteraction();
+                adapter.SimulateTick(StartPosition);
+
+                Assert.That(adapter.ActiveTransferProgressCount, Is.EqualTo(1));
+                Assert.That(adapter.RenderedGroundPileCount, Is.EqualTo(1));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
         public void HarvestedResourceLeavesVisibleGroundYieldUntilTransferCompletes()
         {
             GameObject root = CreateAdapter(out DebugResourceInteraction adapter);

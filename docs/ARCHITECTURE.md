@@ -191,3 +191,23 @@ au sol. Le marqueur Unity reste présent tant que le conteneur Core n'est pas vi
 La troisième `ListView` et la barre de progression consomment le view-model de
 session. La progression affichée est calculée depuis les ticks du Core ; aucune
 durée métier ne dépend de `Time.deltaTime`.
+
+## Lisibilité visuelle temporaire du prototype
+
+Le lot 5V ne modifie aucune frontière métier. Les adaptateurs Runtime chargent
+des textures PNG temporaires depuis
+`Assets/AgeOfSurvival/Runtime/Resources/PrototypeVisuals/` au moyen de
+`PrototypeVisualAssets`, puis créent des wrappers `Sprite` détruits avec les
+objets de débogage. Les textures importées restent des assets Unity partagés et
+ne sont jamais détruites par les adaptateurs.
+
+Le sol distingue visuellement cellules de base, accents et bordure. Le joueur,
+les ressources disponibles et les rendements au sol utilisent des silhouettes
+séparées. Le rayon d'interaction et la progression de transfert sont des vues
+dérivées de la position et de l'action Core existantes ; ils ne portent aucune
+règle de portée ou de durée.
+
+Chaque adaptateur conserve son rendu géométrique généré au runtime comme
+solution de repli lorsque les textures temporaires sont absentes. Cette couche
+est donc réversible et remplaçable sans changement du Core, des identifiants,
+de l'entrée ou de la simulation.

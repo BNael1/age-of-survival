@@ -31,7 +31,8 @@ namespace AgeOfSurvival.Runtime.Player
         private PlayerState _player;
         private Transform _visual;
         private Texture2D _generatedTexture;
-        private Sprite _generatedSprite;
+        private Sprite _visualSprite;
+        private bool _usesPrototypeVisual;
 
         private Keyboard _keyboard;
         private KeyControl _upKey;
@@ -199,18 +200,28 @@ namespace AgeOfSurvival.Runtime.Player
             visualObject.transform.SetParent(transform, false);
             _visual = visualObject.transform;
 
-            _generatedTexture = CreateMarkerTexture();
-            _generatedSprite = Sprite.Create(
-                _generatedTexture,
-                new Rect(0f, 0f, MarkerSizePixels, MarkerSizePixels),
-                new Vector2(0.5f, 0.5f),
-                PixelsPerUnit,
-                0,
-                SpriteMeshType.FullRect);
-            _generatedSprite.name = "Generated Debug Player Marker";
+            _visualSprite = PrototypeVisualAssets.CreateSprite(
+                PrototypeVisualAssets.PlayerSurvivor,
+                new Vector2(0.5f, 0.12f),
+                PrototypeVisualAssets.PixelsPerUnit,
+                "Prototype Survivor");
+            _usesPrototypeVisual = _visualSprite != null;
+
+            if (!_usesPrototypeVisual)
+            {
+                _generatedTexture = CreateMarkerTexture();
+                _visualSprite = Sprite.Create(
+                    _generatedTexture,
+                    new Rect(0f, 0f, MarkerSizePixels, MarkerSizePixels),
+                    new Vector2(0.5f, 0.5f),
+                    PixelsPerUnit,
+                    0,
+                    SpriteMeshType.FullRect);
+                _visualSprite.name = "Generated Debug Player Marker";
+            }
 
             var renderer = visualObject.AddComponent<SpriteRenderer>();
-            renderer.sprite = _generatedSprite;
+            renderer.sprite = _visualSprite;
             renderer.sortingOrder = 100;
         }
 
@@ -286,10 +297,19 @@ namespace AgeOfSurvival.Runtime.Player
                 _visual = null;
             }
 
-            DestroyUnityObject(_generatedSprite);
-            DestroyUnityObject(_generatedTexture);
-            _generatedSprite = null;
+            if (_usesPrototypeVisual)
+            {
+                PrototypeVisualAssets.DestroyRuntimeSprite(_visualSprite);
+            }
+            else
+            {
+                DestroyUnityObject(_visualSprite);
+                DestroyUnityObject(_generatedTexture);
+            }
+
+            _visualSprite = null;
             _generatedTexture = null;
+            _usesPrototypeVisual = false;
         }
 
         private static void DestroyUnityObject(Object target)

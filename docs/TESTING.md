@@ -145,3 +145,18 @@ commande `E`, rendement au sol, progression visible, transfert de trois branches
 après la durée, reste exact de trois branches, interruption par déplacement sans
 mutation, reprise ultérieure et disparition du marqueur seulement lorsque la
 source est vide. La Console est propre après retrait du helper temporaire.
+
+## Lot 5V — validation requise
+
+Le lot 5V ajoute trois cas EditMode Runtime :
+
+- disponibilité de toutes les textures temporaires via `Resources` ;
+- utilisation de trois sprites distincts pour les catégories du sol ;
+- visibilité du rayon d'interaction, du reste au sol et de la progression active.
+
+Total attendu après import : **116/116 cas EditMode** dans le Test Runner
+graphique et en batchmode. La validation Play Mode doit vérifier que le joueur,
+les ressources, les piles au sol, la cible, le rayon et la progression restent
+lisibles pendant le déplacement et les transferts, sans changement de portée,
+de durée, de quantités ou de contrôles. La Console doit rester sans erreur ni
+avertissement provenant du projet.
