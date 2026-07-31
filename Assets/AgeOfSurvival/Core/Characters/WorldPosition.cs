@@ -42,6 +42,13 @@ namespace AgeOfSurvival.Core.Characters
             return new WorldPosition(X + deltaX, Y + deltaY);
         }
 
+        public double DistanceSquaredTo(WorldPosition other)
+        {
+            double deltaX = X - other.X;
+            double deltaY = Y - other.Y;
+            return (deltaX * deltaX) + (deltaY * deltaY);
+        }
+
         public bool Equals(WorldPosition other)
         {
             return X.Equals(other.X) && Y.Equals(other.Y);

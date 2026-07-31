@@ -25,7 +25,7 @@ Les tests EditMode couvrent le Core. Les tests PlayMode seront ajoutés seulemen
 ## Invariants initiaux
 
 - aucune référence `UnityEngine` dans `AgeOfSurvival.Core` ;
-- coordonnées logiques entières ;
+- coordonnées de grille entières ; positions d’entités continues et finies ;
 - conversion position/index vérifiée et stable ;
 - tick fixe indépendant du framerate ;
 - identifiants persistants stables lorsqu’ils seront introduits ;
@@ -75,3 +75,35 @@ Le lot 3 introduit un état de joueur continu dans `AgeOfSurvival.Core` :
 - il ne possède ni collision, ni animation, ni caméra suiveuse, ni règle de terrain.
 
 Le clavier et le marqueur peuvent être remplacés sans modifier la règle de déplacement du Core.
+
+## Première interaction avec une ressource
+
+Le lot 4 ajoute au Core un petit état de ressource indépendant de Unity :
+
+- `ResourceId` fournit une identité stable et un ordre ordinal déterministe ;
+- `ResourceState` associe cet identifiant à une `WorldPosition` et à l'état
+  `Available` ou `Harvested` ;
+- `ResourceTargeting` choisit la ressource disponible la plus proche dans un
+  rayon inclusif, avec départage par identifiant à distance égale ;
+- `ResourceInteraction` applique une commande explicite et récolte au plus une
+  ressource.
+
+Le flux d'intégration est :
+
+```text
+Input System -> adaptateur Unity -> commande -> Core -> état ressource -> rendu Unity
+```
+
+`DebugResourceInteraction` met l'appui sur `E` en attente. Le
+`DebugPlayerController` le fait consommer dans son callback de tick fixe après
+le déplacement du joueur. L'adaptateur recalcule ensuite la cible via le Core et
+met à jour des marqueurs et un contour générés au runtime. Il ne contient ni
+règle de distance, ni mutation métier cachée, ni collider, ni récompense.
+
+Le rayon `1.5` et les trois positions de ressources de `SampleScene` sont des
+paramètres de débogage temporaires, pas des décisions d'équilibrage ou d'art.
+
+`ExecuteAlways` sert uniquement à garantir le nettoyage des assets générés lors
+des tests EditMode. La construction automatique, l'abonnement aux entrées et la
+boucle `Update` sont bloqués hors Play Mode. `Rebuild()` reste une opération
+explicite de débogage et de test, pas un outil de création de contenu persistant.

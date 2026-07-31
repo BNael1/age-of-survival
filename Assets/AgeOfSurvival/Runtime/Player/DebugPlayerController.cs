@@ -1,10 +1,10 @@
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Simulation;
 using AgeOfSurvival.Runtime.Rendering;
+using AgeOfSurvival.Runtime.Resources;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
-using UnityEngine.Tilemaps;
 
 namespace AgeOfSurvival.Runtime.Player
 {
@@ -20,6 +20,7 @@ namespace AgeOfSurvival.Runtime.Player
         private const float PixelsPerUnit = 64f;
 
         [SerializeField] private DebugIsometricWorld worldRenderer;
+        [SerializeField] private DebugResourceInteraction resourceInteraction;
         [SerializeField] private Vector2 startPosition = new Vector2(4.5f, 4.5f);
         [SerializeField, Min(0f)] private float movementSpeed = 3f;
         [SerializeField, Min(1)] private int ticksPerSecond = 60;
@@ -53,6 +54,11 @@ namespace AgeOfSurvival.Runtime.Player
                 worldRenderer = GetComponent<DebugIsometricWorld>();
             }
 
+            if (resourceInteraction == null)
+            {
+                resourceInteraction = GetComponent<DebugResourceInteraction>();
+            }
+
             if (worldRenderer == null || worldRenderer.Tilemap == null)
             {
                 Debug.LogError(
@@ -67,6 +73,7 @@ namespace AgeOfSurvival.Runtime.Player
 
             CreateVisual();
             SynchronizeVisual();
+            resourceInteraction?.SimulateTick(_player.Position);
         }
 
         private void Update()
@@ -80,14 +87,16 @@ namespace AgeOfSurvival.Runtime.Player
             Vector2 worldDirection = ScreenToWorldDirection(screenDirection);
             double tickDuration = _clock.TickDurationSeconds;
 
-            _clock.Advance(
-                Time.deltaTime,
-                () => PlayerMovement.Step(
+            _clock.Advance(Time.deltaTime, () =>
+            {
+                PlayerMovement.Step(
                     _player,
                     worldDirection.x,
                     worldDirection.y,
                     movementSpeed,
-                    tickDuration));
+                    tickDuration);
+                resourceInteraction?.SimulateTick(_player.Position);
+            });
 
             SynchronizeVisual();
         }
@@ -210,24 +219,10 @@ namespace AgeOfSurvival.Runtime.Player
                 return;
             }
 
-            Tilemap tilemap = worldRenderer.Tilemap;
-            if (tilemap == null)
-            {
-                return;
-            }
-
-            Vector3 origin = tilemap.GetCellCenterWorld(Vector3Int.zero);
-            Vector3 xBasis = tilemap.GetCellCenterWorld(Vector3Int.right) - origin;
-            Vector3 yBasis = tilemap.GetCellCenterWorld(Vector3Int.up) - origin;
-            WorldPosition position = _player.Position;
-
-            Vector3 renderedPosition = origin
-                + (xBasis * (float)position.X)
-                + (yBasis * (float)position.Y);
-            renderedPosition.y += visualYOffset;
-            renderedPosition.z = -0.1f;
-
-            _visual.position = renderedPosition;
+            _visual.position = worldRenderer.LogicalToWorldPosition(
+                _player.Position,
+                visualYOffset,
+                -0.1f);
         }
 
         private static Texture2D CreateMarkerTexture()

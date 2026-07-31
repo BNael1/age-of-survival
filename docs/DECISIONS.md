@@ -47,3 +47,20 @@ Le lot initial utilise des tuiles et couleurs générées au runtime comme visue
 Le premier joueur utilise une position continue dans le Core et un déplacement à huit directions normalisé. Le lot initial lit uniquement ZQSD avec le package officiel Unity Input System, en recherchant les caractères produits par la disposition active du clavier.
 
 Cette lecture directe des touches est un adaptateur minimal et réversible. Une architecture d’actions reconfigurables sera décidée lorsqu’un second périphérique, les menus de remappage ou plusieurs contextes d’entrée deviendront nécessaires. Les flèches ne sont pas ajoutées comme raccourci redondant dans ce lot.
+
+## ADR-0007 — Interaction minimale avec ciblage automatique
+
+**Statut : active**
+**Date : 31 juillet 2026**
+
+Le premier système de ressource cible automatiquement la ressource
+`Available` la plus proche dans un rayon limité. À distance égale, l'identifiant
+stable départage les candidates de façon déterministe.
+
+La touche `E` est l'unique commande d'interaction de ce lot. L'adaptateur Unity
+met cette commande en attente et le Core la consomme sur un tick fixe. Les
+marqueurs de ressources et l'indicateur de cible sont des visuels temporaires
+générés au runtime.
+
+Une interaction réussie passe une seule ressource à `Harvested`. Ce lot ne crée
+aucune récompense et ne se connecte pas à un inventaire.

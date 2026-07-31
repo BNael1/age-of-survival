@@ -1,3 +1,4 @@
+using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.World;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -29,6 +30,28 @@ namespace AgeOfSurvival.Runtime.Rendering
 
         public DenseGrid<byte> World => _world;
         public Tilemap Tilemap => _tilemap;
+
+        public Vector3 LogicalToWorldPosition(
+            WorldPosition logicalPosition,
+            float visualYOffset,
+            float visualZ)
+        {
+            if (_tilemap == null)
+            {
+                return transform.position;
+            }
+
+            Vector3 origin = _tilemap.GetCellCenterWorld(Vector3Int.zero);
+            Vector3 xBasis = _tilemap.GetCellCenterWorld(Vector3Int.right) - origin;
+            Vector3 yBasis = _tilemap.GetCellCenterWorld(Vector3Int.up) - origin;
+
+            Vector3 renderedPosition = origin
+                + (xBasis * (float)logicalPosition.X)
+                + (yBasis * (float)logicalPosition.Y);
+            renderedPosition.y += visualYOffset;
+            renderedPosition.z = visualZ;
+            return renderedPosition;
+        }
 
         private void Awake()
         {

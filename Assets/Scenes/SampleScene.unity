@@ -360,6 +360,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1872500001}
   - component: {fileID: 1872500002}
+  - component: {fileID: 1872500004}
   - component: {fileID: 1872500003}
   m_Layer: 0
   m_Name: Age of Survival Debug World
@@ -413,8 +414,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   worldRenderer: {fileID: 1872500002}
+  resourceInteraction: {fileID: 1872500004}
   startPosition: {x: 4.5, y: 4.5}
   movementSpeed: 3
   ticksPerSecond: 60
   maxTicksPerFrame: 8
   visualYOffset: 0.18
+--- !u!114 &1872500004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1872500000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ec4a20c6354454a996eb419b87764c4, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  worldRenderer: {fileID: 1872500002}
+  interactionRadius: 1.5
+  visualYOffset: 0.14
+  resourcePositions:
+  - {x: 5.25, y: 4.5}
+  - {x: 4.5, y: 5.75}
+  - {x: 3.25, y: 4.5}

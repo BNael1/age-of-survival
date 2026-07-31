@@ -60,4 +60,23 @@ Le lot 3 ajoute onze cas EditMode :
 - sept cas sur l’état continu et la règle de déplacement du Core ;
 - quatre cas paramétrés sur la conversion des directions écran vers le plan isométrique.
 
-Validation du 31 juillet 2026 : **28/28 cas réussis** dans l’éditeur et **28/28 cas réussis** en batchmode, avec un code de sortie 0. Le déplacement ZQSD dans huit directions, la normalisation diagonale et la caméra fixe ont également été vérifiés manuellement dans la Game View.
+Validation du 31 juillet 2026 : **28/28 cas réussis** dans l'éditeur et **28/28 cas réussis** en batchmode, avec un code de sortie 0. Le déplacement ZQSD dans huit directions, la normalisation diagonale et la caméra fixe ont également été vérifiés manuellement dans la Game View.
+
+## Lot 4 — validation réalisée
+
+Le lot 4 ajoute dix-sept cas EditMode :
+
+- onze cas Core sur l'identité stable, le ciblage déterministe, le rayon
+  inclusif, les ressources récoltées et la récolte unique ;
+- six cas Runtime sur la construction des marqueurs, l'indicateur de cible, la
+  disparition d'une ressource récoltée, le rebuild, le nettoyage et la mise en
+  file d'une interaction sans clavier physique.
+
+Validation du 31 juillet 2026 : **45/45 cas réussis** dans l’éditeur et en
+batchmode, zéro échec, zéro cas ignoré et code de sortie 0. La compilation avec
+Unity `6000.3.19f1` est réussie.
+
+La validation Play Mode a confirmé le ciblage unique, la disparition et le
+changement de cible sur trois récoltes successives, l'absence de cible et de
+mutation hors portée, ainsi qu'une Console à zéro erreur. Le Test Runner
+graphique a également terminé à **45/45**, sans échec ni cas ignoré.
