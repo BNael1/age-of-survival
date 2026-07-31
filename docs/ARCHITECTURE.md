@@ -43,3 +43,16 @@ Assets/AgeOfSurvival/
 ```
 
 Le monde sera conçu pour un découpage en chunks, mais la taille de production des chunks n’est pas encore décidée.
+
+## Premier adaptateur de rendu
+
+Le lot 2 introduit `AgeOfSurvival.Runtime`, qui dépend de `AgeOfSurvival.Core`. La dépendance inverse est interdite.
+
+`DebugIsometricWorld` est un adaptateur temporaire :
+
+- il construit une `DenseGrid<byte>` déterministe ;
+- il traduit les coordonnées logiques en cellules d’une Tilemap Unity isométrique ;
+- il génère ses visuels de débogage au runtime ;
+- il ne définit ni terrain de production, ni gameplay, ni sauvegarde.
+
+Cette preuve d’intégration pourra être remplacée sans modifier les primitives du Core.

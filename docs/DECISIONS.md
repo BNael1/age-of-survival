@@ -29,3 +29,12 @@ Ne pas introduire Entities/DOTS. Jobs et Burst ne seront étudiés qu’après p
 **Date : 31 juillet 2026**
 
 Chaque lot doit avoir un comportement attendu, des tests, un diff lisible et un petit commit.
+
+## ADR-0005 — Tilemap isométrique comme premier adaptateur de rendu
+
+**Statut : active**
+**Date : 31 juillet 2026**
+
+Utiliser la Tilemap isométrique officielle de Unity pour la première représentation du monde. La Tilemap reste un adaptateur de présentation alimenté par des données du Core ; elle ne devient pas la source de vérité de la simulation.
+
+Le lot initial utilise des tuiles et couleurs générées au runtime comme visuels de débogage. Elles ne constituent pas une décision de direction artistique.

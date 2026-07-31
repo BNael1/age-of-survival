@@ -42,3 +42,13 @@ TestResults/editmode.log
 ```
 
 Le dossier `TestResults/` est ignoré par Git.
+
+## Lot 2 — validation réalisée
+
+Le lot 2 ajoute trois cas EditMode :
+
+- déterminisme du motif de débogage ;
+- création d’une Tilemap isométrique contenant une tuile par cellule du Core ;
+- reconstruction sans duplication de hiérarchie.
+
+Validation du 31 juillet 2026 : **17/17 cas réussis** dans l’éditeur et **17/17 cas réussis** en batchmode. La grille isométrique 10 × 10 a également été vérifiée manuellement dans la Game View.
