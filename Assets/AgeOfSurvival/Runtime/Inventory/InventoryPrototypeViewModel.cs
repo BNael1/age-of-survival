@@ -96,7 +96,7 @@ namespace AgeOfSurvival.Runtime.Inventory
         public static InventoryPrototypeViewModel Build(InventoryPrototypeSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            return Build(session.Inventory, session.FirstNonEmptyGround(), session.CurrentTick, session.TransferAction);
+            return Build(session.Inventory, session.GroundForView(), session.CurrentTick, session.TransferAction);
         }
 
         private static InventoryPrototypeViewModel Build(

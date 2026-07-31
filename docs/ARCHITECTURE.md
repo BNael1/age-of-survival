@@ -132,6 +132,13 @@ d'abord ce qui rentre dans la destination, puis retire exactement cette quantit�
 de la source. La somme des quantités reste donc conservée, y compris lors d'un
 transfert partiel ou vers une destination pleine.
 
+La frontière actuelle de `InventoryOperations` est locale à un conteneur. Elle
+ne suffit pas encore à garantir qu'une même `ItemInstanceId` n'existe jamais
+dans deux conteneurs d'un même joueur, ni qu'un retrait d'objet unique efface ou
+refuse une référence d'équipement active. Ces invariants devront être portés par
+une opération agrégée avant d'autoriser le dépôt au sol, la destruction ou la
+persistance d'objets uniques équipés.
+
 Ce lot ne contient ni `MonoBehaviour`, ni rendu, ni UI, ni état possédé par un
 `GameObject`. Les adaptateurs Unity et l'équipement sont introduits dans les lots
 suivants sans déplacer la source de vérité hors du Core.

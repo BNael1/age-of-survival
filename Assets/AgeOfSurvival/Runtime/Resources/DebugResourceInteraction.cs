@@ -299,10 +299,11 @@ namespace AgeOfSurvival.Runtime.Resources
 
         private GroundContainerState FindGroundFor(ResourceState resource)
         {
+            GroundContainerId expectedId = ResourceYieldOperations.GroundIdFor(resource.Id);
             for (int index = 0; index < _session.GroundContainers.Count; index++)
             {
                 GroundContainerState ground = _session.GroundContainers[index];
-                if (ground.Position.Equals(resource.Position)) return ground;
+                if (ground.Id.Equals(expectedId)) return ground;
             }
             return null;
         }

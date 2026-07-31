@@ -213,6 +213,50 @@ namespace AgeOfSurvival.Runtime.Tests.Inventory
             Assert.That(view.TransferProgress, Is.GreaterThan(0.4).And.LessThan(0.6));
         }
 
+        [Test]
+        public void CraftedInconsistentSelectionsAreRejectedWithoutThrowing()
+        {
+            var session = new InventoryPrototypeSession();
+            var stackMarkedUnique = new InventorySelection(
+                session.MainContainer.Id,
+                InventoryPrototypeCatalog.Branches.Id,
+                session.Tool.InstanceId,
+                true);
+            var bagWithWrongOwner = new InventorySelection(
+                session.BagContainer.Id,
+                InventoryPrototypeCatalog.Bag.Id,
+                session.Bag.InstanceId,
+                true);
+
+            Assert.That(
+                session.Commands.CanTransfer(stackMarkedUnique, session.BagContainer.Id),
+                Is.False);
+            Assert.That(
+                session.Commands.Transfer(stackMarkedUnique, session.BagContainer.Id).Outcome,
+                Is.EqualTo(InventoryOperationOutcome.Rejected));
+            Assert.That(
+                session.Commands.CanEquip(bagWithWrongOwner, EquipmentSlot.Back),
+                Is.False);
+        }
+
+        [Test]
+        public void GroundViewFollowsActiveTransferSourceInsteadOfFirstHarvestedGround()
+        {
+            var session = new InventoryPrototypeSession();
+            WorldPosition firstPosition = InventoryPrototypeCatalog.ResourcePositions[0];
+            WorldPosition secondPosition = InventoryPrototypeCatalog.ResourcePositions[1];
+
+            session.HarvestAndStartTransfer(firstPosition, 0.1, 1);
+            session.AdvanceTransfer(2, firstPosition, true);
+            session.HarvestAndStartTransfer(secondPosition, 0.1, 3);
+
+            InventoryPrototypeViewModel view = InventoryPrototypeViewModelBuilder.Build(session);
+
+            Assert.That(session.GroundContainers, Has.Count.EqualTo(2));
+            Assert.That(session.TransferAction.SourceId, Is.EqualTo(session.GroundContainers[1].Container.Id));
+            Assert.That(view.Ground.Id, Is.EqualTo(session.GroundContainers[1].Container.Id));
+        }
+
         private static InventorySelection FindSelection(
             InventoryPrototypeSession session,
             string displayName)

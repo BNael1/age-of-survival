@@ -86,6 +86,7 @@ namespace AgeOfSurvival.Runtime.Inventory
             double interactionRadius,
             long currentTick)
         {
+            CurrentPlayerPosition = playerPosition;
             ResourceYieldResult result = ResourceYieldOperations.HarvestToGround(
                 _resources,
                 _groundContainers,
@@ -129,6 +130,7 @@ namespace AgeOfSurvival.Runtime.Inventory
         public bool CanStartGroundTransfer(GroundContainerState ground)
         {
             return ground != null
+                && _groundContainers.Contains(ground)
                 && !ground.IsEmpty
                 && (TransferAction == null || TransferAction.Status != TransferActionStatus.Active)
                 && CurrentPlayerPosition.DistanceSquaredTo(ground.Position)
@@ -143,6 +145,7 @@ namespace AgeOfSurvival.Runtime.Inventory
             WorldPosition playerPosition,
             bool playerMoved)
         {
+            CurrentPlayerPosition = playerPosition;
             if (TransferAction == null)
                 return new TransferActionResult(null, TransferActionReason.InvalidRequest);
             GroundContainerState ground = FindGround(TransferAction.SourceId);
@@ -164,12 +167,48 @@ namespace AgeOfSurvival.Runtime.Inventory
             return null;
         }
 
-        public GroundContainerState FirstNonEmptyGround()
+        public GroundContainerState GroundForView()
         {
-            for (int index = 0; index < _groundContainers.Count; index++)
-                if (!_groundContainers[index].IsEmpty) return _groundContainers[index];
-            return null;
+            if (TransferAction != null)
+            {
+                GroundContainerState actionGround = FindGround(TransferAction.SourceId);
+                if (actionGround != null && !actionGround.IsEmpty)
+                {
+                    return actionGround;
+                }
+            }
+
+            return FindNearestNonEmptyGround(CurrentPlayerPosition);
         }
+
+        public GroundContainerState FindNearestNonEmptyGround(WorldPosition origin)
+        {
+            GroundContainerState nearest = null;
+            double nearestDistanceSquared = double.PositiveInfinity;
+            for (int index = 0; index < _groundContainers.Count; index++)
+            {
+                GroundContainerState candidate = _groundContainers[index];
+                if (candidate.IsEmpty)
+                {
+                    continue;
+                }
+
+                double distanceSquared = origin.DistanceSquaredTo(candidate.Position);
+                if (nearest == null
+                    || distanceSquared < nearestDistanceSquared
+                    || (distanceSquared.Equals(nearestDistanceSquared)
+                        && candidate.Id.CompareTo(nearest.Id) < 0))
+                {
+                    nearest = candidate;
+                    nearestDistanceSquared = distanceSquared;
+                }
+            }
+
+            return nearest;
+        }
+
+        public GroundContainerState FirstNonEmptyGround() =>
+            FindNearestNonEmptyGround(CurrentPlayerPosition);
     }
 
     /// <summary>

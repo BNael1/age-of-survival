@@ -20,7 +20,8 @@ Lots validés et commités :
 - `26a1a27` — `feat: add player movement` ;
 - `1a1f280` — `feat: add resource interaction` ;
 - `f44bae1` — `feat: add core inventory containers` ;
-- `6d5b4dd` — `feat: add inventory equipment UI`.
+- `6d5b4dd` — `feat: add inventory equipment UI` ;
+- `dbcd442` — `feat: connect timed resource transfers`.
 
 État validé au commit `26a1a27` :
 
@@ -94,6 +95,16 @@ Le lot 5C ajoute :
 - maintien du reste exact au sol puis reprise ultérieure ;
 - 19 nouveaux cas EditMode, soit 103/103 réussis graphiquement et en batchmode ;
 - 12 assertions Play Mode sur le cycle complet du lot.
+
+## Limites techniques connues
+
+- `InventoryOperations` garantit l'identité unique à l'intérieur d'un conteneur,
+  mais pas encore l'unicité globale d'une `ItemInstanceId` entre tous les
+  conteneurs d'un `PlayerInventoryState` ;
+- retirer directement un objet unique équipé via une opération de conteneur peut
+  laisser une référence d'équipement orpheline. Avant d'autoriser le dépôt au
+  sol, la destruction ou la persistance d'objets uniques équipés, les mutations
+  devront passer par une frontière agrégée qui maintient ces deux invariants.
 
 ## Prochaine action
 

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace AgeOfSurvival.Core.Inventory
 {
@@ -36,7 +37,8 @@ namespace AgeOfSurvival.Core.Inventory
         public bool Equals(EncumbranceValue other) => Units == other.Units;
         public override bool Equals(object obj) => obj is EncumbranceValue other && Equals(other);
         public override int GetHashCode() => Units.GetHashCode();
-        public override string ToString() => (Units / (decimal)UnitsPerDisplayedUnit).ToString("0.000");
+        public override string ToString() =>
+            (Units / (decimal)UnitsPerDisplayedUnit).ToString("0.000", CultureInfo.InvariantCulture);
 
         public static EncumbranceValue operator +(EncumbranceValue left, EncumbranceValue right) =>
             new EncumbranceValue(checked(left.Units + right.Units));

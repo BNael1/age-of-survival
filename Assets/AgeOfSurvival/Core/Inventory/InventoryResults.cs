@@ -22,11 +22,13 @@ namespace AgeOfSurvival.Core.Inventory
         public int Accepted { get; }
         public int Remaining => Requested - Accepted;
         public bool Changed => Accepted > 0;
-        public InventoryOperationOutcome Outcome => Accepted == Requested
-            ? InventoryOperationOutcome.Complete
-            : Accepted == 0
-                ? InventoryOperationOutcome.DestinationFull
-                : InventoryOperationOutcome.Partial;
+        public InventoryOperationOutcome Outcome => Requested <= 0
+            ? InventoryOperationOutcome.Rejected
+            : Accepted == Requested
+                ? InventoryOperationOutcome.Complete
+                : Accepted == 0
+                    ? InventoryOperationOutcome.DestinationFull
+                    : InventoryOperationOutcome.Partial;
     }
 
     public readonly struct RemoveItemResult

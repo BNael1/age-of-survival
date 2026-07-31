@@ -56,6 +56,59 @@ namespace AgeOfSurvival.Core.Tests.Inventory
         }
 
         [Test]
+        public void NonStackableYieldIsRejectedBeforeHarvest()
+        {
+            var resource = new ResourceState(new ResourceId("tree-01"), Origin);
+            var ground = new List<GroundContainerState>();
+            var tool = new ItemDefinition(
+                new ItemDefinitionId("tool"),
+                "Tool",
+                ItemStateKind.Unique,
+                new EncumbranceValue(500));
+
+            Assert.That(() => ResourceYieldOperations.HarvestToGround(
+                new[] { resource }, ground, Origin, 1.5, tool, 1, new EncumbranceValue(1000)),
+                Throws.ArgumentException);
+            Assert.That(resource.Availability, Is.EqualTo(ResourceAvailability.Available));
+            Assert.That(ground, Is.Empty);
+        }
+
+        [Test]
+        public void ReadOnlyGroundDestinationIsRejectedBeforeHarvest()
+        {
+            var resource = new ResourceState(new ResourceId("tree-01"), Origin);
+            var ground = new List<GroundContainerState>().AsReadOnly();
+
+            Assert.That(() => ResourceYieldOperations.HarvestToGround(
+                new[] { resource }, ground, Origin, 1.5, Branches, 1, new EncumbranceValue(1000)),
+                Throws.ArgumentException);
+            Assert.That(resource.Availability, Is.EqualTo(ResourceAvailability.Available));
+            Assert.That(ground, Is.Empty);
+        }
+
+        [Test]
+        public void DuplicateGroundIdentityIsRejectedBeforeHarvest()
+        {
+            var resource = new ResourceState(new ResourceId("tree-01"), Origin);
+            var container = Container(
+                ResourceYieldOperations.ContainerIdFor(resource.Id).ToString(),
+                1000);
+            var ground = new List<GroundContainerState>
+            {
+                new GroundContainerState(
+                    ResourceYieldOperations.GroundIdFor(resource.Id),
+                    Origin,
+                    container)
+            };
+
+            Assert.That(() => ResourceYieldOperations.HarvestToGround(
+                new[] { resource }, ground, Origin, 1.5, Branches, 1, new EncumbranceValue(1000)),
+                Throws.InvalidOperationException);
+            Assert.That(resource.Availability, Is.EqualTo(ResourceAvailability.Available));
+            Assert.That(ground, Has.Count.EqualTo(1));
+        }
+
+        [Test]
         public void DefaultGroundAndTransferIdentifiersAreSafe()
         {
             Assert.That(default(GroundContainerId).IsValid, Is.False);
@@ -73,6 +126,66 @@ namespace AgeOfSurvival.Core.Tests.Inventory
             Assert.That(result.Succeeded, Is.True);
             Assert.That(result.Action.PlannedQuantity, Is.EqualTo(3));
             Assert.That(result.Action.DurationTicks, Is.EqualTo(60));
+        }
+
+        [Test]
+        public void StartRejectsSameContainerInfiniteRangeAndUniqueDefinitions()
+        {
+            ContainerState source = Container("source", 10000);
+            ContainerState destination = Container("destination", 10000);
+            InventoryOperations.AddStack(source, Branches, 1);
+            var unique = new ItemDefinition(
+                new ItemDefinitionId("tool"),
+                "Tool",
+                ItemStateKind.Unique,
+                new EncumbranceValue(500));
+            InventoryOperations.AddUnique(
+                source,
+                unique,
+                new UniqueItemState(unique.Id, new ItemInstanceId("tool-01")));
+
+            TransferActionResult same = TransferActionOperations.Start(
+                new TransferActionId("same"), source, source, Branches, 1, 0, Origin, 1.5, Timing);
+            TransferActionResult infinite = TransferActionOperations.Start(
+                new TransferActionId("infinite"), source, destination, Branches, 1, 0, Origin,
+                double.PositiveInfinity, Timing);
+            TransferActionResult unsupported = TransferActionOperations.Start(
+                new TransferActionId("unique"), source, destination, unique, 1, 0, Origin, 1.5, Timing);
+
+            Assert.That(same.Reason, Is.EqualTo(TransferActionReason.InvalidRequest));
+            Assert.That(infinite.Reason, Is.EqualTo(TransferActionReason.InvalidRequest));
+            Assert.That(unsupported.Reason, Is.EqualTo(TransferActionReason.InvalidRequest));
+        }
+
+        [Test]
+        public void MissingDependencyFinalizesActiveActionAsFailed()
+        {
+            ContainerState source = Container("source", 10000);
+            ContainerState destination = Container("destination", 10000);
+            InventoryOperations.AddStack(source, Branches, 1);
+            TransferActionState action = Start(source, destination, 1).Action;
+
+            TransferActionResult result = TransferActionOperations.Advance(
+                action, 1, Origin, false, null, destination, Branches);
+
+            Assert.That(result.Reason, Is.EqualTo(TransferActionReason.InvalidRequest));
+            Assert.That(action.Status, Is.EqualTo(TransferActionStatus.Failed));
+            Assert.That(action.FinalizedTick, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void InterruptedProgressFreezesAtFinalizedTick()
+        {
+            ContainerState source = Container("source", 10000);
+            ContainerState destination = Container("destination", 10000);
+            InventoryOperations.AddStack(source, Branches, 1);
+            TransferActionState action = Start(source, destination, 1).Action;
+
+            TransferActionOperations.Advance(action, 1, Origin, true, source, destination, Branches);
+            double interruptedProgress = action.ProgressAt(1);
+
+            Assert.That(action.Status, Is.EqualTo(TransferActionStatus.Interrupted));
+            Assert.That(action.ProgressAt(1000), Is.EqualTo(interruptedProgress).Within(0.0001));
         }
 
         [Test]

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Globalization;
 using System.Linq;
 using AgeOfSurvival.Core.Inventory;
 using NUnit.Framework;
@@ -71,6 +72,32 @@ namespace AgeOfSurvival.Core.Tests.Inventory
             Assert.That(value.ToString(), Is.EqualTo("1.250"));
             Assert.That(value.Multiply(3).Units, Is.EqualTo(3750));
             Assert.That(() => new EncumbranceValue(-1), Throws.TypeOf<ArgumentOutOfRangeException>());
+        }
+
+        [Test]
+        public void DefaultAddResultIsRejectedAndSafe()
+        {
+            AddItemResult result = default;
+
+            Assert.That(result.Outcome, Is.EqualTo(InventoryOperationOutcome.Rejected));
+            Assert.That(result.Changed, Is.False);
+            Assert.That(result.Requested, Is.Zero);
+            Assert.That(result.Accepted, Is.Zero);
+        }
+
+        [Test]
+        public void EncumbranceFormattingIsCultureInvariant()
+        {
+            CultureInfo previous = CultureInfo.CurrentCulture;
+            try
+            {
+                CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
+                Assert.That(new EncumbranceValue(1250).ToString(), Is.EqualTo("1.250"));
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = previous;
+            }
         }
 
         [Test]

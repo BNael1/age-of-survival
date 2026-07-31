@@ -68,12 +68,16 @@ namespace AgeOfSurvival.Core.Inventory
         public double MaximumDistance { get; }
         public TransferActionStatus Status { get; internal set; }
         public TransferActionReason Reason { get; internal set; }
+        public long? FinalizedTick { get; internal set; }
         public int RemainingQuantity => RequestedQuantity - TransferredQuantity;
         public double ProgressAt(long tick)
         {
             if (Status == TransferActionStatus.Completed) return 1.0;
-            if (tick <= StartTick) return 0.0;
-            return Math.Min(1.0, (double)(tick - StartTick) / DurationTicks);
+            long effectiveTick = FinalizedTick.HasValue && tick > FinalizedTick.Value
+                ? FinalizedTick.Value
+                : tick;
+            if (effectiveTick <= StartTick) return 0.0;
+            return Math.Min(1.0, (double)(effectiveTick - StartTick) / DurationTicks);
         }
     }
 
@@ -93,7 +97,9 @@ namespace AgeOfSurvival.Core.Inventory
             double maximumDistance, TransferTimingDefinition timing)
         {
             if (!id.IsValid || source == null || destination == null || definition == null || timing == null
-                || requestedQuantity <= 0 || startTick < 0 || maximumDistance < 0 || double.IsNaN(maximumDistance))
+                || definition.StateKind != ItemStateKind.Stackable || source.Id.Equals(destination.Id)
+                || requestedQuantity <= 0 || startTick < 0 || maximumDistance < 0
+                || double.IsNaN(maximumDistance) || double.IsInfinity(maximumDistance))
                 return new TransferActionResult(null, TransferActionReason.InvalidRequest);
             int available = InventoryOperations.Count(source, definition.Id);
             if (available <= 0) return new TransferActionResult(null, TransferActionReason.SourceInsufficient);
@@ -109,34 +115,55 @@ namespace AgeOfSurvival.Core.Inventory
         public static TransferActionResult Advance(TransferActionState action, long currentTick, WorldPosition playerPosition,
             bool playerMoved, ContainerState source, ContainerState destination, ItemDefinition definition)
         {
-            if (action == null || source == null || destination == null || definition == null)
-                return new TransferActionResult(action, TransferActionReason.InvalidRequest);
+            if (action == null)
+                return new TransferActionResult(null, TransferActionReason.InvalidRequest);
             if (action.Status != TransferActionStatus.Active)
                 return new TransferActionResult(action, TransferActionReason.AlreadyFinalized);
+            if (currentTick < action.StartTick || source == null || destination == null || definition == null
+                || definition.StateKind != ItemStateKind.Stackable)
+                return Fail(action, currentTick, TransferActionReason.InvalidRequest);
             if (!source.Id.Equals(action.SourceId)
                 || !destination.Id.Equals(action.DestinationId)
                 || !definition.Id.Equals(action.DefinitionId))
-                return Fail(action, TransferActionReason.InvalidRequest);
-            if (playerMoved) return Interrupt(action, TransferActionReason.PlayerMoved);
+                return Fail(action, currentTick, TransferActionReason.InvalidRequest);
+            if (playerMoved) return Interrupt(action, currentTick, TransferActionReason.PlayerMoved);
             if (playerPosition.DistanceSquaredTo(action.SourcePosition) > action.MaximumDistance * action.MaximumDistance)
-                return Interrupt(action, TransferActionReason.OutOfRange);
+                return Interrupt(action, currentTick, TransferActionReason.OutOfRange);
             if (currentTick - action.StartTick < action.DurationTicks)
                 return new TransferActionResult(action, TransferActionReason.None);
 
             int available = InventoryOperations.Count(source, definition.Id);
-            if (available <= 0) return Fail(action, TransferActionReason.SourceInsufficient);
+            if (available <= 0) return Fail(action, currentTick, TransferActionReason.SourceInsufficient);
             int attempt = Math.Min(action.PlannedQuantity, available);
             TransferResult transfer = InventoryOperations.TransferStack(source, destination, definition, attempt);
             action.TransferredQuantity = transfer.Transferred;
-            if (transfer.Transferred == 0) return Fail(action, TransferActionReason.DestinationFull);
+            if (transfer.Transferred == 0) return Fail(action, currentTick, TransferActionReason.DestinationFull);
             action.Status = TransferActionStatus.Completed;
             action.Reason = TransferActionReason.None;
+            action.FinalizedTick = currentTick;
             return new TransferActionResult(action, TransferActionReason.None);
         }
 
-        private static TransferActionResult Interrupt(TransferActionState action, TransferActionReason reason)
-        { action.Status = TransferActionStatus.Interrupted; action.Reason = reason; return new TransferActionResult(action, reason); }
-        private static TransferActionResult Fail(TransferActionState action, TransferActionReason reason)
-        { action.Status = TransferActionStatus.Failed; action.Reason = reason; return new TransferActionResult(action, reason); }
+        private static TransferActionResult Interrupt(
+            TransferActionState action,
+            long currentTick,
+            TransferActionReason reason)
+        {
+            action.Status = TransferActionStatus.Interrupted;
+            action.Reason = reason;
+            action.FinalizedTick = currentTick;
+            return new TransferActionResult(action, reason);
+        }
+
+        private static TransferActionResult Fail(
+            TransferActionState action,
+            long currentTick,
+            TransferActionReason reason)
+        {
+            action.Status = TransferActionStatus.Failed;
+            action.Reason = reason;
+            action.FinalizedTick = currentTick;
+            return new TransferActionResult(action, reason);
+        }
     }
 }

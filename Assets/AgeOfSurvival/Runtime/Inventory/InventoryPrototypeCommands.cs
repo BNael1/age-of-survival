@@ -23,7 +23,7 @@ namespace AgeOfSurvival.Runtime.Inventory
         public bool IsUnique { get; }
         public bool IsValid => SourceContainerId.IsValid
             && DefinitionId.IsValid
-            && (!IsUnique || InstanceId.IsValid);
+            && (IsUnique ? InstanceId.IsValid : !InstanceId.IsValid);
     }
 
     public sealed class InventoryPrototypeCommands
@@ -51,16 +51,27 @@ namespace AgeOfSurvival.Runtime.Inventory
                 return false;
             }
 
+            bool definitionIsUnique = definition.StateKind == ItemStateKind.Unique;
+            if (selection.IsUnique != definitionIsUnique)
+            {
+                return false;
+            }
+
             if (selection.IsUnique)
             {
-                if (!_inventory.TryFindUnique(selection.InstanceId, out UniqueItemState item, out _, out ContainerState owner)
+                if (!_inventory.TryFindUnique(
+                        selection.InstanceId,
+                        out UniqueItemState item,
+                        out ItemDefinition actualDefinition,
+                        out ContainerState owner)
                     || !owner.Id.Equals(source.Id)
+                    || !actualDefinition.Id.Equals(selection.DefinitionId)
                     || item.ContainedContainerId.Equals(destinationId))
                 {
                     return false;
                 }
 
-                return destination.RemainingCapacity.Units >= definition.UnitEncumbrance.Units;
+                return destination.RemainingCapacity.Units >= actualDefinition.UnitEncumbrance.Units;
             }
 
             return InventoryOperations.Count(source, definition.Id) > 0
@@ -98,8 +109,20 @@ namespace AgeOfSurvival.Runtime.Inventory
                 return false;
             }
 
-            ItemDefinition definition = _inventory.FindDefinition(selection.DefinitionId);
-            return definition?.Equipment != null
+            ContainerState source = _inventory.FindContainer(selection.SourceContainerId);
+            if (source == null
+                || !_inventory.TryFindUnique(
+                    selection.InstanceId,
+                    out _,
+                    out ItemDefinition definition,
+                    out ContainerState owner)
+                || !owner.Id.Equals(source.Id)
+                || !definition.Id.Equals(selection.DefinitionId))
+            {
+                return false;
+            }
+
+            return definition.Equipment != null
                 && definition.Equipment.Supports(slot)
                 && !_inventory.Equipment.IsEquipped(selection.InstanceId);
         }

@@ -22,28 +22,67 @@ namespace AgeOfSurvival.Core.Resources
             ItemDefinition yieldDefinition, int yieldQuantity, EncumbranceValue groundCapacity)
         {
             if (groundContainers == null) throw new ArgumentNullException(nameof(groundContainers));
+            if (groundContainers.IsReadOnly)
+                throw new ArgumentException("Ground containers must be writable.", nameof(groundContainers));
             if (yieldDefinition == null) throw new ArgumentNullException(nameof(yieldDefinition));
+            if (yieldDefinition.StateKind != ItemStateKind.Stackable)
+                throw new ArgumentException("Resource yields must use a stackable item definition.", nameof(yieldDefinition));
             if (yieldQuantity <= 0) throw new ArgumentOutOfRangeException(nameof(yieldQuantity));
             if (groundCapacity.Units < yieldDefinition.UnitEncumbrance.Multiply(yieldQuantity).Units)
                 throw new ArgumentException("Ground capacity must hold the complete configured yield.", nameof(groundCapacity));
-            ResourceInteractionResult interaction = ResourceInteraction.Apply(new ResourceInteractionCommand(),
-                resources, playerPosition, interactionRadius);
-            if (!interaction.Succeeded) return new ResourceYieldResult(interaction, null, 0);
 
-            ResourceState resource = Find(resources, interaction.HarvestedResourceId.Value);
-            string suffix = resource.Id.Value;
-            var container = new ContainerState(new ContainerId("ground-container-" + suffix),
-                new ContainerDefinition("ground-" + suffix, "Ground near " + suffix, groundCapacity));
+            ResourceState target = ResourceTargeting.FindNearestAvailable(
+                resources, playerPosition, interactionRadius);
+            if (target == null)
+                return new ResourceYieldResult(ResourceInteractionResult.NoAvailableTarget(), null, 0);
+
+            GroundContainerId groundId = GroundIdFor(target.Id);
+            ContainerId containerId = ContainerIdFor(target.Id);
+            ValidateIdentityAvailability(groundContainers, groundId, containerId);
+
+            var container = new ContainerState(containerId,
+                new ContainerDefinition("ground-" + target.Id.Value,
+                    "Ground near " + target.Id.Value, groundCapacity));
             AddItemResult added = InventoryOperations.AddStack(container, yieldDefinition, yieldQuantity);
-            var ground = new GroundContainerState(new GroundContainerId("ground-" + suffix), resource.Position, container);
+            if (added.Accepted != yieldQuantity)
+                throw new InvalidOperationException("A prevalidated ground container rejected part of the configured yield.");
+
+            var ground = new GroundContainerState(groundId, target.Position, container);
             groundContainers.Add(ground);
-            return new ResourceYieldResult(interaction, ground, added.Accepted);
+            if (!target.TryHarvest())
+            {
+                groundContainers.Remove(ground);
+                return new ResourceYieldResult(ResourceInteractionResult.NoAvailableTarget(), null, 0);
+            }
+
+            return new ResourceYieldResult(ResourceInteractionResult.Success(target.Id), ground, added.Accepted);
         }
 
-        private static ResourceState Find(IReadOnlyList<ResourceState> resources, ResourceId id)
+        public static GroundContainerId GroundIdFor(ResourceId resourceId)
         {
-            for (int i = 0; i < resources.Count; i++) if (resources[i].Id.Equals(id)) return resources[i];
-            throw new InvalidOperationException("Harvested resource was not found.");
+            if (!resourceId.IsValid)
+                throw new ArgumentException("A valid resource identifier is required.", nameof(resourceId));
+            return new GroundContainerId("ground-" + resourceId.Value);
+        }
+
+        public static ContainerId ContainerIdFor(ResourceId resourceId)
+        {
+            if (!resourceId.IsValid)
+                throw new ArgumentException("A valid resource identifier is required.", nameof(resourceId));
+            return new ContainerId("ground-container-" + resourceId.Value);
+        }
+
+        private static void ValidateIdentityAvailability(IList<GroundContainerState> groundContainers,
+            GroundContainerId groundId, ContainerId containerId)
+        {
+            for (int index = 0; index < groundContainers.Count; index++)
+            {
+                GroundContainerState existing = groundContainers[index];
+                if (existing == null)
+                    throw new ArgumentException("Ground containers must not contain null entries.", nameof(groundContainers));
+                if (existing.Id.Equals(groundId) || existing.Container.Id.Equals(containerId))
+                    throw new InvalidOperationException("A ground container already exists for this resource identifier.");
+            }
         }
     }
 }
