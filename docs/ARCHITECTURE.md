@@ -137,8 +137,10 @@ définition canonique : même type d'état et même encombrement unitaire. Les
 opérations vérifient cet invariant avant toute mutation, et
 `PlayerInventoryState` refuse un registre dont les définitions contredisent les
 entrées déjà présentes. Lors de sa construction, l'agrégat lie aussi chaque
-conteneur enregistré au registre canonique, même lorsqu'il est vide. Le
-conteneur conserve ensuite l'empreinte d'une définition après retrait de la
+conteneur enregistré au registre canonique, même lorsqu'il est vide. L'identifiant
+du conteneur principal est validé avant cette liaison afin qu'un échec de
+construction ne modifie aucun conteneur fourni. Le conteneur conserve ensuite
+l'empreinte d'une définition après retrait de la
 dernière entrée. Une mutation ultérieure ne peut donc introduire ni identifiant
 inconnu, ni données physiques différentes pour contourner la capacité.
 

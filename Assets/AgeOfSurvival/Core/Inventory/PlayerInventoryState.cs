@@ -29,10 +29,9 @@ namespace AgeOfSurvival.Core.Inventory
 
             _definitions = new List<ItemDefinition>(definitions);
             _containers = new List<ContainerState>(containers);
-            ValidateRegistries();
+            ValidateRegistries(mainContainerId);
 
-            MainContainer = FindContainer(mainContainerId)
-                ?? throw new ArgumentException("The main container must be registered.", nameof(mainContainerId));
+            MainContainer = FindContainer(mainContainerId);
             Equipment = new EquipmentState();
             _readOnlyDefinitions = _definitions.AsReadOnly();
             _readOnlyContainers = _containers.AsReadOnly();
@@ -96,7 +95,7 @@ namespace AgeOfSurvival.Core.Inventory
             return false;
         }
 
-        private void ValidateRegistries()
+        private void ValidateRegistries(ContainerId mainContainerId)
         {
             for (int index = 0; index < _definitions.Count; index++)
             {
@@ -122,6 +121,13 @@ namespace AgeOfSurvival.Core.Inventory
                         throw new ArgumentException("Container identifiers must be unique.", "containers");
                     }
                 }
+            }
+
+            if (FindContainer(mainContainerId) == null)
+            {
+                throw new ArgumentException(
+                    "The main container must be registered.",
+                    nameof(mainContainerId));
             }
 
             for (int containerIndex = 0; containerIndex < _containers.Count; containerIndex++)

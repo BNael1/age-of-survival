@@ -488,6 +488,29 @@ namespace AgeOfSurvival.Core.Tests.Inventory
         }
 
         [Test]
+        public void MissingMainContainerDoesNotBindProvidedContainers()
+        {
+            ContainerState bag = Container("bag", 10000);
+            var extra = new ItemDefinition(
+                new ItemDefinitionId("extra"),
+                "Extra",
+                ItemStateKind.Stackable,
+                new EncumbranceValue(500));
+
+            Assert.That(
+                () => new PlayerInventoryState(
+                    new ContainerId("missing"),
+                    new[] { Branches },
+                    new[] { bag }),
+                Throws.ArgumentException);
+
+            AddItemResult added = InventoryOperations.AddStack(bag, extra, 1);
+            Assert.That(added.Accepted, Is.EqualTo(1));
+            Assert.That(InventoryOperations.Count(bag, extra.Id), Is.EqualTo(1));
+            Assert.That(bag.UsedCapacity.Units, Is.EqualTo(500));
+        }
+
+        [Test]
         public void CoreInventoryAssemblyHasNoUnityDependency()
         {
             string[] references = typeof(ContainerState).Assembly

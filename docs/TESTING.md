@@ -205,9 +205,13 @@ Le correctif ajoute quatre cas EditMode Core :
   d'un ajout direct ;
 - la liaison canonique reste active après retrait de la dernière entrée ;
 - un identifiant absent du registre canonique est rejeté avant mutation ;
-- un échec de construction de `PlayerInventoryState` ne laisse aucune liaison
-  canonique partielle dans les conteneurs fournis.
+- un échec de construction de `PlayerInventoryState` causé par un registre
+  contradictoire ne laisse aucune liaison canonique partielle dans les
+  conteneurs fournis ;
+- un identifiant de conteneur principal absent est rejeté avant toute liaison et
+  laisse les conteneurs réutilisables sans registre imposé.
 
-Validation du 1 août 2026 : **141/141 cas EditMode** dans le Test Runner
-graphique et en batchmode, zéro échec et zéro cas ignoré. Le Play Mode confirme
-les transferts temporisés, l'équipement et la surcharge ; la Console est propre.
+Validation attendue après ce correctif : **142/142 cas EditMode** dans le Test
+Runner graphique et en batchmode, zéro échec et zéro cas ignoré. Le Play Mode doit
+reconfirmer les transferts temporisés, l'équipement et la surcharge ; la Console
+doit rester propre.

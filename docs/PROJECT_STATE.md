@@ -134,9 +134,11 @@ mais vide. Tous les conteneurs d'un `PlayerInventoryState` sont désormais liés
 au registre canonique dès la construction, même sans entrée, et conservent les
 empreintes des définitions après retrait de la dernière entrée. Une mutation
 ultérieure ne peut donc introduire ni identifiant inconnu, ni définition
-contradictoire. Quatre cas supplémentaires portent la suite à 141/141 dans le
-Test Runner graphique et en batchmode ; les transferts, l'équipement, la
-surcharge et la Console sont validés en Play Mode.
+contradictoire. Un contrôle supplémentaire valide le conteneur principal avant
+toute liaison, afin qu'une construction invalide ne modifie pas les conteneurs
+fournis. Cinq cas supplémentaires portent la suite à 142/142 dans le Test Runner
+graphique et en batchmode ; les transferts, l'équipement, la surcharge et la
+Console sont validés en Play Mode.
 
 ## Limites techniques connues
 
@@ -150,11 +152,12 @@ surcharge et la Console sont validés en Play Mode.
 
 ## Prochaine action
 
-1. Terminer le contrôle Git du correctif canonique et vérifier un arbre propre.
-2. Intégrer la branche dans `main` par avance rapide uniquement, si `main` est
+1. Appliquer et valider le correctif d'atomicité de construction sur la branche.
+2. Créer un commit séparé puis reconstruire les artefacts de contrôle.
+3. Intégrer la branche dans `main` par avance rapide uniquement, si `main` est
    toujours à `1a1f280` et sans divergence.
-3. Relancer les 141 cas EditMode sur `main`, vérifier le Play Mode et la Console.
-4. Conserver le bundle final puis supprimer la branche locale devenue inutile.
+4. Relancer les 142 cas EditMode sur `main`, vérifier le Play Mode et la Console.
+5. Conserver le bundle final puis supprimer la branche locale devenue inutile.
 
 ## Dépôts archivés
 
