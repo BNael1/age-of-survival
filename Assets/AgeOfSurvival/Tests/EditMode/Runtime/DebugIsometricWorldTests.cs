@@ -1,7 +1,9 @@
+using System.IO;
 using System.Linq;
 using AgeOfSurvival.Core.World;
 using AgeOfSurvival.Runtime.Rendering;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -9,6 +11,10 @@ namespace AgeOfSurvival.Runtime.Tests
 {
     public sealed class DebugIsometricWorldTests
     {
+        private const int GroundTileWidthPixels = 64;
+        private const int GroundTileHeightPixels = 32;
+        private const int SeamTestMapSize = 10;
+
         [Test]
         public void DebugPattern_IsDeterministicAndKeepsTheBorderDistinct()
         {
@@ -25,6 +31,33 @@ namespace AgeOfSurvival.Runtime.Tests
         public void PrototypeVisualTexturesAreAvailableToRuntimeAdapters()
         {
             Assert.That(PrototypeVisualAssets.AllRequiredTexturesExist(), Is.True);
+        }
+
+        [Test]
+        public void PrototypeGroundImportsPreservePixelArtSettings()
+        {
+            AssertGroundImportSettings("ground_grass.png");
+            AssertGroundImportSettings("ground_dirt.png");
+            AssertGroundImportSettings("ground_water.png");
+        }
+
+        [Test]
+        public void PrototypeGroundTiles_CoverTenByTenPavingWithoutInternalGaps()
+        {
+            AlphaMask grass = LoadGroundAlphaMask("ground_grass.png");
+            AlphaMask dirt = LoadGroundAlphaMask("ground_dirt.png");
+            AlphaMask water = LoadGroundAlphaMask("ground_water.png");
+
+            float transparentGapFraction = MeasureTransparentGapFraction(
+                grass,
+                dirt,
+                water);
+
+            Assert.That(
+                transparentGapFraction,
+                Is.LessThan(0.01f),
+                $"The central {SeamTestMapSize}x{SeamTestMapSize} isometric paving "
+                + $"contains {transparentGapFraction:P6} uncovered pixels.");
         }
 
         [Test]
@@ -100,6 +133,242 @@ namespace AgeOfSurvival.Runtime.Tests
             {
                 Object.DestroyImmediate(root);
             }
+        }
+
+        private static void AssertGroundImportSettings(string fileName)
+        {
+            string assetPath = GroundAssetPath(fileName);
+            var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+
+            Assert.That(importer, Is.Not.Null, $"Missing texture importer for {assetPath}.");
+            Assert.That(importer.filterMode, Is.EqualTo(FilterMode.Point));
+            Assert.That(importer.mipmapEnabled, Is.False);
+            Assert.That(
+                importer.textureCompression,
+                Is.EqualTo(TextureImporterCompression.Uncompressed));
+            Assert.That(importer.spritePixelsPerUnit, Is.EqualTo(64f));
+            Assert.That(importer.alphaIsTransparency, Is.True);
+        }
+
+        private static AlphaMask LoadGroundAlphaMask(string fileName)
+        {
+            string absolutePath = Path.Combine(
+                Application.dataPath,
+                "AgeOfSurvival",
+                "Runtime",
+                "Resources",
+                "PrototypeVisuals",
+                fileName);
+            byte[] pngBytes = File.ReadAllBytes(absolutePath);
+            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+
+            try
+            {
+                Assert.That(ImageConversion.LoadImage(texture, pngBytes, false), Is.True);
+                Assert.That(texture.width, Is.EqualTo(GroundTileWidthPixels));
+                Assert.That(texture.height, Is.EqualTo(GroundTileHeightPixels));
+
+                Color32[] pixels = texture.GetPixels32();
+                var opaquePixels = new bool[pixels.Length];
+                for (int index = 0; index < pixels.Length; index++)
+                {
+                    opaquePixels[index] = pixels[index].a > 0;
+                }
+
+                return new AlphaMask(opaquePixels);
+            }
+            finally
+            {
+                Object.DestroyImmediate(texture);
+            }
+        }
+
+        private static float MeasureTransparentGapFraction(
+            AlphaMask grass,
+            AlphaMask dirt,
+            AlphaMask water)
+        {
+            const int paddingCells = 1;
+            int paddedMinimum = -paddingCells;
+            int paddedMaximum = SeamTestMapSize + paddingCells - 1;
+            int minimumCenterX = int.MaxValue;
+            int maximumCenterX = int.MinValue;
+            int minimumCenterY = int.MaxValue;
+            int maximumCenterY = int.MinValue;
+
+            for (int cellY = paddedMinimum; cellY <= paddedMaximum; cellY++)
+            {
+                for (int cellX = paddedMinimum; cellX <= paddedMaximum; cellX++)
+                {
+                    int centerX = (GroundTileWidthPixels / 2) * (cellX - cellY);
+                    int centerY = (GroundTileHeightPixels / 2) * (cellX + cellY);
+                    minimumCenterX = Mathf.Min(minimumCenterX, centerX);
+                    maximumCenterX = Mathf.Max(maximumCenterX, centerX);
+                    minimumCenterY = Mathf.Min(minimumCenterY, centerY);
+                    maximumCenterY = Mathf.Max(maximumCenterY, centerY);
+                }
+            }
+
+            int canvasWidth = maximumCenterX - minimumCenterX + GroundTileWidthPixels;
+            int canvasHeight = maximumCenterY - minimumCenterY + GroundTileHeightPixels;
+            var covered = new bool[canvasWidth * canvasHeight];
+            var expectedInterior = new bool[canvasWidth * canvasHeight];
+            var bounds = new GridBounds(SeamTestMapSize, SeamTestMapSize);
+
+            for (int cellY = paddedMinimum; cellY <= paddedMaximum; cellY++)
+            {
+                for (int cellX = paddedMinimum; cellX <= paddedMaximum; cellX++)
+                {
+                    int wrappedX = PositiveModulo(cellX, SeamTestMapSize);
+                    int wrappedY = PositiveModulo(cellY, SeamTestMapSize);
+                    byte cellValue = DebugWorldPattern.SelectCellValue(
+                        new GridPosition(wrappedX, wrappedY),
+                        bounds);
+                    AlphaMask tile = AlphaMaskFor(cellValue, grass, dirt, water);
+                    PlaceAlphaMask(
+                        tile,
+                        cellX,
+                        cellY,
+                        minimumCenterX,
+                        minimumCenterY,
+                        canvasWidth,
+                        covered);
+                }
+            }
+
+            for (int cellY = 0; cellY < SeamTestMapSize; cellY++)
+            {
+                for (int cellX = 0; cellX < SeamTestMapSize; cellX++)
+                {
+                    PlaceIdealDiamond(
+                        cellX,
+                        cellY,
+                        minimumCenterX,
+                        minimumCenterY,
+                        canvasWidth,
+                        expectedInterior);
+                }
+            }
+
+            int expectedPixelCount = 0;
+            int uncoveredPixelCount = 0;
+            for (int index = 0; index < expectedInterior.Length; index++)
+            {
+                if (!expectedInterior[index])
+                {
+                    continue;
+                }
+
+                expectedPixelCount++;
+                if (!covered[index])
+                {
+                    uncoveredPixelCount++;
+                }
+            }
+
+            Assert.That(
+                expectedPixelCount,
+                Is.EqualTo(SeamTestMapSize * SeamTestMapSize * 1024));
+            return (float)uncoveredPixelCount / expectedPixelCount;
+        }
+
+        private static void PlaceAlphaMask(
+            AlphaMask tile,
+            int cellX,
+            int cellY,
+            int minimumCenterX,
+            int minimumCenterY,
+            int canvasWidth,
+            bool[] covered)
+        {
+            int centerX = (GroundTileWidthPixels / 2) * (cellX - cellY);
+            int centerY = (GroundTileHeightPixels / 2) * (cellX + cellY);
+            int left = centerX - minimumCenterX;
+            int bottom = centerY - minimumCenterY;
+
+            for (int pixelY = 0; pixelY < GroundTileHeightPixels; pixelY++)
+            {
+                for (int pixelX = 0; pixelX < GroundTileWidthPixels; pixelX++)
+                {
+                    if (!tile.OpaquePixels[(pixelY * GroundTileWidthPixels) + pixelX])
+                    {
+                        continue;
+                    }
+
+                    int canvasIndex = ((bottom + pixelY) * canvasWidth) + left + pixelX;
+                    covered[canvasIndex] = true;
+                }
+            }
+        }
+
+        private static void PlaceIdealDiamond(
+            int cellX,
+            int cellY,
+            int minimumCenterX,
+            int minimumCenterY,
+            int canvasWidth,
+            bool[] expectedInterior)
+        {
+            int centerX = (GroundTileWidthPixels / 2) * (cellX - cellY);
+            int centerY = (GroundTileHeightPixels / 2) * (cellX + cellY);
+            int left = centerX - minimumCenterX;
+            int bottom = centerY - minimumCenterY;
+
+            for (int pixelY = 0; pixelY < GroundTileHeightPixels; pixelY++)
+            {
+                for (int pixelX = 0; pixelX < GroundTileWidthPixels; pixelX++)
+                {
+                    float normalizedX = Mathf.Abs(
+                        (pixelX + 0.5f - (GroundTileWidthPixels * 0.5f))
+                        / (GroundTileWidthPixels * 0.5f));
+                    float normalizedY = Mathf.Abs(
+                        (pixelY + 0.5f - (GroundTileHeightPixels * 0.5f))
+                        / (GroundTileHeightPixels * 0.5f));
+                    if (normalizedX + normalizedY > 1f)
+                    {
+                        continue;
+                    }
+
+                    int canvasIndex = ((bottom + pixelY) * canvasWidth) + left + pixelX;
+                    expectedInterior[canvasIndex] = true;
+                }
+            }
+        }
+
+        private static AlphaMask AlphaMaskFor(
+            byte cellValue,
+            AlphaMask grass,
+            AlphaMask dirt,
+            AlphaMask water)
+        {
+            switch (cellValue)
+            {
+                case DebugWorldPattern.AccentCell:
+                    return dirt;
+                case DebugWorldPattern.BorderCell:
+                    return water;
+                default:
+                    return grass;
+            }
+        }
+
+        private static int PositiveModulo(int value, int modulus)
+        {
+            int result = value % modulus;
+            return result < 0 ? result + modulus : result;
+        }
+
+        private static string GroundAssetPath(string fileName) =>
+            $"Assets/AgeOfSurvival/Runtime/Resources/PrototypeVisuals/{fileName}";
+
+        private sealed class AlphaMask
+        {
+            public AlphaMask(bool[] opaquePixels)
+            {
+                OpaquePixels = opaquePixels;
+            }
+
+            public bool[] OpaquePixels { get; }
         }
     }
 }

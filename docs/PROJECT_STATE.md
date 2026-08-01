@@ -11,7 +11,7 @@ Dernière mise à jour : 1 août 2026
 
 ## État actuel
 
-Le dépôt Unity est sur la branche locale `codex/lot5-inventory-sequence`.
+Le dépôt Unity est sur la branche locale `codex/lot6b-seamless-terrain`.
 
 Lots validés et commités :
 
@@ -27,7 +27,8 @@ Lots validés et commités :
 - `2d198a4` — `feat: add progressive encumbrance movement penalty` ;
 - `4d2be34` — `fix: preserve inventory and fixed-tick invariants` ;
 - `83cb82c` — `fix: bind inventory containers to canonical definitions` ;
-- `52c7517` — `fix: preserve inventory construction atomicity`.
+- `52c7517` — `fix: preserve inventory construction atomicity` ;
+- `e83b590` — `docs: close lot 5 inventory review`.
 
 État validé au commit `26a1a27` :
 
@@ -142,6 +143,16 @@ fournis. Cinq cas supplémentaires portent la suite à 142/142 dans le Test Runn
 graphique et en batchmode ; les transferts, l'équipement, la surcharge et la
 Console sont validés en Play Mode.
 
+Le lot 6B remplace uniquement les trois textures de sol temporaires par les
+deux tuiles 64 × 32 de l'atlas Godot interne validé par Naël. Les chemins et
+GUID Unity restent inchangés ; la grille isométrique 1 × 0,5, les 64 PPU et le
+code Runtime ne changent pas. Le pavage alpha déterministe 10 × 10 passe de
+10,3515625 % à 0,421875 % de pixels internes non couverts. Deux contrôles
+EditMode vérifient désormais les réglages d'import pixel art et le raccord : la
+suite complète atteint **144/144 cas EditMode** en batchmode, avec code de
+sortie 0. Une mosaïque ciblée reconstruite avec la géométrie et les assets Unity
+confirme l'absence d'interstice régulier et conserve les variantes de terrain.
+
 ## Limites techniques connues
 
 - `InventoryOperations` garantit l'identité unique à l'intérieur d'un conteneur,
@@ -154,14 +165,9 @@ Console sont validés en Play Mode.
 
 ## Prochaine action
 
-1. Vérifier que la branche est propre et que `main` est toujours à `1a1f280`,
-   sans divergence.
-2. Intégrer `codex/lot5-inventory-sequence` dans `main` par avance rapide
-   uniquement.
-3. Relancer les 142 cas EditMode sur `main`, puis vérifier le Play Mode et la
-   Console.
-4. Conserver les artefacts finaux de contrôle avant de supprimer la branche
-   locale devenue inutile.
+Après validation de Naël, préparer un lot séparé pour l'échelle du joueur et
+des ressources ainsi que le cadrage caméra. Ces sujets restent explicitement
+hors du lot terrain 6B.
 
 ## Dépôts archivés
 

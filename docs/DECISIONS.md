@@ -138,3 +138,20 @@ Cette adaptation reprend la sévérité générale de Project Zomboid sans ses
 ruptures de paliers. La courbe appartient au Core et reste indépendante de
 l'entrée et du rendu. Le lot initial n'ajoute ni sprint, ni endurance, ni dégâts
 de surcharge.
+
+## ADR-0012 — Terrain isométrique raccordé par chevauchement
+
+**Statut : active**
+**Date : 1 août 2026**
+
+Naël valide pour le lot 6B la copie directe des deux tuiles internes du
+prototype Godot vers les trois chemins de terrain Unity existants. Aucun
+redessin n'est effectué : les régions `64 × 32` de l'atlas source sont copiées
+pixel pour pixel, avec la tuile de base utilisée pour `ground_grass.png` et
+`ground_water.png`, et la variante utilisée pour `ground_dirt.png`.
+
+Le dépôt Godot reste une archive de référence inchangée. Unity conserve ses
+cellules isométriques de `1 × 0,5` unité, `64 PPU`, le filtrage Point, l'absence
+de mipmaps et de compression. Le raccord repose sur le chevauchement alpha déjà
+présent dans les tuiles Godot plutôt que sur une réduction ou un redessin des
+losanges.

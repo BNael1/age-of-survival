@@ -18,6 +18,24 @@ pas la direction artistique et pourront être remplacés sans migration du Core.
 Les packs Kenney CC0 ont été étudiés, mais aucun de leurs fichiers n'est importé
 dans ce lot.
 
+## Assets internes transférés pour le lot 6B
+
+Les trois textures de terrain Unity suivantes sont des assets internes à Age of
+Survival, pas des dépendances tierces :
+
+- source : `/Users/bensaadi/jeu/assets/placeholders/ground_tiles.png` ;
+- commit source Godot : `deba36ea24f7c489994c2ba6104cdd7c7d02cc14` ;
+- destinations Unity :
+  `Assets/AgeOfSurvival/Runtime/Resources/PrototypeVisuals/ground_grass.png`,
+  `ground_dirt.png` et `ground_water.png` ;
+- provenance : atlas produit pour le prototype Age of Survival et introduit
+  dans son historique par Naël ;
+- transformation : découpe directe des deux régions `64 × 32`, sans redessin ;
+- obligations : aucune obligation de licence tierce identifiée.
+
+Le dépôt Godot demeure inchangé. Les fichiers `.meta` Unity existants sont
+conservés afin de préserver leurs GUID et leurs réglages d'import.
+
 ## Règle
 
 Toute future dépendance externe doit documenter : nom, version, auteur, URL, licence, fichiers concernés, obligations, raison d’adoption, risques et stratégie de sortie.
