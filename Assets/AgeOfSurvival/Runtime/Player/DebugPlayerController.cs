@@ -89,26 +89,28 @@ namespace AgeOfSurvival.Runtime.Player
                 return;
             }
 
-            SynchronizeMovementState();
             Vector2 screenDirection = ReadScreenDirection();
             Vector2 worldDirection = ScreenToWorldDirection(screenDirection);
             double tickDuration = _clock.TickDurationSeconds;
-            double movementMultiplier = CurrentMovementMultiplier;
 
             _clock.Advance(Time.deltaTime, () =>
             {
-                PlayerMovement.Step(
+                InventoryPrototypeSession session = ResolvePrototypeSession();
+                EncumbranceMovementState movementState = InventoryMovementStep.Step(
                     _player,
+                    session,
                     worldDirection.x,
                     worldDirection.y,
                     movementSpeed,
-                    movementMultiplier,
                     tickDuration);
+                CurrentLoadRatio = movementState.LoadRatio;
+                CurrentMovementMultiplier = movementState.SpeedMultiplier;
                 resourceInteraction?.SimulateTick(
                     _player.Position,
                     worldDirection.sqrMagnitude > 0.0001f);
             });
 
+            SynchronizeMovementState();
             SynchronizeVisual();
         }
 
@@ -134,11 +136,12 @@ namespace AgeOfSurvival.Runtime.Player
                 screenDirection.y - screenDirection.x);
         }
 
+        private InventoryPrototypeSession ResolvePrototypeSession() =>
+            resourceInteraction?.PrototypeSession ?? InventoryPrototypeSessionProvider.Current;
+
         private void SynchronizeMovementState()
         {
-            InventoryPrototypeSession session =
-                resourceInteraction?.PrototypeSession ?? InventoryPrototypeSessionProvider.Current;
-            EncumbranceMovementState movementState = session.MovementState;
+            EncumbranceMovementState movementState = ResolvePrototypeSession().MovementState;
             CurrentLoadRatio = movementState.LoadRatio;
             CurrentMovementMultiplier = movementState.SpeedMultiplier;
         }

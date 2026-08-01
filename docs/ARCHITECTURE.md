@@ -132,6 +132,13 @@ d'abord ce qui rentre dans la destination, puis retire exactement cette quantit�
 de la source. La somme des quantités reste donc conservée, y compris lors d'un
 transfert partiel ou vers une destination pleine.
 
+Une entrée portant un `ItemDefinitionId` donné doit rester compatible avec la
+définition canonique : même type d'état et même encombrement unitaire. Les
+opérations vérifient cet invariant avant toute mutation, et
+`PlayerInventoryState` refuse un registre dont les définitions contredisent les
+entrées déjà présentes. Un identifiant stable ne peut donc pas être utilisé avec
+des données physiques différentes pour contourner la capacité.
+
 La frontière actuelle de `InventoryOperations` est locale à un conteneur. Elle
 ne suffit pas encore à garantir qu'une même `ItemInstanceId` n'existe jamais
 dans deux conteneurs d'un même joueur, ni qu'un retrait d'objet unique efface ou
@@ -162,6 +169,12 @@ de session au niveau du processus. Aucun `GameObject` ne possède la source de
 vérité. La couche Runtime construit des view-models immuables, puis l'interface
 UI Toolkit émet des commandes via `InventoryPrototypeCommands`. Les `ListView`
 ne modifient jamais directement les collections du Core.
+
+Le déplacement chargé passe par `InventoryMovementStep`. Ce point de composition
+Runtime recalcule la charge perçue et le multiplicateur à l'intérieur de chaque
+callback de tick fixe. Une frame qui rattrape plusieurs ticks ne capture donc pas
+une valeur unique susceptible de devenir périmée après un transfert ou un
+changement d'équipement.
 
 La scène ne contient qu'un `InventoryPrototypeUiBehaviour`, chargé de créer le
 `UIDocument`, d'appliquer le thème runtime officiel Unity et de relier la vue à

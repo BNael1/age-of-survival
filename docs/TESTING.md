@@ -160,7 +160,7 @@ ressources, les piles au sol, la cible, le rayon et la progression restent
 lisibles pendant le déplacement et les transferts, sans changement de portée,
 de durée, de quantités ou de contrôles. La Console est propre.
 
-## Lot 5D — validation requise
+## Lot 5D — validation réalisée
 
 Le lot 5D ajoute seize cas EditMode :
 
@@ -173,11 +173,25 @@ Le lot 5D ajoute seize cas EditMode :
   sac.
 
 Les tests Runtime existants vérifient aussi les textes `112.5 % / ×0.91` puis
-`95 % / ×1.00`, ainsi que leur présence dans l'UI Toolkit. Total attendu après
-import : **132/132 cas EditMode** dans le Test Runner graphique et en
-batchmode.
+`95 % / ×1.00`, ainsi que leur présence dans l'UI Toolkit. Validation du 31 juillet 2026 : **132/132 cas EditMode** dans le Test Runner graphique et en batchmode, avec Play Mode et Console propres.
 
 La validation Play Mode doit confirmer la légère pénalité initiale, le retour à
 la vitesse normale lorsque le sac est équipé, la mise à jour immédiate des deux
 libellés et une transition sans saut perceptible lors d'une augmentation de
 charge. Sprint, endurance et dégâts ne doivent pas apparaître dans ce lot.
+
+
+## Correctif de revue globale — validation requise
+
+Le correctif ajoute cinq cas EditMode :
+
+- quatre cas Core vérifiant le rejet atomique des définitions partageant un
+  identifiant stable mais contredisant le type d'état ou l'encombrement d'une
+  entrée existante, y compris lors d'un transfert et de la construction de
+  `PlayerInventoryState` ;
+- un cas Runtime vérifiant que le multiplicateur de déplacement est recalculé
+  séparément pour deux ticks entre lesquels l'équipement change.
+
+Total attendu après import : **137/137 cas EditMode**. La validation Play Mode
+doit confirmer qu'un transfert ou un changement d'équipement affecte le tick
+suivant même lorsque plusieurs ticks fixes sont exécutés dans la même frame.

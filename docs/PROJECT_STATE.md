@@ -1,6 +1,6 @@
 # État du projet
 
-Dernière mise à jour : 31 juillet 2026
+Dernière mise à jour : 1 août 2026
 
 ## Moteur
 
@@ -23,7 +23,8 @@ Lots validés et commités :
 - `6d5b4dd` — `feat: add inventory equipment UI` ;
 - `dbcd442` — `feat: connect timed resource transfers` ;
 - `93870f1` — `fix: harden inventory transfer invariants` ;
-- `25fd671` — `feat: improve prototype visual readability`.
+- `25fd671` — `feat: improve prototype visual readability` ;
+- `2d198a4` — `feat: add progressive encumbrance movement penalty`.
 
 État validé au commit `26a1a27` :
 
@@ -110,14 +111,21 @@ sont produits dans le projet, remplaçables et sans dépendance tierce. Le Core,
 les règles de gameplay et les contrôles ne changent pas. Les 116/116 cas
 EditMode passent et le rendu Play Mode a été validé.
 
-Le lot 5D est préparé mais pas encore validé localement. Il ajoute dans le Core
-une courbe progressive de surcharge basée sur la charge perçue rapportée à la
+Le lot 5D est validé et commité sous `2d198a4`. Il ajoute dans le Core une
+courbe progressive de surcharge basée sur la charge perçue rapportée à la
 capacité principale : `100 % → ×1,00`, `125 % → ×0,81`, `150 % → ×0,63`,
 `175 % → ×0,44`, `200 % et plus → ×0,25`, avec interpolation linéaire.
 `DebugPlayerController` applique le multiplicateur au déplacement à tick fixe et
-l'interface affiche le pourcentage de charge et la vitesse résultante. Sprint,
-endurance et dégâts restent hors périmètre. Le total attendu est 132 cas
-EditMode après import.
+l'interface affiche le pourcentage de charge et la vitesse résultante. Les
+132/132 cas EditMode passent en batchmode et dans le Test Runner ; le Play Mode
+et la Console sont validés. Sprint, endurance et dégâts restent hors périmètre.
+
+La revue globale avant fusion a trouvé deux invariants à corriger : une
+définition contradictoire partageant un identifiant stable pouvait fausser les
+calculs de capacité, et plusieurs ticks fixes d'une même frame pouvaient
+réutiliser un multiplicateur de surcharge périmé. Le correctif en cours impose
+la compatibilité identifiant/type/encombrement avant mutation et recalcule la
+charge dans chaque tick fixe. Cinq cas portent le total attendu à 137.
 
 ## Limites techniques connues
 
@@ -131,14 +139,14 @@ EditMode après import.
 
 ## Prochaine action
 
-1. Appliquer le patch du lot 5D sur `25fd671` et laisser Unity importer les deux
-   nouveaux scripts et leurs métadonnées.
-2. Obtenir 132/132 cas EditMode en batchmode et dans le Test Runner graphique.
-3. Vérifier en Play Mode la vitesse initiale à environ `×0,91`, le retour à
-   `×1,00` lorsque le sac est équipé, puis au moins un état de surcharge plus
-   sévère sans rupture visible entre les points de contrôle.
-4. Examiner le diff et commiter séparément sous
-   `feat: add progressive encumbrance movement penalty`.
+1. Appliquer le correctif de revue sur `2d198a4`.
+2. Obtenir 137/137 cas EditMode en batchmode et dans le Test Runner graphique.
+3. Vérifier en Play Mode que la charge est recalculée au tick suivant une
+   modification d'inventaire ou d'équipement, y compris lors de ticks de
+   rattrapage dans une même frame.
+4. Confirmer une Console propre, examiner le diff puis commiter séparément sous
+   `fix: preserve inventory and fixed-tick invariants`.
+5. Refaire le contrôle final avant toute fusion dans `main`.
 
 ## Dépôts archivés
 

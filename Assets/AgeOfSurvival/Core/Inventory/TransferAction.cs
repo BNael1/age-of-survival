@@ -98,6 +98,8 @@ namespace AgeOfSurvival.Core.Inventory
         {
             if (!id.IsValid || source == null || destination == null || definition == null || timing == null
                 || definition.StateKind != ItemStateKind.Stackable || source.Id.Equals(destination.Id)
+                || !InventoryOperations.IsDefinitionCompatible(source, definition)
+                || !InventoryOperations.IsDefinitionCompatible(destination, definition)
                 || requestedQuantity <= 0 || startTick < 0 || maximumDistance < 0
                 || double.IsNaN(maximumDistance) || double.IsInfinity(maximumDistance))
                 return new TransferActionResult(null, TransferActionReason.InvalidRequest);
@@ -124,7 +126,9 @@ namespace AgeOfSurvival.Core.Inventory
                 return Fail(action, currentTick, TransferActionReason.InvalidRequest);
             if (!source.Id.Equals(action.SourceId)
                 || !destination.Id.Equals(action.DestinationId)
-                || !definition.Id.Equals(action.DefinitionId))
+                || !definition.Id.Equals(action.DefinitionId)
+                || !InventoryOperations.IsDefinitionCompatible(source, definition)
+                || !InventoryOperations.IsDefinitionCompatible(destination, definition))
                 return Fail(action, currentTick, TransferActionReason.InvalidRequest);
             if (playerMoved) return Interrupt(action, currentTick, TransferActionReason.PlayerMoved);
             if (playerPosition.DistanceSquaredTo(action.SourcePosition) > action.MaximumDistance * action.MaximumDistance)

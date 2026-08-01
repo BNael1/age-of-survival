@@ -12,6 +12,7 @@ namespace AgeOfSurvival.Core.Inventory
             ValidateContainerAndDefinition(destination, definition);
             ValidatePositiveQuantity(quantity);
             RequireKind(definition, ItemStateKind.Stackable);
+            RequireCompatibleDefinition(destination, definition);
 
             int accepted = QuantityThatFits(destination, definition.UnitEncumbrance, quantity);
             if (accepted == 0)
@@ -40,6 +41,7 @@ namespace AgeOfSurvival.Core.Inventory
         {
             ValidateContainerAndDefinition(destination, definition);
             RequireKind(definition, ItemStateKind.Unique);
+            RequireCompatibleDefinition(destination, definition);
 
             if (!item.InstanceId.IsValid || !item.DefinitionId.Equals(definition.Id))
             {
@@ -68,6 +70,7 @@ namespace AgeOfSurvival.Core.Inventory
             ValidateContainerAndDefinition(source, definition);
             ValidatePositiveQuantity(quantity);
             RequireKind(definition, ItemStateKind.Stackable);
+            RequireCompatibleDefinition(source, definition);
 
             int index = source.FindStackIndex(definition.Id);
             if (index < 0 || source.EntryAt(index).Quantity < quantity)
@@ -95,6 +98,7 @@ namespace AgeOfSurvival.Core.Inventory
         {
             ValidateContainerAndDefinition(source, definition);
             RequireKind(definition, ItemStateKind.Unique);
+            RequireCompatibleDefinition(source, definition);
 
             if (!instanceId.IsValid)
             {
@@ -119,6 +123,8 @@ namespace AgeOfSurvival.Core.Inventory
         {
             ValidateTransferArguments(source, destination, definition, quantity);
             RequireKind(definition, ItemStateKind.Stackable);
+            RequireCompatibleDefinition(source, definition);
+            RequireCompatibleDefinition(destination, definition);
 
             if (source.Id.Equals(destination.Id))
             {
@@ -161,6 +167,8 @@ namespace AgeOfSurvival.Core.Inventory
             if (destination == null) throw new ArgumentNullException(nameof(destination));
             if (definition == null) throw new ArgumentNullException(nameof(definition));
             RequireKind(definition, ItemStateKind.Unique);
+            RequireCompatibleDefinition(source, definition);
+            RequireCompatibleDefinition(destination, definition);
 
             if (source.Id.Equals(destination.Id))
             {
@@ -239,6 +247,25 @@ namespace AgeOfSurvival.Core.Inventory
         {
             if (container == null) throw new ArgumentNullException(nameof(container));
             if (definition == null) throw new ArgumentNullException(nameof(definition));
+        }
+
+        internal static bool IsDefinitionCompatible(
+            ContainerState container,
+            ItemDefinition definition) =>
+            container != null
+            && definition != null
+            && container.IsDefinitionCompatible(definition);
+
+        private static void RequireCompatibleDefinition(
+            ContainerState container,
+            ItemDefinition definition)
+        {
+            if (!IsDefinitionCompatible(container, definition))
+            {
+                throw new ArgumentException(
+                    "The item definition contradicts an existing entry with the same stable identifier.",
+                    nameof(definition));
+            }
         }
 
         private static void ValidatePositiveQuantity(int quantity)

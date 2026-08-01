@@ -324,6 +324,86 @@ namespace AgeOfSurvival.Core.Tests.Inventory
         }
 
         [Test]
+        public void ContradictoryStackDefinitionIsRejectedWithoutMutation()
+        {
+            ContainerState container = Container("carried", 10000);
+            InventoryOperations.AddStack(container, Branches, 2);
+            var contradictory = new ItemDefinition(
+                Branches.Id,
+                "Contradictory branches",
+                ItemStateKind.Stackable,
+                new EncumbranceValue(1));
+
+            Assert.That(
+                () => InventoryOperations.AddStack(container, contradictory, 100),
+                Throws.ArgumentException);
+            Assert.That(InventoryOperations.Count(container, Branches.Id), Is.EqualTo(2));
+            Assert.That(container.UsedCapacity.Units, Is.EqualTo(2000));
+        }
+
+        [Test]
+        public void ContradictoryUniqueDefinitionIsRejectedWithoutMutation()
+        {
+            ContainerState container = Container("carried", 10000);
+            UniqueItemState first = Unique(Tool, "tool-01");
+            InventoryOperations.AddUnique(container, Tool, first);
+            var contradictory = new ItemDefinition(
+                Tool.Id,
+                "Contradictory tool",
+                ItemStateKind.Unique,
+                new EncumbranceValue(1));
+
+            Assert.That(
+                () => InventoryOperations.AddUnique(
+                    container,
+                    contradictory,
+                    Unique(contradictory, "tool-02")),
+                Throws.ArgumentException);
+            Assert.That(container.Entries, Has.Count.EqualTo(1));
+            Assert.That(container.UsedCapacity.Units, Is.EqualTo(2000));
+        }
+
+        [Test]
+        public void ContradictoryTransferDefinitionIsRejectedAtomically()
+        {
+            ContainerState source = Container("source", 10000);
+            ContainerState destination = Container("destination", 10000);
+            InventoryOperations.AddStack(source, Branches, 4);
+            var contradictory = new ItemDefinition(
+                Branches.Id,
+                "Contradictory branches",
+                ItemStateKind.Stackable,
+                new EncumbranceValue(1));
+
+            Assert.That(
+                () => InventoryOperations.TransferStack(source, destination, contradictory, 4),
+                Throws.ArgumentException);
+            Assert.That(InventoryOperations.Count(source, Branches.Id), Is.EqualTo(4));
+            Assert.That(destination.Entries, Is.Empty);
+            Assert.That(source.UsedCapacity.Units, Is.EqualTo(4000));
+        }
+
+        [Test]
+        public void PlayerAggregateRejectsEntriesThatContradictCanonicalDefinitions()
+        {
+            ContainerState main = Container("main", 10000);
+            InventoryOperations.AddStack(main, Branches, 2);
+            var contradictory = new ItemDefinition(
+                Branches.Id,
+                "Contradictory branches",
+                ItemStateKind.Stackable,
+                new EncumbranceValue(500));
+
+            Assert.That(
+                () => new PlayerInventoryState(
+                    main.Id,
+                    new[] { contradictory },
+                    new[] { main }),
+                Throws.ArgumentException);
+            Assert.That(main.UsedCapacity.Units, Is.EqualTo(2000));
+        }
+
+        [Test]
         public void CoreInventoryAssemblyHasNoUnityDependency()
         {
             string[] references = typeof(ContainerState).Assembly

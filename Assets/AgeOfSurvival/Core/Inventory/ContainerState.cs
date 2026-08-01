@@ -44,6 +44,22 @@ namespace AgeOfSurvival.Core.Inventory
             return -1;
         }
 
+        internal bool IsDefinitionCompatible(ItemDefinition definition)
+        {
+            if (definition == null) return false;
+            for (int index = 0; index < _entries.Count; index++)
+            {
+                InventoryEntry entry = _entries[index];
+                if (entry.DefinitionId.Equals(definition.Id)
+                    && !entry.MatchesDefinition(definition))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         internal int FindUniqueIndex(ItemInstanceId instanceId)
         {
             for (int index = 0; index < _entries.Count; index++)

@@ -123,6 +123,22 @@ namespace AgeOfSurvival.Core.Inventory
                     }
                 }
             }
+
+            for (int containerIndex = 0; containerIndex < _containers.Count; containerIndex++)
+            {
+                ContainerState container = _containers[containerIndex];
+                for (int entryIndex = 0; entryIndex < container.Entries.Count; entryIndex++)
+                {
+                    InventoryEntry entry = container.Entries[entryIndex];
+                    ItemDefinition definition = FindDefinition(entry.DefinitionId);
+                    if (definition == null || !entry.MatchesDefinition(definition))
+                    {
+                        throw new ArgumentException(
+                            "Container entries must match the canonical item definition registry.",
+                            "containers");
+                    }
+                }
+            }
         }
     }
 }

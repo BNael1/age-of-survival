@@ -43,6 +43,12 @@ namespace AgeOfSurvival.Core.Inventory
                 item,
                 definition.UnitEncumbrance);
 
+        internal bool MatchesDefinition(ItemDefinition definition) =>
+            definition != null
+            && DefinitionId.Equals(definition.Id)
+            && Kind == definition.StateKind
+            && UnitEncumbrance.Equals(definition.UnitEncumbrance);
+
         internal InventoryEntry WithQuantity(int quantity)
         {
             if (Kind != ItemStateKind.Stackable)
