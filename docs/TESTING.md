@@ -197,9 +197,9 @@ qu'un transfert ou un changement d'équipement affecte le tick suivant même
 lorsque plusieurs ticks fixes sont exécutés dans la même frame. La Console est
 propre.
 
-## Correctif final du registre canonique — validation réalisée
+## Correctifs finaux du registre canonique et d'atomicité — validation réalisée
 
-Le correctif ajoute quatre cas EditMode Core :
+Les deux correctifs ajoutent cinq cas EditMode Core :
 
 - un conteneur enregistré mais vide refuse une définition contradictoire lors
   d'un ajout direct ;
@@ -211,7 +211,6 @@ Le correctif ajoute quatre cas EditMode Core :
 - un identifiant de conteneur principal absent est rejeté avant toute liaison et
   laisse les conteneurs réutilisables sans registre imposé.
 
-Validation attendue après ce correctif : **142/142 cas EditMode** dans le Test
-Runner graphique et en batchmode, zéro échec et zéro cas ignoré. Le Play Mode doit
-reconfirmer les transferts temporisés, l'équipement et la surcharge ; la Console
-doit rester propre.
+Validation du 1 août 2026 : **142/142 cas EditMode** dans le Test Runner
+graphique et en batchmode, zéro échec et zéro cas ignoré. Le Play Mode confirme
+les transferts temporisés, l'équipement et la surcharge ; la Console est propre.

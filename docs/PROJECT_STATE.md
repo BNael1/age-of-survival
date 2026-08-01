@@ -25,7 +25,9 @@ Lots validés et commités :
 - `93870f1` — `fix: harden inventory transfer invariants` ;
 - `25fd671` — `feat: improve prototype visual readability` ;
 - `2d198a4` — `feat: add progressive encumbrance movement penalty` ;
-- `4d2be34` — `fix: preserve inventory and fixed-tick invariants`.
+- `4d2be34` — `fix: preserve inventory and fixed-tick invariants` ;
+- `83cb82c` — `fix: bind inventory containers to canonical definitions` ;
+- `52c7517` — `fix: preserve inventory construction atomicity`.
 
 État validé au commit `26a1a27` :
 
@@ -152,12 +154,14 @@ Console sont validés en Play Mode.
 
 ## Prochaine action
 
-1. Appliquer et valider le correctif d'atomicité de construction sur la branche.
-2. Créer un commit séparé puis reconstruire les artefacts de contrôle.
-3. Intégrer la branche dans `main` par avance rapide uniquement, si `main` est
-   toujours à `1a1f280` et sans divergence.
-4. Relancer les 142 cas EditMode sur `main`, vérifier le Play Mode et la Console.
-5. Conserver le bundle final puis supprimer la branche locale devenue inutile.
+1. Vérifier que la branche est propre et que `main` est toujours à `1a1f280`,
+   sans divergence.
+2. Intégrer `codex/lot5-inventory-sequence` dans `main` par avance rapide
+   uniquement.
+3. Relancer les 142 cas EditMode sur `main`, puis vérifier le Play Mode et la
+   Console.
+4. Conserver les artefacts finaux de contrôle avant de supprimer la branche
+   locale devenue inutile.
 
 ## Dépôts archivés
 
