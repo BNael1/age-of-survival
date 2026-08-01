@@ -144,11 +144,15 @@ de surcharge.
 **Statut : active**
 **Date : 1 août 2026**
 
-Naël valide pour le lot 6B la copie directe des deux tuiles internes du
-prototype Godot vers les trois chemins de terrain Unity existants. Aucun
-redessin n'est effectué : les régions `64 × 32` de l'atlas source sont copiées
-pixel pour pixel, avec la tuile de base utilisée pour `ground_grass.png` et
-`ground_water.png`, et la variante utilisée pour `ground_dirt.png`.
+Naël valide pour le lot 6B la copie directe des deux tuiles internes à Age of
+Survival depuis le fichier source Godot
+`/Users/bensaadi/jeu/assets/placeholders/ground_tiles.png`, au commit
+`deba36ea24f7c489994c2ba6104cdd7c7d02cc14`, vers les trois chemins de terrain
+Unity existants. Aucun redessin n'est effectué : les régions `64 × 32` de
+l'atlas source sont copiées pixel pour pixel. La tuile gauche alimente
+`ground_grass.png`, la tuile droite alimente `ground_dirt.png` et
+`ground_water.png` duplique provisoirement la tuile gauche.
+Ces fichiers sont des assets internes à Age of Survival.
 
 Le dépôt Godot reste une archive de référence inchangée. Unity conserve ses
 cellules isométriques de `1 × 0,5` unité, `64 PPU`, le filtrage Point, l'absence

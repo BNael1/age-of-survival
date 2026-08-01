@@ -28,7 +28,8 @@ Lots validés et commités :
 - `4d2be34` — `fix: preserve inventory and fixed-tick invariants` ;
 - `83cb82c` — `fix: bind inventory containers to canonical definitions` ;
 - `52c7517` — `fix: preserve inventory construction atomicity` ;
-- `e83b590` — `docs: close lot 5 inventory review`.
+- `e83b590` — `docs: close lot 5 inventory review` ;
+- `f7d4923` — `feat: add seamless isometric terrain`.
 
 État validé au commit `26a1a27` :
 
@@ -155,6 +156,8 @@ confirme l'absence d'interstice régulier et conserve les variantes de terrain.
 
 ## Limites techniques connues
 
+- `ground_water.png` contient provisoirement l'apparence de grass et ne
+  constitue pas une vraie tuile d'eau ;
 - `InventoryOperations` garantit l'identité unique à l'intérieur d'un conteneur,
   mais pas encore l'unicité globale d'une `ItemInstanceId` entre tous les
   conteneurs d'un `PlayerInventoryState` ;
@@ -165,9 +168,13 @@ confirme l'absence d'interstice régulier et conserve les variantes de terrain.
 
 ## Prochaine action
 
-Après validation de Naël, préparer un lot séparé pour l'échelle du joueur et
-des ressources ainsi que le cadrage caméra. Ces sujets restent explicitement
-hors du lot terrain 6B.
+1. Committer le correctif documentaire de clôture du lot 6B.
+2. Vérifier que la branche descend directement de `main`.
+3. Intégrer la branche dans `main` par avance rapide uniquement.
+4. Relancer les 144 tests EditMode sur `main`.
+5. Vérifier la Console et l'arbre Git final.
+6. Seulement ensuite, cadrer avec Naël un lot séparé pour l'échelle du joueur
+   et des ressources ainsi que le cadrage caméra.
 
 ## Dépôts archivés
 
