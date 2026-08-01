@@ -404,6 +404,90 @@ namespace AgeOfSurvival.Core.Tests.Inventory
         }
 
         [Test]
+        public void PlayerAggregateBindsEmptyContainersToCanonicalDefinitions()
+        {
+            ContainerState main = Container("main", 10000);
+            ContainerState bag = Container("bag", 10000);
+            _ = new PlayerInventoryState(
+                main.Id,
+                new[] { Branches },
+                new[] { main, bag });
+            var contradictory = new ItemDefinition(
+                Branches.Id,
+                "Contradictory branches",
+                ItemStateKind.Stackable,
+                new EncumbranceValue(1));
+
+            Assert.That(
+                () => InventoryOperations.AddStack(bag, contradictory, 1000),
+                Throws.ArgumentException);
+            Assert.That(bag.Entries, Is.Empty);
+            Assert.That(bag.UsedCapacity, Is.EqualTo(EncumbranceValue.Zero));
+        }
+
+        [Test]
+        public void PlayerAggregateRejectsDefinitionsOutsideCanonicalRegistry()
+        {
+            ContainerState main = Container("main", 10000);
+            _ = new PlayerInventoryState(
+                main.Id,
+                new[] { Branches },
+                new[] { main });
+            var extra = new ItemDefinition(
+                new ItemDefinitionId("extra"),
+                "Extra",
+                ItemStateKind.Stackable,
+                new EncumbranceValue(500));
+
+            Assert.That(
+                () => InventoryOperations.AddStack(main, extra, 1),
+                Throws.ArgumentException);
+            Assert.That(main.Entries, Is.Empty);
+            Assert.That(main.UsedCapacity, Is.EqualTo(EncumbranceValue.Zero));
+        }
+
+        [Test]
+        public void EmptyContainerRetainsItsFirstDefinitionFingerprint()
+        {
+            ContainerState container = Container("carried", 10000);
+            InventoryOperations.AddStack(container, Branches, 2);
+            InventoryOperations.RemoveStack(container, Branches, 2);
+            var contradictory = new ItemDefinition(
+                Branches.Id,
+                "Contradictory branches",
+                ItemStateKind.Stackable,
+                new EncumbranceValue(1));
+
+            Assert.That(
+                () => InventoryOperations.AddStack(container, contradictory, 1000),
+                Throws.ArgumentException);
+            Assert.That(container.Entries, Is.Empty);
+            Assert.That(container.UsedCapacity, Is.EqualTo(EncumbranceValue.Zero));
+        }
+
+        [Test]
+        public void PlayerAggregateRejectsPreviouslyBoundNonCanonicalDefinition()
+        {
+            ContainerState main = Container("main", 10000);
+            var extra = new ItemDefinition(
+                new ItemDefinitionId("extra"),
+                "Extra",
+                ItemStateKind.Stackable,
+                new EncumbranceValue(500));
+            InventoryOperations.AddStack(main, extra, 1);
+            InventoryOperations.RemoveStack(main, extra, 1);
+
+            Assert.That(
+                () => new PlayerInventoryState(
+                    main.Id,
+                    new[] { Branches },
+                    new[] { main }),
+                Throws.ArgumentException);
+            Assert.That(main.Entries, Is.Empty);
+            Assert.That(main.UsedCapacity, Is.EqualTo(EncumbranceValue.Zero));
+        }
+
+        [Test]
         public void CoreInventoryAssemblyHasNoUnityDependency()
         {
             string[] references = typeof(ContainerState).Assembly

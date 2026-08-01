@@ -126,18 +126,22 @@ namespace AgeOfSurvival.Core.Inventory
 
             for (int containerIndex = 0; containerIndex < _containers.Count; containerIndex++)
             {
-                ContainerState container = _containers[containerIndex];
-                for (int entryIndex = 0; entryIndex < container.Entries.Count; entryIndex++)
+                try
                 {
-                    InventoryEntry entry = container.Entries[entryIndex];
-                    ItemDefinition definition = FindDefinition(entry.DefinitionId);
-                    if (definition == null || !entry.MatchesDefinition(definition))
-                    {
-                        throw new ArgumentException(
-                            "Container entries must match the canonical item definition registry.",
-                            "containers");
-                    }
+                    _containers[containerIndex].ValidateCanonicalDefinitions(_definitions);
                 }
+                catch (ArgumentException exception)
+                {
+                    throw new ArgumentException(
+                        "Containers must match the canonical item definition registry.",
+                        "containers",
+                        exception);
+                }
+            }
+
+            for (int containerIndex = 0; containerIndex < _containers.Count; containerIndex++)
+            {
+                _containers[containerIndex].BindCanonicalDefinitions(_definitions);
             }
         }
     }

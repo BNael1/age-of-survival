@@ -175,13 +175,12 @@ Le lot 5D ajoute seize cas EditMode :
 Les tests Runtime existants vérifient aussi les textes `112.5 % / ×0.91` puis
 `95 % / ×1.00`, ainsi que leur présence dans l'UI Toolkit. Validation du 31 juillet 2026 : **132/132 cas EditMode** dans le Test Runner graphique et en batchmode, avec Play Mode et Console propres.
 
-La validation Play Mode doit confirmer la légère pénalité initiale, le retour à
-la vitesse normale lorsque le sac est équipé, la mise à jour immédiate des deux
+La validation Play Mode a confirmé la légère pénalité initiale, le retour à la
+vitesse normale lorsque le sac est équipé, la mise à jour immédiate des deux
 libellés et une transition sans saut perceptible lors d'une augmentation de
-charge. Sprint, endurance et dégâts ne doivent pas apparaître dans ce lot.
+charge. Sprint, endurance et dégâts n'apparaissent pas dans ce lot.
 
-
-## Correctif de revue globale — validation requise
+## Correctif de revue globale — validation réalisée
 
 Le correctif ajoute cinq cas EditMode :
 
@@ -192,6 +191,23 @@ Le correctif ajoute cinq cas EditMode :
 - un cas Runtime vérifiant que le multiplicateur de déplacement est recalculé
   séparément pour deux ticks entre lesquels l'équipement change.
 
-Total attendu après import : **137/137 cas EditMode**. La validation Play Mode
-doit confirmer qu'un transfert ou un changement d'équipement affecte le tick
-suivant même lorsque plusieurs ticks fixes sont exécutés dans la même frame.
+Validation du 1 août 2026 : **137/137 cas EditMode** dans le Test Runner
+graphique et en batchmode, zéro échec et zéro cas ignoré. Le Play Mode confirme
+qu'un transfert ou un changement d'équipement affecte le tick suivant même
+lorsque plusieurs ticks fixes sont exécutés dans la même frame. La Console est
+propre.
+
+## Correctif final du registre canonique — validation réalisée
+
+Le correctif ajoute quatre cas EditMode Core :
+
+- un conteneur enregistré mais vide refuse une définition contradictoire lors
+  d'un ajout direct ;
+- la liaison canonique reste active après retrait de la dernière entrée ;
+- un identifiant absent du registre canonique est rejeté avant mutation ;
+- un échec de construction de `PlayerInventoryState` ne laisse aucune liaison
+  canonique partielle dans les conteneurs fournis.
+
+Validation du 1 août 2026 : **141/141 cas EditMode** dans le Test Runner
+graphique et en batchmode, zéro échec et zéro cas ignoré. Le Play Mode confirme
+les transferts temporisés, l'équipement et la surcharge ; la Console est propre.

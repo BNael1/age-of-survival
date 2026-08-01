@@ -20,6 +20,7 @@ namespace AgeOfSurvival.Core.Inventory
                 return new AddItemResult(quantity, 0);
             }
 
+            destination.BindDefinition(definition);
             int existingIndex = destination.FindStackIndex(definition.Id);
             if (existingIndex >= 0)
             {
@@ -58,6 +59,7 @@ namespace AgeOfSurvival.Core.Inventory
                 return new AddItemResult(1, 0);
             }
 
+            destination.BindDefinition(definition);
             destination.Append(InventoryEntry.CreateUnique(definition, item));
             return new AddItemResult(1, 1);
         }
@@ -263,7 +265,7 @@ namespace AgeOfSurvival.Core.Inventory
             if (!IsDefinitionCompatible(container, definition))
             {
                 throw new ArgumentException(
-                    "The item definition contradicts an existing entry with the same stable identifier.",
+                    "The item definition contradicts the container definition registry.",
                     nameof(definition));
             }
         }

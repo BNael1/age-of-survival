@@ -136,8 +136,11 @@ Une entrée portant un `ItemDefinitionId` donné doit rester compatible avec la
 définition canonique : même type d'état et même encombrement unitaire. Les
 opérations vérifient cet invariant avant toute mutation, et
 `PlayerInventoryState` refuse un registre dont les définitions contredisent les
-entrées déjà présentes. Un identifiant stable ne peut donc pas être utilisé avec
-des données physiques différentes pour contourner la capacité.
+entrées déjà présentes. Lors de sa construction, l'agrégat lie aussi chaque
+conteneur enregistré au registre canonique, même lorsqu'il est vide. Le
+conteneur conserve ensuite l'empreinte d'une définition après retrait de la
+dernière entrée. Une mutation ultérieure ne peut donc introduire ni identifiant
+inconnu, ni données physiques différentes pour contourner la capacité.
 
 La frontière actuelle de `InventoryOperations` est locale à un conteneur. Elle
 ne suffit pas encore à garantir qu'une même `ItemInstanceId` n'existe jamais

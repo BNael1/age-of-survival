@@ -24,7 +24,8 @@ Lots validés et commités :
 - `dbcd442` — `feat: connect timed resource transfers` ;
 - `93870f1` — `fix: harden inventory transfer invariants` ;
 - `25fd671` — `feat: improve prototype visual readability` ;
-- `2d198a4` — `feat: add progressive encumbrance movement penalty`.
+- `2d198a4` — `feat: add progressive encumbrance movement penalty` ;
+- `4d2be34` — `fix: preserve inventory and fixed-tick invariants`.
 
 État validé au commit `26a1a27` :
 
@@ -123,9 +124,19 @@ et la Console sont validés. Sprint, endurance et dégâts restent hors périmè
 La revue globale avant fusion a trouvé deux invariants à corriger : une
 définition contradictoire partageant un identifiant stable pouvait fausser les
 calculs de capacité, et plusieurs ticks fixes d'une même frame pouvaient
-réutiliser un multiplicateur de surcharge périmé. Le correctif en cours impose
-la compatibilité identifiant/type/encombrement avant mutation et recalcule la
-charge dans chaque tick fixe. Cinq cas portent le total attendu à 137.
+réutiliser un multiplicateur de surcharge périmé. Le commit `4d2be34` impose la
+compatibilité identifiant/type/encombrement avant mutation et recalcule la
+charge dans chaque tick fixe. Les 137/137 cas EditMode passent dans l'éditeur et
+en batchmode ; le Play Mode et la Console sont validés.
+
+La revue finale des artefacts a ensuite couvert le cas d'un conteneur enregistré
+mais vide. Tous les conteneurs d'un `PlayerInventoryState` sont désormais liés
+au registre canonique dès la construction, même sans entrée, et conservent les
+empreintes des définitions après retrait de la dernière entrée. Une mutation
+ultérieure ne peut donc introduire ni identifiant inconnu, ni définition
+contradictoire. Quatre cas supplémentaires portent la suite à 141/141 dans le
+Test Runner graphique et en batchmode ; les transferts, l'équipement, la
+surcharge et la Console sont validés en Play Mode.
 
 ## Limites techniques connues
 
@@ -139,14 +150,11 @@ charge dans chaque tick fixe. Cinq cas portent le total attendu à 137.
 
 ## Prochaine action
 
-1. Appliquer le correctif de revue sur `2d198a4`.
-2. Obtenir 137/137 cas EditMode en batchmode et dans le Test Runner graphique.
-3. Vérifier en Play Mode que la charge est recalculée au tick suivant une
-   modification d'inventaire ou d'équipement, y compris lors de ticks de
-   rattrapage dans une même frame.
-4. Confirmer une Console propre, examiner le diff puis commiter séparément sous
-   `fix: preserve inventory and fixed-tick invariants`.
-5. Refaire le contrôle final avant toute fusion dans `main`.
+1. Terminer le contrôle Git du correctif canonique et vérifier un arbre propre.
+2. Intégrer la branche dans `main` par avance rapide uniquement, si `main` est
+   toujours à `1a1f280` et sans divergence.
+3. Relancer les 141 cas EditMode sur `main`, vérifier le Play Mode et la Console.
+4. Conserver le bundle final puis supprimer la branche locale devenue inutile.
 
 ## Dépôts archivés
 
