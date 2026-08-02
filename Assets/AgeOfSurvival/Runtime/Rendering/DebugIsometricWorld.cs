@@ -79,12 +79,17 @@ namespace AgeOfSurvival.Runtime.Rendering
             var unityGrid = gridObject.AddComponent<Grid>();
             unityGrid.cellLayout = GridLayout.CellLayout.Isometric;
             unityGrid.cellSize = new Vector3(1f, 0.5f, 1f);
+            unityGrid.cellGap = new Vector3(0f, -1f / 32f, 0f);
 
             var tilemapObject = new GameObject(TilemapName);
             tilemapObject.transform.SetParent(gridObject.transform, false);
 
             _tilemap = tilemapObject.AddComponent<Tilemap>();
-            tilemapObject.AddComponent<TilemapRenderer>();
+            var tilemapRenderer = tilemapObject.AddComponent<TilemapRenderer>();
+            // The source diamonds carry one opaque edge pixel beyond their visual
+            // surface. Sort each tile vertically so the one-pixel overlap stays hidden.
+            tilemapRenderer.mode = TilemapRenderer.Mode.Individual;
+            tilemapRenderer.sortOrder = TilemapRenderer.SortOrder.TopRight;
 
             CreateTiles();
             PopulateTilemap();

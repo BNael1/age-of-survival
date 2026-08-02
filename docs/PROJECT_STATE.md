@@ -1,6 +1,6 @@
 # État du projet
 
-Dernière mise à jour : 1 août 2026
+Dernière mise à jour : 2 août 2026
 
 ## Moteur
 
@@ -11,7 +11,7 @@ Dernière mise à jour : 1 août 2026
 
 ## État actuel
 
-Le dépôt Unity est sur la branche locale `codex/lot6b-seamless-terrain`.
+Le dépôt Unity est sur la branche locale `codex/lot6c-terrain-visual-seams`.
 
 Lots validés et commités :
 
@@ -151,8 +151,20 @@ code Runtime ne changent pas. Le pavage alpha déterministe 10 × 10 passe de
 10,3515625 % à 0,421875 % de pixels internes non couverts. Deux contrôles
 EditMode vérifient désormais les réglages d'import pixel art et le raccord : la
 suite complète atteint **144/144 cas EditMode** en batchmode, avec code de
-sortie 0. Une mosaïque ciblée reconstruite avec la géométrie et les assets Unity
-confirme l'absence d'interstice régulier et conserve les variantes de terrain.
+sortie 0. La capture Play Mode réelle a toutefois invalidé la conclusion
+visuelle du lot 6B : le test alpha ne couvrait pas les coutures opaques répétées
+et ne constituait donc pas une preuve suffisante de raccord.
+
+Le lot 6C est validé visuellement et techniquement par Naël. Le diagnostic
+confirme que les tuiles 64 × 32 portent une bordure opaque qui doit être
+recouverte dans l'ordre isométrique. Unity rendait les cellules en bloc, sans le
+recouvrement d'un pixel nécessaire. Le correctif configure un tri individuel
+`TopRight`, l'axe vertical du Renderer 2D et un pas diagonal rendu de 15 pixels.
+Les PNG, les 64 PPU et les positions Core restent inchangés. La suite atteint
+**145/145 cas EditMode**. Deux Tilemaps adjacentes de 5 × 5 cellules produisent
+exactement le même rendu qu'une Tilemap unique de 10 × 5, joueur compris, avec
+**0 pixel différent**. Le lot est prêt à être intégré dans `main` après création
+et revue de son commit.
 
 ## Limites techniques connues
 
@@ -168,13 +180,11 @@ confirme l'absence d'interstice régulier et conserve les variantes de terrain.
 
 ## Prochaine action
 
-1. Committer le correctif documentaire de clôture du lot 6B.
-2. Vérifier que la branche descend directement de `main`.
-3. Intégrer la branche dans `main` par avance rapide uniquement.
-4. Relancer les 144 tests EditMode sur `main`.
-5. Vérifier la Console et l'arbre Git final.
-6. Seulement ensuite, cadrer avec Naël un lot séparé pour l'échelle du joueur
-   et des ressources ainsi que le cadrage caméra.
+1. Créer le commit 6C.
+2. Vérifier son contenu et son ascendance.
+3. Intégrer dans `main` par avance rapide uniquement.
+4. Relancer les 145 tests EditMode sur `main`.
+5. Seulement ensuite, cadrer le lot joueur, ressources et caméra.
 
 ## Dépôts archivés
 

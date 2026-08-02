@@ -230,6 +230,13 @@ solution de repli lorsque les textures temporaires sont absentes. Cette couche
 est donc réversible et remplaçable sans changement du Core, des identifiants,
 de l'entrée ou de la simulation.
 
+Les tuiles de terrain isométriques qui portent des pixels opaques sur leur
+frontière suivent un contrat de rendu durable : `TilemapRenderer` en mode
+`Individual`, ordre `TopRight`, transparence du Renderer 2D triée sur l'axe Y
+et recouvrement rendu d'un pixel entre voisins diagonaux. Ce contrat appartient
+uniquement à l'adaptateur visuel ; les coordonnées et dimensions logiques du
+Core ne changent pas.
+
 ## Surcharge progressive et déplacement
 
 Le lot 5D conserve la règle dans le Core. `EncumbranceMovementOperations` reçoit

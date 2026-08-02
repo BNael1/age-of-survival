@@ -159,3 +159,14 @@ cellules isométriques de `1 × 0,5` unité, `64 PPU`, le filtrage Point, l'abse
 de mipmaps et de compression. Le raccord repose sur le chevauchement alpha déjà
 présent dans les tuiles Godot plutôt que sur une réduction ou un redessin des
 losanges.
+
+**Amendement lot 6C — décision validée par Naël le 2 août 2026.** La capture
+Play Mode a invalidé la preuve visuelle du lot 6B : sa métrique alpha ne
+mesurait pas les coutures opaques. Sans modifier les PNG, le Core ni les
+coordonnées logiques, Unity rend désormais chaque tuile avec un pas visuel
+diagonal de `15 px`, un `TilemapRenderer` en mode `Individual`, l'ordre
+`TopRight` et le tri de transparence sur l'axe Y. Naël valide la suppression des
+coutures internes. Les tranches du périmètre extérieur sont acceptées : elles
+correspondent à des cellules sans voisin pour les recouvrir. Deux Tilemaps
+adjacentes de `5 × 5` cellules ont produit exactement le même rendu qu'une
+Tilemap unique de `10 × 5`, joueur compris, avec `0` pixel différent.

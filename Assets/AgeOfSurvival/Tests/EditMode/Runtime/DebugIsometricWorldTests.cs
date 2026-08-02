@@ -115,6 +115,61 @@ namespace AgeOfSurvival.Runtime.Tests
         }
 
         [Test]
+        public void Rebuild_YSortsAndOverlapsEveryOpaqueGroundEdge()
+        {
+            AlphaMask grass = LoadGroundAlphaMask("ground_grass.png");
+            var root = new GameObject("Isometric ground overlap order test");
+
+            try
+            {
+                var presenter = root.AddComponent<DebugIsometricWorld>();
+                presenter.Rebuild();
+
+                var renderer = presenter.Tilemap.GetComponent<TilemapRenderer>();
+                ScriptableObject rendererData = AssetDatabase.LoadAssetAtPath<ScriptableObject>(
+                    "Assets/Settings/Renderer2D.asset");
+                Assert.That(rendererData, Is.Not.Null);
+                var serializedRendererData = new SerializedObject(rendererData);
+                SerializedProperty sortMode = serializedRendererData.FindProperty(
+                    "m_TransparencySortMode");
+                SerializedProperty sortAxis = serializedRendererData.FindProperty(
+                    "m_TransparencySortAxis");
+                int opaqueOverlapPixels = CountOpaqueOverlapPixels(
+                    grass,
+                    GroundTileWidthPixels / 2,
+                    GroundTileHeightPixels / 2);
+                Vector3 cellOrigin = presenter.Tilemap.GetCellCenterLocal(Vector3Int.zero);
+                float diagonalStepPixels = Mathf.Abs(
+                    presenter.Tilemap.GetCellCenterLocal(Vector3Int.right).y - cellOrigin.y)
+                    * PrototypeVisualAssets.PixelsPerUnit;
+
+                Assert.That(
+                    opaqueOverlapPixels,
+                    Is.GreaterThan(0),
+                    "The source tile must retain the opaque overlap that makes draw order observable.");
+                Assert.That(
+                    diagonalStepPixels,
+                    Is.EqualTo(15f).Within(0.001f),
+                    "Neighbouring diamonds must overlap by one pixel instead of exposing their opaque edge.");
+                Assert.That(renderer.mode, Is.EqualTo(TilemapRenderer.Mode.Individual));
+                Assert.That(
+                    renderer.sortOrder,
+                    Is.EqualTo(TilemapRenderer.SortOrder.TopRight),
+                    "Overlapping isometric ground must draw nearer cells over the lower opaque edge of their neighbours.");
+                Assert.That(sortMode, Is.Not.Null);
+                Assert.That(
+                    sortMode.intValue,
+                    Is.EqualTo((int)TransparencySortMode.CustomAxis));
+                Assert.That(sortAxis, Is.Not.Null);
+                Assert.That(sortAxis.vector3Value, Is.EqualTo(Vector3.up));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
         public void Rebuild_TwiceDoesNotDuplicateTheGeneratedHierarchy()
         {
             var root = new GameObject("Debug world rebuild test");
@@ -270,6 +325,32 @@ namespace AgeOfSurvival.Runtime.Tests
                 expectedPixelCount,
                 Is.EqualTo(SeamTestMapSize * SeamTestMapSize * 1024));
             return (float)uncoveredPixelCount / expectedPixelCount;
+        }
+
+        private static int CountOpaqueOverlapPixels(
+            AlphaMask tile,
+            int horizontalOffset,
+            int verticalOffset)
+        {
+            int overlapCount = 0;
+
+            for (int pixelY = verticalOffset; pixelY < GroundTileHeightPixels; pixelY++)
+            {
+                for (int pixelX = horizontalOffset; pixelX < GroundTileWidthPixels; pixelX++)
+                {
+                    int firstIndex = (pixelY * GroundTileWidthPixels) + pixelX;
+                    int secondIndex = ((pixelY - verticalOffset) * GroundTileWidthPixels)
+                        + pixelX
+                        - horizontalOffset;
+
+                    if (tile.OpaquePixels[firstIndex] && tile.OpaquePixels[secondIndex])
+                    {
+                        overlapCount++;
+                    }
+                }
+            }
+
+            return overlapCount;
         }
 
         private static void PlaceAlphaMask(
