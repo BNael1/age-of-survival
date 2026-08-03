@@ -243,3 +243,31 @@ exécution a révélé un débordement intermédiaire à la limite négative de 
 le calcul de composition des coordonnées a été corrigé et le cas de régression
 fait partie de la suite finale. Aucun Play Mode n'est requis car le lot ne
 modifie ni Runtime, ni scène, ni rendu.
+
+<!-- LOT7C_TESTING -->
+## Lot 7C — validation
+
+<!-- LOT7C_EDITMODE_STATUS: PASS -->
+
+Le lot ajoute **69 cas EditMode**, pour un total de **316** :
+
+- fixtures binaires de `PopulationV1` et préservation de `FoundationV1` ;
+- champs Q16, coordonnées négatives et limites `Int64` ;
+- terrains, zones, profils et révisions ;
+- déterminisme, ordre de génération et indépendance du découpage ;
+- distance minimale des ressources, y compris aux frontières ;
+- identifiants stables incluant la seed ;
+- spawn déterministe et dégagé ;
+- immutabilité et cache à la demande ;
+- raccord Runtime vers Tilemap, ressources et joueur ;
+- activation de la population dans `SampleScene` sans recalibrer la caméra.
+
+Validation EditMode du 3 août 2026 : **316/316**, zéro échec, zéro ignoré
+ou inconclusif et code Unity `0`. XML SHA-256
+`fd4a4404e4377ac9d3f8e286c1f6b5c9e07740db848b87699eb6e8c3676e4a8b`;
+journal SHA-256
+`1960eb2e86a4471b883021112de32ae9ab2aa876bf9d9a330c416de7d131ecde`.
+La validation Play Mode est acquise sur la capture de remplacement SHA-256
+`a182836b84bd27fbfa5ad04c47b12b404fef37a90ff8265bdc211c1ff8ce22db` :
+l'eau est distincte, le spawn et la caméra restent corrects, et le rapport
+visuel ne relève aucun motif d'erreur projet.

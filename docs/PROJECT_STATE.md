@@ -11,7 +11,7 @@ Dernière mise à jour : 3 août 2026
 
 ## État actuel
 
-Le dépôt Unity est sur la branche locale `codex/lot7b-deterministic-world-generation`.
+Le dépôt Unity est sur la branche locale `codex/lot7c-initial-world-population`.
 
 Lots validés et commités :
 
@@ -32,7 +32,8 @@ Lots validés et commités :
 - `f7d4923` — `feat: add seamless isometric terrain` ;
 - `93c22db` — `docs: close lot 6b terrain review` ;
 - `4df2a2e` — `fix: remove isometric terrain seams` ;
-- `a46e994` — `feat: add ground-anchor camera follow`.
+- `a46e994` — `feat: add ground-anchor camera follow` ;
+- `15fae58` — `feat: add deterministic world generation foundation`.
 
 État validé au commit `26a1a27` :
 
@@ -180,19 +181,32 @@ au sol du visuel joueur, conserve Z et applique le zoom technique provisoire
 passe à **154/154 cas EditMode**, avec validation Play Mode favorable. Le lot
 7A est fermé.
 
-Le lot 7B est installé et validé sur la branche dédiée
-`codex/lot7b-deterministic-world-generation`, sans modification Runtime ni scène.
-Il introduit dans le Core une seed 64 bits canonique, une version de générateur,
-des coordonnées monde/chunk signées sur 64 bits, une disposition technique
-`32 × 32`, un échantillonneur entier sans état, un générateur de chunks
-immuables à la demande et une couche sparse séparée pour les modifications.
-Les sorties de la version 1, les coordonnées négatives, les limites `Int64`, les
-bords, l'ordre de génération, le déchargement/régénération et la séparation
-généré/modifié sont couverts par **93 nouveaux cas EditMode**. La suite complète
-est validée à **247/247** sous Unity 6000.3.19f1, avec zéro échec, zéro cas ignoré
-ou inconclusif, code Unity `0` et XML `/tmp/lot7b-editmode-results.xml` vérifié.
-Aucun Play Mode n'est requis. Biomes, terrain final, ressources, spawn, streaming
-Unity et sauvegarde disque restent hors périmètre. Le lot n'est pas encore commité.
+Le lot 7B est intégré dans `main` au commit
+`15fae587d8ea084349ca60889075c543c7aa57e0`, arbre
+`77f316b4ae0254047d06b99aa62dd4ef5a474ea2`, par avance rapide pure depuis
+`a46e99434ad68ea5f87c037328d4a95bc3d15435`. La suite complète intégrée passe
+à **247/247 cas EditMode**, zéro échec, zéro ignoré ou inconclusif, code Unity
+`0`. Unity et le dépôt Godot sont propres. Le lot 7B est fermé.
+
+<!-- LOT7C_PROJECT_STATE -->
+Le lot 7C est installé sans commit sur
+`codex/lot7c-initial-world-population`, directement depuis `15fae587d8ea084349ca60889075c543c7aa57e0`.
+Il ajoute `PopulationV1` (`2`), des champs Q16 lissés en C# pur, trois terrains,
+des zones ouvertes et boisées, un placement de ressources à distance minimale,
+des identifiants incluant la seed, un spawn déterministe et un cache de chunks
+peuplés immuables. `SampleScene` rend provisoirement un chunk `32 × 32` de seed
+`0`, réutilise les assets existants et conserve le zoom `4.0625`.
+Validation EditMode 7C : **316/316**, zéro échec, zéro ignoré ou inconclusif,
+code Unity `0`, XML SHA-256
+`fd4a4404e4377ac9d3f8e286c1f6b5c9e07740db848b87699eb6e8c3676e4a8b`.
+La capture Play Mode de remplacement `lot7c-playmode.png`, SHA-256
+`a182836b84bd27fbfa5ad04c47b12b404fef37a90ff8265bdc211c1ff8ce22db`,
+rend les 143 cellules d'eau nettement distinctes en bleu sombre. Le rapport
+visuel, SHA-256
+`12f424522eb21c180ab2d6b528859e1f18d7b2fd676558b4aa509956caf01977`,
+ne relève aucun motif d'erreur projet. Naël avait accepté tous les autres choix
+visibles lors de la première revue ; l'unique réserve est résolue. La validation
+visuelle 7C est acquise. Aucun commit n'est encore créé.
 
 ## Limites techniques connues
 
@@ -208,14 +222,12 @@ Unity et sauvegarde disque restent hors périmètre. Le lot n'est pas encore com
 
 ## Prochaine action
 
-1. Terminer la revue indépendante du patch et du rapport du lot 7B.
-2. Obtenir la validation de Naël avant tout commit.
-3. Créer un commit unique sur la branche dédiée, puis contrôler son parent, son
-   arbre, ses 27 chemins et l'état Git final.
-4. Intégrer ensuite par avance rapide pure dans `main` et relancer les **247/247**
-   cas EditMode sur l'arbre intégré.
-5. Ne commencer ni le lot 7C ni un adaptateur de rendu chunké avant fermeture
-   complète de 7B.
+1. Terminer la revue indépendante du patch final et de ses artefacts.
+2. Après autorisation, créer un commit unique sur la branche dédiée.
+3. Contrôler son parent, son arbre, ses 34 chemins et l'état Git final.
+4. Intégrer ensuite par avance rapide pure dans `main` et relancer les
+   **316/316** cas EditMode sur l'arbre intégré.
+5. Garder le calibrage final des échelles, pivots, tri Y et zooms au lot 7D.
 
 ## Dépôts archivés
 

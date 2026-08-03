@@ -416,6 +416,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   width: 10
   height: 10
+  useGeneratedPopulation: 1
+  worldSeed: 0
+  chunkX: 0
+  chunkY: 0
 --- !u!114 &1872500003
 MonoBehaviour:
   m_ObjectHideFlags: 0

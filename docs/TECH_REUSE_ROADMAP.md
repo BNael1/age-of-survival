@@ -55,3 +55,18 @@ il sert uniquement aux décisions reproductibles de génération.
 - stratégie de sortie ;
 - gain de temps mesurable ;
 - absence de propriété sur les systèmes centraux.
+
+<!-- LOT7C_REUSE -->
+## Recherche du lot 7C — champs et espacement
+
+Recherche réalisée le 3 août 2026.
+
+| Candidat | Statut | Décision |
+|---|---|---|
+| Tilemap `SetTilesBlock` officiel | API Unity incluse | **Utilisé** pour remplir le chunk en bloc ; aucun package ajouté. |
+| ScriptableObject | API Unity incluse | **Réservé aux profils éditoriaux futurs** ; l'état mutable et la sauvegarde n'y résident pas. |
+| Poisson disk / Bridson | publication scientifique | **Référence conceptuelle seulement** pour la distance minimale ; aucun code repris. |
+| Bibliothèques de bruit externes | licences et versions variables | **Non nécessaires au prototype** ; les champs Q16 sont implémentés localement. |
+| Générateurs Asset Store | dépendance centrale | **Rejetés pour le Core propriétaire**. |
+
+Aucune dépendance Runtime externe n'est ajoutée.

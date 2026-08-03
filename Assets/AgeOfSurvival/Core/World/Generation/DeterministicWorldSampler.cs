@@ -14,11 +14,13 @@ namespace AgeOfSurvival.Core.World.Generation
         private const ulong MixMultiplierB = 0x94D049BB133111EBUL;
         private const ulong WorldDomain = 0x414F535F574F524CUL;
         private const ulong FoundationV1Domain = 0x445F47454E5F5631UL;
+        private const ulong PopulationV1Domain = 0x445F504F505F5631UL;
         private const double UnitScale = 1.0 / 9007199254740992.0;
 
         public static bool Supports(WorldGeneratorVersion version)
         {
-            return version == WorldGeneratorVersions.FoundationV1;
+            return version == WorldGeneratorVersions.FoundationV1
+                || version == WorldGeneratorVersions.PopulationV1;
         }
 
         public static ulong Sample64(
@@ -32,7 +34,22 @@ namespace AgeOfSurvival.Core.World.Generation
                     $"World generator version {settings.Version} is not supported by this build.");
             }
 
-            return SampleFoundationV1(settings.Seed, worldCell, stream);
+            if (settings.Version == WorldGeneratorVersions.FoundationV1)
+            {
+                return SampleVersion(
+                    settings.Seed,
+                    settings.Version,
+                    worldCell,
+                    stream,
+                    FoundationV1Domain);
+            }
+
+            return SampleVersion(
+                settings.Seed,
+                settings.Version,
+                worldCell,
+                stream,
+                PopulationV1Domain);
         }
 
         /// <summary>
@@ -47,19 +64,21 @@ namespace AgeOfSurvival.Core.World.Generation
             return (sample >> 11) * UnitScale;
         }
 
-        private static ulong SampleFoundationV1(
+        private static ulong SampleVersion(
             WorldSeed seed,
+            WorldGeneratorVersion version,
             WorldCellCoordinate worldCell,
-            GenerationStream stream)
+            GenerationStream stream,
+            ulong versionDomain)
         {
             unchecked
             {
                 ulong state = Mix64(seed.Value ^ WorldDomain);
-                state = Mix64(state ^ ((ulong)WorldGeneratorVersions.FoundationV1.Value + GoldenGamma));
+                state = Mix64(state ^ ((ulong)version.Value + GoldenGamma));
                 state = Mix64(state ^ (ZigZag(worldCell.X) + (GoldenGamma * 2UL)));
                 state = Mix64(state ^ (ZigZag(worldCell.Y) + (GoldenGamma * 3UL)));
                 state = Mix64(state ^ ((ulong)stream.Value + (GoldenGamma * 4UL)));
-                return Mix64(state ^ FoundationV1Domain);
+                return Mix64(state ^ versionDomain);
             }
         }
 

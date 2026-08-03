@@ -209,3 +209,26 @@ silencieusement.
 dans une couche sparse distincte et triable canoniquement. Le lot ne définit ni
 biome, ni terrain final, ni ressources, ni spawn, ni rendu chunké : ces éléments
 restent au lot 7C ou aux adaptateurs ultérieurs.
+
+<!-- LOT7C_DECISION -->
+## ADR-0015 — Population V1 et profil éditorial révisé
+
+**Statut : active, paramètres visuels provisoires**
+**Date : 3 août 2026**
+
+La population initiale utilise `PopulationV1` (`2`) au lieu de modifier
+`FoundationV1`. Les champs continus, les ressources et le spawn sont adressés
+par coordonnée monde et flux nommé. Un profil stable (`temperate-prototype`) et
+sa révision font partie du contrat de sauvegarde.
+
+Les ressources sont espacées par amincissement déterministe de candidats ;
+l'identifiant inclut la seed, la version, le profil, la révision, le type et la
+coordonnée. Le premier spawn valide est choisi sur l'anneau de Chebyshev le plus
+proche, puis par priorité stable.
+
+Naël avait accepté le terrain, la terre nue, la densité, le spawn et le cadrage
+lors de la première revue. La capture de remplacement, après passage de la
+teinte d'eau à `Color32(0,64,255,255)`, résout l'unique réserve de lisibilité.
+Ces paramètres sont retenus provisoirement pour le lot 7C ; ils ne constituent
+pas la direction artistique finale. Le lot ne décide pas les collisions, le
+streaming, le biome final ni le calibrage du lot 7D.

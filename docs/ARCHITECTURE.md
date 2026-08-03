@@ -299,3 +299,16 @@ recalcule aucune règle : elle affiche les valeurs produites par le Core.
 Sprint, endurance, dégâts de surcharge et effets d'animation sont reportés. Ils
 pourront consommer le même ratio sans modifier la courbe ni déplacer la source
 de vérité vers Unity.
+
+<!-- LOT7C_ARCHITECTURE -->
+## Population initiale déterministe
+
+`WorldPopulationSettings` associe l'identité de génération à un profil éditorial
+versionné. `DeterministicWorldPopulationGenerator` reste dans le Core pur : il
+échantillonne les cellules absolues, génère `PopulatedChunk`, place les
+ressources et recherche le spawn sans dépendre d'Unity ni d'un ordre de chargement.
+
+`PopulatedChunk` est une base immuable. `OnDemandPopulatedWorld` est un cache
+appelant. Le Runtime transforme les placements générés en `ResourceState`
+mutables pour le prototype, sans écrire dans la base générée. `DebugIsometricWorld`
+reste un adaptateur provisoire limité à un chunk et à la Tilemap existante.

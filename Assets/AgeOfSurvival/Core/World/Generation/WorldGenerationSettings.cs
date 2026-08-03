@@ -192,15 +192,18 @@ namespace AgeOfSurvival.Core.World.Generation
     public static class WorldGeneratorVersions
     {
         public static readonly WorldGeneratorVersion FoundationV1 = new WorldGeneratorVersion(1);
+        public static readonly WorldGeneratorVersion PopulationV1 = new WorldGeneratorVersion(2);
     }
 
     public static class GenerationStreams
     {
-        /// <summary>
-        /// Raw deterministic sample used by the lot 7B foundation.
-        /// Lot 7C must introduce separate named streams for terrain and population.
-        /// </summary>
         public static readonly GenerationStream Foundation = new GenerationStream(0u);
+        public static readonly GenerationStream TerrainElevation = new GenerationStream(0x54455241u);
+        public static readonly GenerationStream TerrainSoil = new GenerationStream(0x534F494Cu);
+        public static readonly GenerationStream LandscapeZone = new GenerationStream(0x5A4F4E45u);
+        public static readonly GenerationStream ResourceCandidate = new GenerationStream(0x5243414Eu);
+        public static readonly GenerationStream ResourcePriority = new GenerationStream(0x52505249u);
+        public static readonly GenerationStream SpawnPriority = new GenerationStream(0x53505249u);
     }
 
     /// <summary>
@@ -280,6 +283,14 @@ namespace AgeOfSurvival.Core.World.Generation
             return new WorldGenerationSettings(
                 seed,
                 WorldGeneratorVersions.FoundationV1,
+                PrototypeChunkLayout);
+        }
+
+        public static WorldGenerationSettings CreatePopulationV1(WorldSeed seed)
+        {
+            return new WorldGenerationSettings(
+                seed,
+                WorldGeneratorVersions.PopulationV1,
                 PrototypeChunkLayout);
         }
     }

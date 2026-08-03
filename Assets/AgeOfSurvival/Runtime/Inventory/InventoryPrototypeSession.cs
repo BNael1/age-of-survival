@@ -19,7 +19,17 @@ namespace AgeOfSurvival.Runtime.Inventory
         private int _nextTransferAction = 1;
 
         public InventoryPrototypeSession()
+            : this(CreatePrototypeResources())
         {
+        }
+
+        public InventoryPrototypeSession(IEnumerable<ResourceState> resources)
+        {
+            if (resources == null)
+            {
+                throw new ArgumentNullException(nameof(resources));
+            }
+
             _readOnlyResources = _resources.AsReadOnly();
             _readOnlyGroundContainers = _groundContainers.AsReadOnly();
             MainContainer = new ContainerState(
@@ -55,11 +65,33 @@ namespace AgeOfSurvival.Runtime.Inventory
                 new[] { MainContainer, BagContainer });
             Commands = new InventoryPrototypeCommands(Inventory);
 
+            var resourceIds = new HashSet<ResourceId>();
+            foreach (ResourceState resource in resources)
+            {
+                if (resource == null)
+                {
+                    throw new ArgumentException("Initial resources must not contain null entries.", nameof(resources));
+                }
+
+                if (!resourceIds.Add(resource.Id))
+                {
+                    throw new ArgumentException(
+                        $"Initial resources contain duplicate identifier {resource.Id}.",
+                        nameof(resources));
+                }
+
+                _resources.Add(resource);
+            }
+        }
+
+
+        private static IEnumerable<ResourceState> CreatePrototypeResources()
+        {
             for (int index = 0; index < InventoryPrototypeCatalog.ResourcePositions.Length; index++)
             {
-                _resources.Add(new ResourceState(
+                yield return new ResourceState(
                     new ResourceId($"debug-resource-{index + 1:00}"),
-                    InventoryPrototypeCatalog.ResourcePositions[index]));
+                    InventoryPrototypeCatalog.ResourcePositions[index]);
             }
         }
 
@@ -223,6 +255,13 @@ namespace AgeOfSurvival.Runtime.Inventory
 
         public static InventoryPrototypeSession Current =>
             _current ?? (_current = new InventoryPrototypeSession());
+
+        public static InventoryPrototypeSession ConfigureResources(
+            IEnumerable<ResourceState> resources)
+        {
+            _current = new InventoryPrototypeSession(resources);
+            return _current;
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetForPlayMode()

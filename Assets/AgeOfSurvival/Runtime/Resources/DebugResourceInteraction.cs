@@ -201,13 +201,26 @@ namespace AgeOfSurvival.Runtime.Resources
             _hasPlayerPosition = false;
             CurrentTargetId = null;
             LastInteractionResult = null;
-            _session = Application.isPlaying
-                ? InventoryPrototypeSessionProvider.Current
-                : new InventoryPrototypeSession();
-
             if (worldRenderer == null)
             {
                 worldRenderer = GetComponent<DebugIsometricWorld>();
+            }
+
+            IReadOnlyList<ResourceState> generatedResources = worldRenderer != null
+                && worldRenderer.UsesGeneratedPopulation
+                ? worldRenderer.CreateGeneratedResourceStates()
+                : null;
+            if (generatedResources != null)
+            {
+                _session = Application.isPlaying
+                    ? InventoryPrototypeSessionProvider.ConfigureResources(generatedResources)
+                    : new InventoryPrototypeSession(generatedResources);
+            }
+            else
+            {
+                _session = Application.isPlaying
+                    ? InventoryPrototypeSessionProvider.Current
+                    : new InventoryPrototypeSession();
             }
 
             CreateVisualAssets();

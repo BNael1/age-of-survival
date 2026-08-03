@@ -2,9 +2,10 @@
 
 ## Statut
 
-Le lot 7B introduit uniquement la fondation déterministe et chunkée du monde.
-Il ne choisit encore ni biome, ni type de terrain final, ni densité de ressources,
-ni point d'apparition. Ces décisions appartiennent au lot 7C.
+Le lot 7B fournit la fondation déterministe et chunkée. Le lot 7C ajoute
+une première population logique versionnée : terrains, zones, ressources et
+spawn. Le profil reste provisoire artistiquement, mais ses paramètres 7C et la
+lisibilité de l'eau sont validés pour ce jalon.
 
 ## Identité d'un monde généré
 
@@ -15,8 +16,8 @@ L'identité minimale est composée de :
 - `WorldGeneratorVersion` : entier strictement positif ;
 - `ChunkLayout` : dimensions explicites de la partition chargée et sauvegardée.
 
-La version active est `FoundationV1` (`1`). La taille technique prototype est
-`32 × 32` cellules. Cette taille n'est pas incorporée dans l'échantillonnage
+Les versions supportées sont `FoundationV1` (`1`) et `PopulationV1` (`2`).
+La taille technique prototype reste `32 × 32` cellules. Cette taille n'est pas incorporée dans l'échantillonnage
 d'une cellule : une même coordonnée monde conserve donc le même échantillon si
 la partition en chunks change. Une migration de disposition restera néanmoins
 nécessaire pour les modifications persistantes déjà enregistrées.
@@ -115,3 +116,22 @@ un nouveau flux ne doit pas décaler les résultats des flux existants.
 - sauvegarde sur disque et migrations ;
 - simulation hors écran ;
 - Jobs, Burst ou DOTS.
+
+## Extension du lot 7C
+
+<!-- LOT7C_WORLD_GENERATION -->
+
+`PopulationV1` conserve le sampler sans état et ajoute six flux nommés pour
+l'élévation, le sol, la zone, les candidats de ressources, leur priorité et le
+spawn. Des champs Q16 lissés par interpolation entière produisent les décisions
+de terrain en coordonnées monde absolues.
+
+Le profil save-facing `temperate-prototype@1` sépare les paramètres éditoriaux
+de l'algorithme. Les ressources utilisent un amincissement déterministe par
+priorité dans un rayon euclidien ; la décision reste identique aux frontières de
+chunks. Le spawn recherche le premier anneau contenant une cellule ouverte,
+terrestre et dégagée, puis tranche par priorité stable.
+
+`PopulatedChunk` est immuable. Les `ResourceState` mutables n'apparaissent qu'à
+la frontière Runtime. Le streaming multi-chunks, les collisions de terrain, les
+biomes supplémentaires et la sauvegarde disque restent hors périmètre.

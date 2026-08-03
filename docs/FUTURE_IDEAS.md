@@ -32,3 +32,14 @@ Les règles de construction, de refuges et de familiarité déjà validées ne s
 - regroupement spatial, fusion et persistance des conteneurs de sol ;
 - durées propres aux catégories d'objets, compétences et animations ;
 - format de sauvegarde versionné, migrations et réparation de données.
+
+<!-- LOT7C_FUTURE_IDEAS -->
+## Reporté après le lot 7C
+
+- streaming de plusieurs chunks autour du joueur ;
+- collision, navigation et interdiction de marcher sur l'eau ;
+- biomes multiples, rivières, routes et relief physique ;
+- tables de ressources variées, arbres, rochers et animaux ;
+- sauvegarde des ressources récoltées et migrations correspondantes ;
+- asset d'eau final et calibrage artistique, à traiter avec le lot 7D ou un lot
+  d'assets dédié.

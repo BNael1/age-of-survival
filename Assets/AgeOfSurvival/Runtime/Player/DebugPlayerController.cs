@@ -79,7 +79,11 @@ namespace AgeOfSurvival.Runtime.Player
                 return;
             }
 
-            _player = new PlayerState(new WorldPosition(startPosition.x, startPosition.y));
+            WorldPosition initialPosition = worldRenderer.TryGetGeneratedSpawnPosition(
+                out WorldPosition generatedSpawn)
+                ? generatedSpawn
+                : new WorldPosition(startPosition.x, startPosition.y);
+            _player = new PlayerState(initialPosition);
             _clock = new FixedTickClock(ticksPerSecond, maxTicksPerFrame);
             SynchronizeMovementState();
 

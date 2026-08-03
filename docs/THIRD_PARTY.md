@@ -47,3 +47,13 @@ fichier source tiers n'est copié.
 ## Règle
 
 Toute future dépendance externe doit documenter : nom, version, auteur, URL, licence, fichiers concernés, obligations, raison d’adoption, risques et stratégie de sortie.
+
+<!-- LOT7C_THIRD_PARTY -->
+## Lot 7C — population initiale
+
+Aucun package, code source ou asset tiers n'est ajouté. L'implémentation des
+champs Q16 et de l'amincissement par priorité est locale. L'article de Bridson
+sur l'échantillonnage à distance minimale sert uniquement de référence
+algorithmique ; aucun extrait de son implémentation n'est intégré.
+
+La Tilemap, les sprites déjà présents et les APIs Unity incluses sont réutilisés.

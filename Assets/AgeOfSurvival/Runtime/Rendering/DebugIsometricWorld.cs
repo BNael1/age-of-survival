@@ -1,15 +1,20 @@
+using System;
+using System.Collections.Generic;
 using AgeOfSurvival.Core.Characters;
+using AgeOfSurvival.Core.Resources;
 using AgeOfSurvival.Core.World;
+using AgeOfSurvival.Core.World.Generation;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
 namespace AgeOfSurvival.Runtime.Rendering
 {
     /// <summary>
-    /// Temporary Unity adapter that renders a Core DenseGrid as an isometric Tilemap.
-    /// Project-owned prototype sprites improve readability while generated diamonds remain
-    /// available as a safe fallback. This adapter contains no gameplay rules.
+    /// Temporary Unity adapter that renders either the legacy debug pattern or one
+    /// immutable generated population chunk as an isometric Tilemap. It owns no mutable
+    /// simulation state and contains no gameplay rules.
     /// </summary>
+    [DefaultExecutionOrder(-20)]
     public sealed class DebugIsometricWorld : MonoBehaviour
     {
         private const string GridRootName = "Debug Isometric Grid";
@@ -20,6 +25,11 @@ namespace AgeOfSurvival.Runtime.Rendering
 
         [SerializeField, Min(1)] private int width = 10;
         [SerializeField, Min(1)] private int height = 10;
+        [SerializeField] private bool useGeneratedPopulation;
+        [SerializeField] private string worldSeed = "0";
+        [SerializeField] private long chunkX;
+        [SerializeField] private long chunkY;
+
         private Texture2D _generatedTexture;
         private Sprite _generatedSprite;
         private Sprite _grassSprite;
@@ -30,10 +40,17 @@ namespace AgeOfSurvival.Runtime.Rendering
         private Tile _borderTile;
         private DenseGrid<byte> _world;
         private Tilemap _tilemap;
+        private PopulatedChunk _populationChunk;
+        private GeneratedSpawnPoint? _spawnPoint;
+        private WorldCellCoordinate _renderedWorldOrigin;
 
         public DenseGrid<byte> World => _world;
         public Tilemap Tilemap => _tilemap;
         public bool UsesPrototypeVisuals { get; private set; }
+        public bool UsesGeneratedPopulation => useGeneratedPopulation && _populationChunk != null;
+        public PopulatedChunk PopulationChunk => _populationChunk;
+        public GeneratedSpawnPoint? SpawnPoint => _spawnPoint;
+        public WorldCellCoordinate RenderedWorldOrigin => _renderedWorldOrigin;
 
         public Vector3 LogicalToWorldPosition(
             WorldPosition logicalPosition,
@@ -48,13 +65,57 @@ namespace AgeOfSurvival.Runtime.Rendering
             Vector3 origin = _tilemap.GetCellCenterWorld(Vector3Int.zero);
             Vector3 xBasis = _tilemap.GetCellCenterWorld(Vector3Int.right) - origin;
             Vector3 yBasis = _tilemap.GetCellCenterWorld(Vector3Int.up) - origin;
+            double localX = logicalPosition.X - _renderedWorldOrigin.X;
+            double localY = logicalPosition.Y - _renderedWorldOrigin.Y;
 
             Vector3 renderedPosition = origin
-                + (xBasis * (float)logicalPosition.X)
-                + (yBasis * (float)logicalPosition.Y);
+                + (xBasis * (float)localX)
+                + (yBasis * (float)localY);
             renderedPosition.y += visualYOffset;
             renderedPosition.z = visualZ;
             return renderedPosition;
+        }
+
+        public void ConfigureGeneratedPopulation(
+            WorldSeed seed,
+            ChunkCoordinate coordinate)
+        {
+            useGeneratedPopulation = true;
+            worldSeed = seed.ToString();
+            chunkX = coordinate.X;
+            chunkY = coordinate.Y;
+        }
+
+        public bool TryGetGeneratedSpawnPosition(out WorldPosition position)
+        {
+            if (!_spawnPoint.HasValue)
+            {
+                position = default(WorldPosition);
+                return false;
+            }
+
+            WorldCellCoordinate cell = _spawnPoint.Value.Cell;
+            position = new WorldPosition(cell.X, cell.Y);
+            return true;
+        }
+
+        public IReadOnlyList<ResourceState> CreateGeneratedResourceStates()
+        {
+            if (_populationChunk == null)
+            {
+                return Array.Empty<ResourceState>();
+            }
+
+            var resources = new List<ResourceState>(_populationChunk.Resources.Count);
+            for (int index = 0; index < _populationChunk.Resources.Count; index++)
+            {
+                GeneratedResourcePlacement placement = _populationChunk.Resources[index];
+                resources.Add(new ResourceState(
+                    placement.Id,
+                    new WorldPosition(placement.Cell.X, placement.Cell.Y)));
+            }
+
+            return resources.AsReadOnly();
         }
 
         private void Awake()
@@ -68,7 +129,9 @@ namespace AgeOfSurvival.Runtime.Rendering
             DestroyGeneratedHierarchy();
             DestroyGeneratedAssets();
 
-            _world = DebugWorldPattern.Create(width, height);
+            _world = useGeneratedPopulation
+                ? CreateGeneratedPopulationWorld()
+                : DebugWorldPattern.Create(width, height);
 
             var gridObject = new GameObject(GridRootName);
             gridObject.transform.SetParent(transform, false);
@@ -83,13 +146,60 @@ namespace AgeOfSurvival.Runtime.Rendering
 
             _tilemap = tilemapObject.AddComponent<Tilemap>();
             var tilemapRenderer = tilemapObject.AddComponent<TilemapRenderer>();
-            // The source diamonds carry one opaque edge pixel beyond their visual
-            // surface. Sort each tile vertically so the one-pixel overlap stays hidden.
             tilemapRenderer.mode = TilemapRenderer.Mode.Individual;
             tilemapRenderer.sortOrder = TilemapRenderer.SortOrder.TopRight;
 
             CreateTiles();
             PopulateTilemap();
+        }
+
+        private DenseGrid<byte> CreateGeneratedPopulationWorld()
+        {
+            WorldSeed seed = WorldSeed.Parse(worldSeed);
+            WorldPopulationSettings settings =
+                WorldPopulationDefaults.CreateTemperatePrototypeV1(seed);
+            var generator = new DeterministicWorldPopulationGenerator(settings);
+            var coordinate = new ChunkCoordinate(chunkX, chunkY);
+            _populationChunk = generator.Generate(coordinate);
+            _renderedWorldOrigin = ChunkAddressing.GetWorldOrigin(
+                coordinate,
+                settings.Generation.ChunkLayout);
+
+            ChunkLayout layout = settings.Generation.ChunkLayout;
+            var generatedWorld = new DenseGrid<byte>(layout.Bounds);
+            for (int index = 0; index < generatedWorld.Count; index++)
+            {
+                GridPosition localPosition = layout.Bounds.FromIndex(index);
+                generatedWorld[localPosition] = ToDebugCellValue(
+                    _populationChunk.GetCell(localPosition).Terrain);
+            }
+
+            var preferredSpawn = new WorldCellCoordinate(
+                checked(_renderedWorldOrigin.X + (layout.Width / 2)),
+                checked(_renderedWorldOrigin.Y + (layout.Height / 2)));
+            if (!generator.TryFindSpawnNear(preferredSpawn, out GeneratedSpawnPoint spawn))
+            {
+                throw new InvalidOperationException(
+                    $"No valid spawn was found near {preferredSpawn} for {settings}.");
+            }
+
+            _spawnPoint = spawn;
+            return generatedWorld;
+        }
+
+        private static byte ToDebugCellValue(GeneratedTerrainKind terrain)
+        {
+            switch (terrain)
+            {
+                case GeneratedTerrainKind.Grass:
+                    return DebugWorldPattern.BaseCell;
+                case GeneratedTerrainKind.Dirt:
+                    return DebugWorldPattern.AccentCell;
+                case GeneratedTerrainKind.Water:
+                    return DebugWorldPattern.BorderCell;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(terrain), terrain, "Unknown generated terrain kind.");
+            }
         }
 
         private void OnDestroy()
@@ -163,6 +273,17 @@ namespace AgeOfSurvival.Runtime.Rendering
         private void PopulateTilemap()
         {
             GridBounds bounds = _world.Bounds;
+            var tiles = new TileBase[bounds.CellCount];
+
+            for (int index = 0; index < tiles.Length; index++)
+            {
+                GridPosition logicalPosition = bounds.FromIndex(index);
+                tiles[index] = TileFor(_world[logicalPosition]);
+            }
+
+            _tilemap.SetTilesBlock(
+                new BoundsInt(0, 0, 0, bounds.Width, bounds.Height, 1),
+                tiles);
 
             for (int y = 0; y < bounds.Height; y++)
             {
@@ -171,12 +292,10 @@ namespace AgeOfSurvival.Runtime.Rendering
                     var logicalPosition = new GridPosition(x, y);
                     var cellPosition = new Vector3Int(x, y, 0);
                     byte value = _world[logicalPosition];
-
-                    _tilemap.SetTile(cellPosition, TileFor(value));
                     _tilemap.SetTileFlags(cellPosition, TileFlags.None);
                     _tilemap.SetColor(
                         cellPosition,
-                        UsesPrototypeVisuals ? Color.white : ColorFor(value));
+                        TileColorFor(value));
                 }
             }
 
@@ -196,6 +315,21 @@ namespace AgeOfSurvival.Runtime.Rendering
                 default:
                     return _baseTile;
             }
+        }
+
+
+        private Color TileColorFor(byte value)
+        {
+            if (!UsesPrototypeVisuals)
+            {
+                return ColorFor(value);
+            }
+
+            // ground_water.png intentionally remains the provisional grass duplicate.
+            // A debug tint keeps generated water readable without introducing a final asset.
+            return useGeneratedPopulation && value == DebugWorldPattern.BorderCell
+                ? new Color32(0, 64, 255, 255)
+                : Color.white;
         }
 
         private static Color ColorFor(byte value)
@@ -271,6 +405,9 @@ namespace AgeOfSurvival.Runtime.Rendering
 
             _tilemap = null;
             _world = null;
+            _populationChunk = null;
+            _spawnPoint = null;
+            _renderedWorldOrigin = default(WorldCellCoordinate);
         }
 
         private void DestroyGeneratedAssets()
@@ -302,7 +439,7 @@ namespace AgeOfSurvival.Runtime.Rendering
             UsesPrototypeVisuals = false;
         }
 
-        private static void DestroyUnityObject(Object target)
+        private static void DestroyUnityObject(UnityEngine.Object target)
         {
             if (target == null)
             {
@@ -311,11 +448,11 @@ namespace AgeOfSurvival.Runtime.Rendering
 
             if (Application.isPlaying)
             {
-                Object.Destroy(target);
+                UnityEngine.Object.Destroy(target);
             }
             else
             {
-                Object.DestroyImmediate(target);
+                UnityEngine.Object.DestroyImmediate(target);
             }
         }
     }

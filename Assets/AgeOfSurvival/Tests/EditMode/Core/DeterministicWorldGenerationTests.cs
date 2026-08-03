@@ -20,7 +20,7 @@ namespace AgeOfSurvival.Core.Tests
         {
             var settings = new WorldGenerationSettings(
                 new WorldSeed(1UL),
-                new WorldGeneratorVersion(2),
+                new WorldGeneratorVersion(3),
                 new ChunkLayout(32, 32));
 
             Assert.Throws<NotSupportedException>(() =>
@@ -35,7 +35,7 @@ namespace AgeOfSurvival.Core.Tests
         {
             var settings = new WorldGenerationSettings(
                 new WorldSeed(1UL),
-                new WorldGeneratorVersion(2),
+                new WorldGeneratorVersion(3),
                 new ChunkLayout(32, 32));
 
             Assert.Throws<NotSupportedException>(() =>
