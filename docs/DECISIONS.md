@@ -186,3 +186,26 @@ Le zoom `orthographicSize = 4.0625` est une valeur technique fixe, explicite et
 provisoire. Elle ne constitue pas un cadrage artistique définitif : ce calibrage
 reste réservé au lot 7D. Le lot 7A n'introduit aucune génération de monde ; 7B
 reste la génération déterministe et 7C la population initiale.
+
+## ADR-0014 — Génération chunkée déterministe et versionnée
+
+**Statut : active**
+**Date : 3 août 2026**
+
+Le monde généré est identifié par une seed non signée sur 64 bits, une version
+de générateur strictement positive et une disposition explicite de chunks. La
+version initiale est `FoundationV1` (`1`) et la disposition technique prototype
+est `32 × 32`. L'échantillonnage se fait par coordonnée monde absolue et reste
+indépendant de cette partition, afin qu'un changement futur de taille de chunk
+ne change pas automatiquement le terrain logique.
+
+Le Core n'utilise pas `System.Random`, dont la séquence n'est pas garantie entre
+versions majeures de .NET. Il emploie un mélange entier sans état, verrouillé par
+des fixtures de sortie. Toute modification volontaire de l'algorithme exige une
+nouvelle version ; une version inconnue est refusée au lieu d'être régénérée
+silencieusement.
+
+`GeneratedChunk` est une base immuable. Les changements persistants résident
+dans une couche sparse distincte et triable canoniquement. Le lot ne définit ni
+biome, ni terrain final, ni ressources, ni spawn, ni rendu chunké : ces éléments
+restent au lot 7C ou aux adaptateurs ultérieurs.

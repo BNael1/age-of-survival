@@ -36,6 +36,14 @@ Survival, pas des dépendances tierces :
 Le dépôt Godot demeure inchangé. Les fichiers `.meta` Unity existants sont
 conservés afin de préserver leurs GUID et leurs réglages d'import.
 
+## Lot 7B — génération déterministe
+
+Aucune bibliothèque, aucun package et aucun asset externe n'est ajouté. Le Core
+contient une implémentation locale d'un échantillonneur entier sans état. Les
+constantes de diffusion associées à SplitMix64 sont documentées comme référence
+algorithmique dans `WORLD_GENERATION.md` et `TECH_REUSE_ROADMAP.md`; aucun
+fichier source tiers n'est copié.
+
 ## Règle
 
 Toute future dépendance externe doit documenter : nom, version, auteur, URL, licence, fichiers concernés, obligations, raison d’adoption, risques et stratégie de sortie.

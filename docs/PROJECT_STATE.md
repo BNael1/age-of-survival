@@ -11,7 +11,7 @@ Dernière mise à jour : 3 août 2026
 
 ## État actuel
 
-Le dépôt Unity est sur la branche locale `codex/lot7a-minimal-player-camera`.
+Le dépôt Unity est sur la branche locale `codex/lot7b-deterministic-world-generation`.
 
 Lots validés et commités :
 
@@ -29,7 +29,10 @@ Lots validés et commités :
 - `83cb82c` — `fix: bind inventory containers to canonical definitions` ;
 - `52c7517` — `fix: preserve inventory construction atomicity` ;
 - `e83b590` — `docs: close lot 5 inventory review` ;
-- `f7d4923` — `feat: add seamless isometric terrain`.
+- `f7d4923` — `feat: add seamless isometric terrain` ;
+- `93c22db` — `docs: close lot 6b terrain review` ;
+- `4df2a2e` — `fix: remove isometric terrain seams` ;
+- `a46e994` — `feat: add ground-anchor camera follow`.
 
 État validé au commit `26a1a27` :
 
@@ -169,19 +172,27 @@ commit `4df2a2ef3ac2e86528f6172520388bcf5484084e`, arbre
 confirmé **145/145 cas EditMode** réussis. Le lot 6C est fermé.
 
 Le lot 7A retire le cadrage automatique fondé sur les dimensions et les bounds
-de la Tilemap. Un adaptateur Unity Runtime suit instantanément en `LateUpdate`
-le point d'ancrage au sol du visuel joueur, après sa synchronisation en
-`Update`, tout en conservant la profondeur Z de la caméra. La caméra reste
-orthographique avec un zoom fixe explicite de **4.0625**, strictement provisoire
-jusqu'au calibrage visuel du lot 7D. Ce lot n'ajoute aucune génération de monde
-et ne calibre ni le joueur ni les ressources. Le lot 7B reste consacré à la
-génération déterministe, le lot 7C à la population initiale et le lot 7D au
-cadrage visuel final.
-Neuf cas EditMode supplémentaires portent la suite à **154/154**, validés en
-batchmode avec un code de sortie `0`. Le run Play Mode final observe deux
-déplacements successifs sur les frames suivantes, un zoom et un Z constants,
-des deltas caméra/ancre identiques, aucune erreur projet et exactement une
-transition d'entrée et de sortie.
+de la Tilemap. `GroundAnchorCameraFollow` suit en `LateUpdate` le point d'ancrage
+au sol du visuel joueur, conserve Z et applique le zoom technique provisoire
+`4.0625`, sans dépendance aux cellules ni au Core. Le lot est intégré dans
+`main` au commit `a46e99434ad68ea5f87c037328d4a95bc3d15435`, arbre
+`4405d7e1c3a3327625f6e2d28e3ca5d16c8134d9`. La suite complète sur `main`
+passe à **154/154 cas EditMode**, avec validation Play Mode favorable. Le lot
+7A est fermé.
+
+Le lot 7B est installé et validé sur la branche dédiée
+`codex/lot7b-deterministic-world-generation`, sans modification Runtime ni scène.
+Il introduit dans le Core une seed 64 bits canonique, une version de générateur,
+des coordonnées monde/chunk signées sur 64 bits, une disposition technique
+`32 × 32`, un échantillonneur entier sans état, un générateur de chunks
+immuables à la demande et une couche sparse séparée pour les modifications.
+Les sorties de la version 1, les coordonnées négatives, les limites `Int64`, les
+bords, l'ordre de génération, le déchargement/régénération et la séparation
+généré/modifié sont couverts par **93 nouveaux cas EditMode**. La suite complète
+est validée à **247/247** sous Unity 6000.3.19f1, avec zéro échec, zéro cas ignoré
+ou inconclusif, code Unity `0` et XML `/tmp/lot7b-editmode-results.xml` vérifié.
+Aucun Play Mode n'est requis. Biomes, terrain final, ressources, spawn, streaming
+Unity et sauvegarde disque restent hors périmètre. Le lot n'est pas encore commité.
 
 ## Limites techniques connues
 
@@ -197,11 +208,14 @@ transition d'entrée et de sortie.
 
 ## Prochaine action
 
-1. Faire relire le lot 7A par Sillage.
-2. Obtenir la validation de Naël.
-3. Créer ensuite seulement le commit 7A.
-4. Conserver 7B pour la génération déterministe, 7C pour la population initiale
-   et 7D pour le calibrage visuel final.
+1. Terminer la revue indépendante du patch et du rapport du lot 7B.
+2. Obtenir la validation de Naël avant tout commit.
+3. Créer un commit unique sur la branche dédiée, puis contrôler son parent, son
+   arbre, ses 27 chemins et l'état Git final.
+4. Intégrer ensuite par avance rapide pure dans `main` et relancer les **247/247**
+   cas EditMode sur l'arbre intégré.
+5. Ne commencer ni le lot 7C ni un adaptateur de rendu chunké avant fermeture
+   complète de 7B.
 
 ## Dépôts archivés
 

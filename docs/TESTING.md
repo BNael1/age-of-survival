@@ -214,3 +214,32 @@ Les deux correctifs ajoutent cinq cas EditMode Core :
 Validation du 1 août 2026 : **142/142 cas EditMode** dans le Test Runner
 graphique et en batchmode, zéro échec et zéro cas ignoré. Le Play Mode confirme
 les transferts temporisés, l'équipement et la surcharge ; la Console est propre.
+
+## Lots 6B, 6C et 7A — validations réalisées
+
+Le terrain raccordable porte la suite à **145/145 cas EditMode** après le
+correctif 6C. Le lot 7A ajoute neuf cas caméra et porte la suite intégrée sur
+`main` à **154/154**, avec code Unity `0`. La validation Play Mode confirme le
+suivi du point au sol, le zoom provisoire `4.0625`, Z constant et l'absence de
+retard observable sur deux déplacements successifs.
+
+## Lot 7B — validation réalisée
+
+Le lot ajoute **93 cas EditMode Core** :
+
+- parsing canonique de seed et version explicite ;
+- division plancher et aller-retour des coordonnées positives et négatives ;
+- fixtures binaires de `FoundationV1` ;
+- indépendance de la disposition des chunks et de l'ordre de génération ;
+- continuité des bords, y compris autour de zéro ;
+- génération, cache, déchargement et régénération à la demande ;
+- immutabilité de `GeneratedChunk` ;
+- séparation et ordre canonique de `ChunkModificationLayer<T>`.
+
+Validation finale du 3 août 2026 : **247/247 cas EditMode**, zéro échec, zéro
+ignoré, zéro inconclusif et code Unity `0`. Le XML
+`/tmp/lot7b-editmode-results.xml` est bien formé et vérifié. Une première
+exécution a révélé un débordement intermédiaire à la limite négative de `Int64` ;
+le calcul de composition des coordonnées a été corrigé et le cas de régression
+fait partie de la suite finale. Aucun Play Mode n'est requis car le lot ne
+modifie ni Runtime, ni scène, ni rendu.

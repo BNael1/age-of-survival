@@ -89,6 +89,27 @@ interdit à la simulation de dépendre du zoom. L'adaptateur ne consulte ni la
 `DenseGrid`, ni la Tilemap, ni leurs bounds : changer la taille ou l'origine du
 monde ne recadre pas la caméra et ne modifie pas le joueur.
 
+## Fondation de génération déterministe
+
+Le lot 7B place la génération dans `AgeOfSurvival.Core.World.Generation`, sans
+référence à Unity. L'identité d'un monde est explicite : seed non signée sur
+64 bits, version de générateur et disposition de chunks. Les coordonnées monde
+et chunk utilisent des entiers signés sur 64 bits ; les positions locales
+réutilisent `GridPosition` et une division plancher testée pour les coordonnées
+négatives.
+
+`DeterministicWorldSampler` est sans état et échantillonne une cellule depuis sa
+coordonnée monde absolue et un `GenerationStream` stable. Le contenu ne dépend
+ni de l'ordre de génération, ni de la présence de `GameObject`, ni de la taille
+de la partition en chunks. `DeterministicChunkGenerator` produit une base
+`GeneratedChunk` immuable ; `OnDemandGeneratedWorld` ne fait que mettre en cache
+les chunks explicitement demandés.
+
+Les modifications persistantes restent dans `ChunkModificationLayer<T>`, couche
+sparse séparée et exportable en ordre ligne par ligne. Cette séparation interdit
+de transformer la base générée en état mutable principal et prépare la future
+sauvegarde seed + version + modifications, sans imposer encore un format disque.
+
 ## Première interaction avec une ressource
 
 Le lot 4 ajoute au Core un petit état de ressource indépendant de Unity :

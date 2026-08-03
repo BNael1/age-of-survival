@@ -32,6 +32,20 @@ Le prototype adopte donc uniquement l'API UI Toolkit officielle déjà incluse.
 Les couleurs, formes et textes sont créés localement ; aucun code ou asset
 externe issu des références n'est copié.
 
+## Recherche du lot 7B — génération déterministe
+
+Recherche réalisée le 3 août 2026.
+
+| Candidat | Provenance | Licence / statut | Analyse | Décision |
+|---|---|---|---|---|
+| `System.Random` | Microsoft .NET | API de plateforme | Microsoft précise que l'implémentation et donc la séquence ne sont pas garanties entre versions majeures de .NET. Inadapté comme contrat de sauvegarde longue durée. | **Rejeté pour la génération persistante** |
+| SplitMix / mélange SplitMix64 | Steele, Lea et Flood, OOPSLA 2014, DOI `10.1145/2660193.2660195` | Publication scientifique ; aucune bibliothèque importée | Mélange entier rapide, reproductible et simple à réimplémenter. Les constantes de diffusion sont utilisées dans une implémentation locale sans état, avec fixtures. | **Principe adapté, aucun code tiers copié** |
+| PCG | Melissa O'Neill, rapport HMC-CS-2014-0905 | Papier et implémentations de référence disponibles séparément | Excellent PRNG séquentiel, mais un état séquentiel introduirait une dépendance à l'ordre des appels. | **Référence seulement** |
+| Frameworks de génération Unity / Asset Store | Divers | Variables | Ils posséderaient une partie centrale du monde, compliqueraient versions, sauvegardes, mods et stratégie de sortie. | **Rejetés pour le Core** |
+
+Le lot n'ajoute aucune dépendance. Le mélange local n'est pas cryptographique ;
+il sert uniquement aux décisions reproductibles de génération.
+
 ## Critères d’adoption
 
 - licence compatible ;
