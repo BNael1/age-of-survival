@@ -1,6 +1,6 @@
 # État du projet
 
-Dernière mise à jour : 2 août 2026
+Dernière mise à jour : 3 août 2026
 
 ## Moteur
 
@@ -11,7 +11,7 @@ Dernière mise à jour : 2 août 2026
 
 ## État actuel
 
-Le dépôt Unity est sur la branche locale `codex/lot6c-terrain-visual-seams`.
+Le dépôt Unity est sur la branche locale `codex/lot7a-minimal-player-camera`.
 
 Lots validés et commités :
 
@@ -163,8 +163,25 @@ recouvrement d'un pixel nécessaire. Le correctif configure un tri individuel
 Les PNG, les 64 PPU et les positions Core restent inchangés. La suite atteint
 **145/145 cas EditMode**. Deux Tilemaps adjacentes de 5 × 5 cellules produisent
 exactement le même rendu qu'une Tilemap unique de 10 × 5, joueur compris, avec
-**0 pixel différent**. Le lot est prêt à être intégré dans `main` après création
-et revue de son commit.
+**0 pixel différent**. Le lot 6C a été intégré dans `main` par fast-forward au
+commit `4df2a2ef3ac2e86528f6172520388bcf5484084e`, arbre
+`33dbb7f6da032827e83b4d2c3e9edba515b712a3`. La suite complète sur `main` a
+confirmé **145/145 cas EditMode** réussis. Le lot 6C est fermé.
+
+Le lot 7A retire le cadrage automatique fondé sur les dimensions et les bounds
+de la Tilemap. Un adaptateur Unity Runtime suit instantanément en `LateUpdate`
+le point d'ancrage au sol du visuel joueur, après sa synchronisation en
+`Update`, tout en conservant la profondeur Z de la caméra. La caméra reste
+orthographique avec un zoom fixe explicite de **4.0625**, strictement provisoire
+jusqu'au calibrage visuel du lot 7D. Ce lot n'ajoute aucune génération de monde
+et ne calibre ni le joueur ni les ressources. Le lot 7B reste consacré à la
+génération déterministe, le lot 7C à la population initiale et le lot 7D au
+cadrage visuel final.
+Neuf cas EditMode supplémentaires portent la suite à **154/154**, validés en
+batchmode avec un code de sortie `0`. Le run Play Mode final observe deux
+déplacements successifs sur les frames suivantes, un zoom et un Z constants,
+des deltas caméra/ancre identiques, aucune erreur projet et exactement une
+transition d'entrée et de sortie.
 
 ## Limites techniques connues
 
@@ -180,11 +197,11 @@ et revue de son commit.
 
 ## Prochaine action
 
-1. Créer le commit 6C.
-2. Vérifier son contenu et son ascendance.
-3. Intégrer dans `main` par avance rapide uniquement.
-4. Relancer les 145 tests EditMode sur `main`.
-5. Seulement ensuite, cadrer le lot joueur, ressources et caméra.
+1. Faire relire le lot 7A par Sillage.
+2. Obtenir la validation de Naël.
+3. Créer ensuite seulement le commit 7A.
+4. Conserver 7B pour la génération déterministe, 7C pour la population initiale
+   et 7D pour le calibrage visuel final.
 
 ## Dépôts archivés
 

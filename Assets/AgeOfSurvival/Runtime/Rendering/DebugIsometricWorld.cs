@@ -20,9 +20,6 @@ namespace AgeOfSurvival.Runtime.Rendering
 
         [SerializeField, Min(1)] private int width = 10;
         [SerializeField, Min(1)] private int height = 10;
-        [SerializeField, Min(0f)] private float cameraPadding = 1.25f;
-        [SerializeField] private Camera targetCamera;
-
         private Texture2D _generatedTexture;
         private Sprite _generatedSprite;
         private Sprite _grassSprite;
@@ -93,7 +90,6 @@ namespace AgeOfSurvival.Runtime.Rendering
 
             CreateTiles();
             PopulateTilemap();
-            ConfigureCamera();
         }
 
         private void OnDestroy()
@@ -200,25 +196,6 @@ namespace AgeOfSurvival.Runtime.Rendering
                 default:
                     return _baseTile;
             }
-        }
-
-        private void ConfigureCamera()
-        {
-            Camera camera = targetCamera;
-            if (camera == null)
-            {
-                return;
-            }
-
-            Vector3 worldCenter = _tilemap.transform.TransformPoint(_tilemap.localBounds.center);
-            camera.orthographic = true;
-            camera.backgroundColor = new Color32(30, 38, 43, 255);
-            camera.transform.position = new Vector3(worldCenter.x, worldCenter.y, -10f);
-
-            float safeAspect = Mathf.Max(camera.aspect, 0.01f);
-            float verticalHalfSize = _tilemap.localBounds.extents.y;
-            float horizontalHalfSizeAsVertical = _tilemap.localBounds.extents.x / safeAspect;
-            camera.orthographicSize = Mathf.Max(verticalHalfSize, horizontalHalfSizeAsVertical) + cameraPadding;
         }
 
         private static Color ColorFor(byte value)

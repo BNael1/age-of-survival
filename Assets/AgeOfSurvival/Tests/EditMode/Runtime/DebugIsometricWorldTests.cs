@@ -190,6 +190,52 @@ namespace AgeOfSurvival.Runtime.Tests
             }
         }
 
+        [Test]
+        public void Rebuild_DoesNotFrameCameraFromGridDimensions()
+        {
+            const float fixedZoom = 4.0625f;
+            var root = new GameObject("World independent camera test");
+            var cameraObject = new GameObject("Camera independent from world test");
+
+            try
+            {
+                var camera = cameraObject.AddComponent<Camera>();
+                var presenter = root.AddComponent<DebugIsometricWorld>();
+                var serializedPresenter = new SerializedObject(presenter);
+                SerializedProperty legacyTargetCamera = serializedPresenter.FindProperty("targetCamera");
+                if (legacyTargetCamera != null)
+                {
+                    legacyTargetCamera.objectReferenceValue = camera;
+                }
+
+                SetDimensions(serializedPresenter, 10, 10);
+                camera.orthographicSize = fixedZoom;
+                camera.transform.position = new Vector3(37f, -12f, -23f);
+                presenter.Rebuild();
+
+                Assert.That(camera.orthographicSize, Is.EqualTo(fixedZoom));
+                Assert.That(camera.transform.position, Is.EqualTo(new Vector3(37f, -12f, -23f)));
+
+                SetDimensions(serializedPresenter, 100, 100);
+                presenter.Rebuild();
+
+                Assert.That(camera.orthographicSize, Is.EqualTo(fixedZoom));
+                Assert.That(camera.transform.position, Is.EqualTo(new Vector3(37f, -12f, -23f)));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(cameraObject);
+            }
+        }
+
+        private static void SetDimensions(SerializedObject presenter, int width, int height)
+        {
+            presenter.FindProperty("width").intValue = width;
+            presenter.FindProperty("height").intValue = height;
+            presenter.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static void AssertGroundImportSettings(string fileName)
         {
             string assetPath = GroundAssetPath(fileName);

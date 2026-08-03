@@ -72,9 +72,22 @@ Le lot 3 introduit un état de joueur continu dans `AgeOfSurvival.Core` :
 - il transforme les directions écran vers les axes du plan isométrique ;
 - il fait avancer le Core à tick fixe ;
 - il synchronise un marqueur généré au runtime avec la position logique ;
-- il ne possède ni collision, ni animation, ni caméra suiveuse, ni règle de terrain.
+- il ne possède ni collision, ni animation, ni règle de terrain.
 
 Le clavier et le marqueur peuvent être remplacés sans modifier la règle de déplacement du Core.
+
+## Suivi de caméra Runtime
+
+`GroundAnchorCameraFollow` est un adaptateur Unity local au Runtime. Il reçoit
+uniquement la caméra et le `Transform` qui représente le point d'ancrage au sol
+du visuel joueur. Le contrôleur synchronise ce visuel depuis `PlayerState` en
+`Update`, puis la caméra le suit en `LateUpdate`, sans amortissement. Le suivi
+conserve Z et applique le zoom technique fixe provisoire `4.0625`.
+
+Cette frontière interdit au Core toute référence à `UnityEngine.Camera` et
+interdit à la simulation de dépendre du zoom. L'adaptateur ne consulte ni la
+`DenseGrid`, ni la Tilemap, ni leurs bounds : changer la taille ou l'origine du
+monde ne recadre pas la caméra et ne modifie pas le joueur.
 
 ## Première interaction avec une ressource
 

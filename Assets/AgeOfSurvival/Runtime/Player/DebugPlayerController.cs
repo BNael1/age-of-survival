@@ -23,6 +23,7 @@ namespace AgeOfSurvival.Runtime.Player
 
         [SerializeField] private DebugIsometricWorld worldRenderer;
         [SerializeField] private DebugResourceInteraction resourceInteraction;
+        [SerializeField] private GroundAnchorCameraFollow cameraFollow;
         [SerializeField] private Vector2 startPosition = new Vector2(4.5f, 4.5f);
         [SerializeField, Min(0f)] private float movementSpeed = 3f;
         [SerializeField, Min(1)] private int ticksPerSecond = 60;
@@ -64,6 +65,11 @@ namespace AgeOfSurvival.Runtime.Player
                 resourceInteraction = GetComponent<DebugResourceInteraction>();
             }
 
+            if (cameraFollow == null)
+            {
+                cameraFollow = FindFirstObjectByType<GroundAnchorCameraFollow>();
+            }
+
             if (worldRenderer == null || worldRenderer.Tilemap == null)
             {
                 Debug.LogError(
@@ -79,6 +85,7 @@ namespace AgeOfSurvival.Runtime.Player
 
             CreateVisual();
             SynchronizeVisual();
+            cameraFollow?.Track(_visual);
             resourceInteraction?.SimulateTick(_player.Position);
         }
 

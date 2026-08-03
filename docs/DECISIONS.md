@@ -170,3 +170,19 @@ coutures internes. Les tranches du périmètre extérieur sont acceptées : elle
 correspondent à des cellules sans voisin pour les recouvrir. Deux Tilemaps
 adjacentes de `5 × 5` cellules ont produit exactement le même rendu qu'une
 Tilemap unique de `10 × 5`, joueur compris, avec `0` pixel différent.
+
+## ADR-0013 — Caméra Runtime indépendante du monde
+
+**Statut : active**
+**Date : 3 août 2026**
+
+La caméra principale reste orthographique et son adaptateur Unity Runtime suit
+instantanément, en `LateUpdate`, le point d'ancrage au sol du visuel joueur mis
+à jour en `Update`. Il conserve la profondeur Z courante et ne lit ni dimensions
+de grille, ni bounds de Tilemap, ni cellules, ni ressources. Le Core ne connaît
+ni `Camera`, ni zoom, et la simulation n'est jamais modifiée par le suivi.
+
+Le zoom `orthographicSize = 4.0625` est une valeur technique fixe, explicite et
+provisoire. Elle ne constitue pas un cadrage artistique définitif : ce calibrage
+reste réservé au lot 7D. Le lot 7A n'introduit aucune génération de monde ; 7B
+reste la génération déterministe et 7C la population initiale.
