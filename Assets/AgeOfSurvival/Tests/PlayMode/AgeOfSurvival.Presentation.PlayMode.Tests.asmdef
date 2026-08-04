@@ -1,0 +1,20 @@
+{
+  "name": "AgeOfSurvival.Presentation.PlayMode.Tests",
+  "rootNamespace": "AgeOfSurvival.Presentation.PlayMode.Tests",
+  "references": [
+    "GUID:34f4281227b457e9df0427ea4d1386b4",
+    "GUID:97be7849b19d48c7a47ddd17d4d27248"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "noEngineReferences": false
+}

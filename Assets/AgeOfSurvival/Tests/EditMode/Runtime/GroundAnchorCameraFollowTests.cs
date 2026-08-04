@@ -27,6 +27,111 @@ namespace AgeOfSurvival.Runtime.Tests
         }
 
         [Test]
+        public void RawScroll_DefaultPixelsProduceOneLogicalStep()
+        {
+            using (var harness = new CameraHarness())
+            {
+                harness.Follow.ApplyRawScrollPixels(120f);
+
+                Assert.That(harness.Follow.ScrollPixelsPerStep, Is.EqualTo(120f));
+                Assert.That(
+                    harness.Follow.TargetOrthographicSize,
+                    Is.EqualTo(4.0625f / 1.1f).Within(0.000001f));
+            }
+        }
+
+        [Test]
+        public void RawScroll_SixtyPixelsProduceHalfLogicalStep()
+        {
+            using (var harness = new CameraHarness())
+            {
+                harness.Follow.ApplyRawScrollPixels(60f);
+
+                Assert.That(
+                    harness.Follow.TargetOrthographicSize,
+                    Is.EqualTo(4.0625f / Mathf.Sqrt(1.1f)).Within(0.000001f));
+            }
+        }
+
+        [Test]
+        public void RawScroll_FractionalDeltasAccumulateWithoutSignReduction()
+        {
+            using (var combined = new CameraHarness())
+            using (var fractional = new CameraHarness())
+            {
+                combined.Follow.ApplyRawScrollPixels(120f);
+                fractional.Follow.ApplyRawScrollPixels(30f);
+                fractional.Follow.ApplyRawScrollPixels(30f);
+                fractional.Follow.ApplyRawScrollPixels(30f);
+                fractional.Follow.ApplyRawScrollPixels(30f);
+
+                Assert.That(
+                    fractional.Follow.TargetOrthographicSize,
+                    Is.EqualTo(combined.Follow.TargetOrthographicSize).Within(0.000001f));
+            }
+        }
+
+        [Test]
+        public void RawScroll_OneRealisticDeltaDoesNotClampImmediately()
+        {
+            using (var harness = new CameraHarness())
+            {
+                harness.Follow.ApplyRawScrollPixels(120f);
+
+                Assert.That(
+                    harness.Follow.TargetOrthographicSize,
+                    Is.GreaterThan(GroundAnchorCameraFollow.MinimumOrthographicSize));
+                Assert.That(
+                    harness.Follow.TargetOrthographicSize,
+                    Is.LessThan(GroundAnchorCameraFollow.ProvisionalOrthographicSize));
+            }
+        }
+
+        [Test]
+        public void RawScroll_StillClampsToConfiguredLimits()
+        {
+            using (var harness = new CameraHarness())
+            {
+                harness.Follow.ApplyRawScrollPixels(12000f);
+                Assert.That(
+                    harness.Follow.TargetOrthographicSize,
+                    Is.EqualTo(GroundAnchorCameraFollow.MinimumOrthographicSize));
+
+                harness.Follow.ApplyRawScrollPixels(-24000f);
+                Assert.That(
+                    harness.Follow.TargetOrthographicSize,
+                    Is.EqualTo(GroundAnchorCameraFollow.MaximumOrthographicSize));
+            }
+        }
+
+        [Test]
+        public void RawScroll_AppliesSensitivityAfterPixelNormalization()
+        {
+            using (var harness = new CameraHarness())
+            {
+                harness.Follow.SetZoomSensitivity(2f);
+                harness.Follow.ApplyRawScrollPixels(60f);
+
+                Assert.That(
+                    harness.Follow.TargetOrthographicSize,
+                    Is.EqualTo(4.0625f / 1.1f).Within(0.000001f));
+            }
+        }
+
+        [TestCase(0f)]
+        [TestCase(-1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void ScrollPixelsPerStep_RejectsNonPositiveOrNonFiniteValues(float value)
+        {
+            using (var harness = new CameraHarness())
+            {
+                Assert.Throws<System.ArgumentOutOfRangeException>(
+                    () => harness.Follow.SetScrollPixelsPerStep(value));
+            }
+        }
+
+        [Test]
         public void Synchronize_CentersCameraOnVisualGroundAnchor()
         {
             using (var harness = new CameraHarness())
@@ -86,6 +191,33 @@ namespace AgeOfSurvival.Runtime.Tests
                 Assert.That(
                     harness.Anchor.position,
                     Is.EqualTo(expectedAnchorPosition));
+            }
+        }
+
+        [Test]
+        public void ZoomAdvancePreservesCameraAnchorAndDepth()
+        {
+            using (var harness = new CameraHarness())
+            {
+                harness.Anchor.position = new Vector3(6.25f, -2.75f, 12f);
+                harness.Camera.transform.position = new Vector3(0f, 0f, -31f);
+                harness.Follow.Synchronize();
+                harness.Follow.ApplyRawScrollPixels(
+                    -2f * GroundAnchorCameraFollow.DefaultScrollPixelsPerStep);
+
+                for (int frame = 0; frame < 30; frame++)
+                {
+                    harness.Follow.AdvanceZoom(1f / 60f);
+                    harness.Follow.Synchronize();
+                }
+
+                Assert.That(harness.Camera.transform.position.x, Is.EqualTo(6.25f));
+                Assert.That(harness.Camera.transform.position.y, Is.EqualTo(-2.75f));
+                Assert.That(harness.Camera.transform.position.z, Is.EqualTo(-31f));
+                Assert.That(harness.Anchor.position, Is.EqualTo(new Vector3(6.25f, -2.75f, 12f)));
+                Assert.That(
+                    harness.Camera.orthographicSize,
+                    Is.EqualTo(harness.Follow.CurrentOrthographicSize));
             }
         }
 

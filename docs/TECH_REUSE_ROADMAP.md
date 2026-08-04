@@ -70,3 +70,27 @@ Recherche réalisée le 3 août 2026.
 | Générateurs Asset Store | dépendance centrale | **Rejetés pour le Core propriétaire**. |
 
 Aucune dépendance Runtime externe n'est ajoutée.
+
+## Recherche du lot 7D-A — caméra et tri 2D
+
+Recherche réalisée le 3 août 2026 pour Unity `6000.3.19f1` et Input System
+`1.19.0`.
+
+| Candidat | Provenance et licence | Analyse | Décision |
+|---|---|---|---|
+| `Mouse.scroll` / `DeltaControl` | API et manuel Input System officiels ; package Unity Companion License déjà installé | Le delta vertical est un delta matériel en pixels, cumulé pendant la frame, et peut provenir d'une molette ou d'un trackpad. Aucun sample n'a besoin d'être importé. | **Normalisé localement** en pas logiques à raison provisoire de `120 px/pas`, avant sensibilité ; jamais transmis directement au zoom logique. |
+| `Camera.orthographicSize` | API Unity officielle incluse | Définit la demi-hauteur verticale de la vue orthographique et ne dépend pas des bounds rendus. | **Utilisé** |
+| `Mathf.SmoothDamp` | API Unity officielle incluse | Interpolation amortie conçue pour approcher une cible sans dépassement ; le pas de temps est fourni explicitement et le résultat reste clampé. | **Utilisé** |
+| `Renderer.sortingOrder` et `SpriteSortPoint.Pivot` | Manuel de tri 2D Unity 6 et API officielles | L'ordre entier permet un départage stable explicite ; le pivot matérialise le point au sol. | **Utilisé avec calcul local** |
+| Samples Input System 1.19.0 présents dans `Library/PackageCache` | Unity Technologies, révision package `ca8d898…`, Unity Companion License | Exemples maintenus avec le package, examinés comme référence d'API ; aucun fichier importé ou copié. | **Référence seulement** |
+| Cinemachine | Package officiel non présent dans le manifeste | Surdimensionné pour une cible orthographique unique et ajouterait une dépendance sans gain sur le contrat demandé. | **Rejeté pour ce lot** |
+| Frameworks externes de caméra/tri | Licences et maintenance variables | Le comportement tient dans des composants Runtime testables, dont un coordinateur unique de tri en `LateUpdate`, et ne justifie ni dépendance ni propriété externe. | **Rejetés** |
+
+Sources officielles consultées :
+
+- https://docs.unity3d.com/Packages/com.unity.inputsystem@1.19/manual/Mouse.html ;
+- https://docs.unity3d.com/ScriptReference/Camera-orthographicSize.html ;
+- https://docs.unity3d.com/ScriptReference/Mathf.SmoothDamp.html ;
+- https://docs.unity3d.com/6000.0/Documentation/Manual/2d-renderer-sorting.html.
+
+Aucun code d'exemple n'est repris et aucune dépendance n'est ajoutée.

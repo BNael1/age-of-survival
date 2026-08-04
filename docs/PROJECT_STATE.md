@@ -11,7 +11,7 @@ Dernière mise à jour : 3 août 2026
 
 ## État actuel
 
-Le dépôt Unity est sur la branche locale `codex/lot7c-initial-world-population`.
+Le dépôt Unity est sur la branche locale `codex/lot7da-progressive-camera`.
 
 Lots validés et commités :
 
@@ -189,8 +189,8 @@ Le lot 7B est intégré dans `main` au commit
 `0`. Unity et le dépôt Godot sont propres. Le lot 7B est fermé.
 
 <!-- LOT7C_PROJECT_STATE -->
-Le lot 7C est installé sans commit sur
-`codex/lot7c-initial-world-population`, directement depuis `15fae587d8ea084349ca60889075c543c7aa57e0`.
+Le lot 7C est intégré sur `main` dans la base approuvée du lot 7D-A,
+`07023eadf81ea1468a90ec6ed422326aebd4907b`.
 Il ajoute `PopulationV1` (`2`), des champs Q16 lissés en C# pur, trois terrains,
 des zones ouvertes et boisées, un placement de ressources à distance minimale,
 des identifiants incluant la seed, un spawn déterministe et un cache de chunks
@@ -206,7 +206,25 @@ visuel, SHA-256
 `12f424522eb21c180ab2d6b528859e1f18d7b2fd676558b4aa509956caf01977`,
 ne relève aucun motif d'erreur projet. Naël avait accepté tous les autres choix
 visibles lors de la première revue ; l'unique réserve est résolue. La validation
-visuelle 7C est acquise. Aucun commit n'est encore créé.
+visuelle 7C est acquise.
+
+## Lot 7D-A en revue
+
+Le lot 7D-A est installé sans commit sur `codex/lot7da-progressive-camera`,
+directement depuis `07023eadf81ea1468a90ec6ed422326aebd4907b`. Il ajoute le
+zoom orthographique multiplicatif amorti, conserve le suivi de l'ancre joueur,
+agrandit uniquement le visuel joueur à `1.20` et trie joueur/ressources selon
+leurs ancres au sol avec un départage ordinal stable. La correction de revue
+normalise la molette à `120 pixels par pas logique`, centralise le tri dans une
+unique passe `LateUpdate` et crée deux sprites fallback distincts pour les
+pivots ressource/rendement. Le Core, la scène, les textures, les règles de
+déplacement, d'inventaire et de ressources restent inchangés.
+
+Validation finale de la correction : **348/348 EditMode** et **1/1 PlayMode**,
+zéro échec ou cas ignoré/inconclusif, code Unity `0` pour les deux exécutions.
+Les cinq captures ont été régénérées et confirment les trois tailles, les deux
+chevauchements et la passe unique de tri ; l'instrumentation relève zéro erreur
+projet. Le lot attend l'autorisation explicite de Naël avant tout commit.
 
 ## Limites techniques connues
 
@@ -222,12 +240,9 @@ visuelle 7C est acquise. Aucun commit n'est encore créé.
 
 ## Prochaine action
 
-1. Terminer la revue indépendante du patch final et de ses artefacts.
-2. Après autorisation, créer un commit unique sur la branche dédiée.
-3. Contrôler son parent, son arbre, ses 34 chemins et l'état Git final.
-4. Intégrer ensuite par avance rapide pure dans `main` et relancer les
-   **316/316** cas EditMode sur l'arbre intégré.
-5. Garder le calibrage final des échelles, pivots, tri Y et zooms au lot 7D.
+1. Soumettre le lot 7D-A et ses artefacts à Naël, puis s'arrêter sans commit.
+2. Après autorisation seulement, créer un commit unique sur la branche dédiée.
+3. Ne commencer 7D-B qu'après intégration approuvée de 7D-A sur `main`.
 
 ## Dépôts archivés
 

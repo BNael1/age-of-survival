@@ -20,6 +20,9 @@ namespace AgeOfSurvival.Runtime.Player
         private const string VisualName = "Debug Player Marker";
         private const int MarkerSizePixels = 24;
         private const float PixelsPerUnit = 64f;
+        public const float PlayerVisualScale = 1.2f;
+        public const float PlayerGroundPivotX = 0.5f;
+        public const float PlayerGroundPivotY = 0.12f;
 
         [SerializeField] private DebugIsometricWorld worldRenderer;
         [SerializeField] private DebugResourceInteraction resourceInteraction;
@@ -36,6 +39,7 @@ namespace AgeOfSurvival.Runtime.Player
         private Texture2D _generatedTexture;
         private Sprite _visualSprite;
         private bool _usesPrototypeVisual;
+        private GroundAnchorSortCoordinator _sortCoordinator;
 
         private Keyboard _keyboard;
         private KeyControl _upKey;
@@ -44,6 +48,8 @@ namespace AgeOfSurvival.Runtime.Player
         private KeyControl _rightKey;
 
         public PlayerState Player => _player;
+        public Transform VisualGroundAnchor => _visual;
+        public SpriteRenderer VisualRenderer { get; private set; }
         public double CurrentLoadRatio { get; private set; }
         public double CurrentMovementMultiplier { get; private set; } = 1.0;
 
@@ -88,6 +94,22 @@ namespace AgeOfSurvival.Runtime.Player
             SynchronizeMovementState();
 
             CreateVisual();
+            _sortCoordinator = resourceInteraction != null
+                ? resourceInteraction.SortCoordinator
+                : FindFirstObjectByType<GroundAnchorSortCoordinator>();
+            if (_sortCoordinator != null)
+            {
+                _sortCoordinator.Register(
+                    GroundAnchorSortCoordinator.PlayerStableId,
+                    _visual,
+                    _visual.gameObject,
+                    new RendererOrderBinding(VisualRenderer, 1));
+            }
+            else
+            {
+                VisualRenderer.sortingOrder = GroundAnchorSorting.OrderForRank(0);
+            }
+
             SynchronizeVisual();
             cameraFollow?.Track(_visual);
             resourceInteraction?.SimulateTick(_player.Position);
@@ -233,7 +255,7 @@ namespace AgeOfSurvival.Runtime.Player
 
             _visualSprite = PrototypeVisualAssets.CreateSprite(
                 PrototypeVisualAssets.PlayerSurvivor,
-                new Vector2(0.5f, 0.12f),
+                new Vector2(PlayerGroundPivotX, PlayerGroundPivotY),
                 PrototypeVisualAssets.PixelsPerUnit,
                 "Prototype Survivor");
             _usesPrototypeVisual = _visualSprite != null;
@@ -244,16 +266,20 @@ namespace AgeOfSurvival.Runtime.Player
                 _visualSprite = Sprite.Create(
                     _generatedTexture,
                     new Rect(0f, 0f, MarkerSizePixels, MarkerSizePixels),
-                    new Vector2(0.5f, 0.5f),
+                    new Vector2(PlayerGroundPivotX, PlayerGroundPivotY),
                     PixelsPerUnit,
                     0,
                     SpriteMeshType.FullRect);
                 _visualSprite.name = "Generated Debug Player Marker";
             }
 
-            var renderer = visualObject.AddComponent<SpriteRenderer>();
-            renderer.sprite = _visualSprite;
-            renderer.sortingOrder = 100;
+            _visual.localScale = new Vector3(
+                PlayerVisualScale,
+                PlayerVisualScale,
+                1f);
+            VisualRenderer = visualObject.AddComponent<SpriteRenderer>();
+            VisualRenderer.sprite = _visualSprite;
+            VisualRenderer.spriteSortPoint = SpriteSortPoint.Pivot;
         }
 
         private void SynchronizeVisual()
@@ -322,10 +348,17 @@ namespace AgeOfSurvival.Runtime.Player
 
         private void DestroyGeneratedVisual()
         {
+            if (_sortCoordinator != null)
+            {
+                _sortCoordinator.Unregister(GroundAnchorSortCoordinator.PlayerStableId);
+                _sortCoordinator = null;
+            }
+
             if (_visual != null)
             {
                 DestroyUnityObject(_visual.gameObject);
                 _visual = null;
+                VisualRenderer = null;
             }
 
             if (_usesPrototypeVisual)

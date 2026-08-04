@@ -57,3 +57,10 @@ sur l'échantillonnage à distance minimale sert uniquement de référence
 algorithmique ; aucun extrait de son implémentation n'est intégré.
 
 La Tilemap, les sprites déjà présents et les APIs Unity incluses sont réutilisés.
+
+## Lot 7D-A — caméra et tri
+
+Aucun package, code, asset ou framework tiers n'est ajouté. Le lot réutilise
+Input System `1.19.0`, `Camera`, `Mathf` et le rendu 2D fournis par Unity. Les
+samples du package Input System, couverts par la Unity Companion License, ont
+uniquement servi de référence locale ; aucun fichier n'est copié dans `Assets`.

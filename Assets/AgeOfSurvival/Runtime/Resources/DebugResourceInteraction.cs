@@ -27,6 +27,9 @@ namespace AgeOfSurvival.Runtime.Resources
         private const float PixelsPerUnit = 64f;
         private const float DefaultRadiusArtwork = 1.5f;
         private const float ProgressFullScaleX = 8f;
+        public const float ResourceGroundPivotX = 0.5f;
+        public const float ResourceGroundPivotY = 0.12f;
+        public const float GroundPilePivotY = 0.2f;
 
         [SerializeField] private DebugIsometricWorld worldRenderer;
         [SerializeField, Min(0f)] private float interactionRadius = 1.5f;
@@ -34,6 +37,7 @@ namespace AgeOfSurvival.Runtime.Resources
 
         private readonly List<ResourceMarker> _markers = new List<ResourceMarker>();
         private InventoryPrototypeSession _session;
+        private GroundAnchorSortCoordinator _sortCoordinator;
         private Transform _generatedRoot;
         private GameObject _interactionRadiusObject;
         private Texture2D _bodyTexture;
@@ -134,12 +138,47 @@ namespace AgeOfSurvival.Runtime.Resources
             ? _generatedRoot.gameObject
             : null;
         public Sprite GeneratedBodySprite => _resourceSprite;
+        public Sprite GeneratedGroundSprite => _groundSprite;
         public Sprite GeneratedIndicatorSprite => _indicatorSprite;
+        public GroundAnchorSortCoordinator SortCoordinator => ResolveSortCoordinator();
+
+        public bool TryGetVisualGroundAnchor(ResourceId id, out Vector3 anchor)
+        {
+            for (int index = 0; index < _markers.Count; index++)
+            {
+                ResourceMarker marker = _markers[index];
+                if (marker.Resource.Id.Equals(id))
+                {
+                    anchor = marker.Root.transform.position;
+                    return true;
+                }
+            }
+
+            anchor = default;
+            return false;
+        }
+
+        public bool TryGetSortingOrder(ResourceId id, out int sortingOrder)
+        {
+            for (int index = 0; index < _markers.Count; index++)
+            {
+                ResourceMarker marker = _markers[index];
+                if (marker.Resource.Id.Equals(id))
+                {
+                    sortingOrder = marker.BodyRenderer.sortingOrder;
+                    return true;
+                }
+            }
+
+            sortingOrder = default;
+            return false;
+        }
 
         private void Awake()
         {
             if (Application.isPlaying)
             {
+                ResolveSortCoordinator();
                 Rebuild();
             }
         }
@@ -276,12 +315,12 @@ namespace AgeOfSurvival.Runtime.Resources
         {
             _resourceSprite = PrototypeVisualAssets.CreateSprite(
                 PrototypeVisualAssets.ResourceShrub,
-                new Vector2(0.5f, 0.12f),
+                new Vector2(ResourceGroundPivotX, ResourceGroundPivotY),
                 PrototypeVisualAssets.PixelsPerUnit,
                 "Prototype Resource Shrub");
             _groundSprite = PrototypeVisualAssets.CreateSprite(
                 PrototypeVisualAssets.GroundBranches,
-                new Vector2(0.5f, 0.2f),
+                new Vector2(ResourceGroundPivotX, GroundPilePivotY),
                 PrototypeVisualAssets.PixelsPerUnit,
                 "Prototype Ground Branches");
             _indicatorSprite = PrototypeVisualAssets.CreateSprite(
@@ -317,11 +356,10 @@ namespace AgeOfSurvival.Runtime.Resources
                 new Color32(55, 83, 61, 255),
                 new Color32(127, 174, 101, 255));
             _bodyTexture.name = "Generated Debug Resource Texture";
-            _resourceSprite = CreateSprite(
+            CreateFallbackBodySprites(
                 _bodyTexture,
-                MarkerSizePixels,
-                "Generated Debug Resource Sprite");
-            _groundSprite = _resourceSprite;
+                out _resourceSprite,
+                out _groundSprite);
 
             _indicatorTexture = CreateDiamondOutlineTexture(
                 IndicatorSizePixels,
@@ -330,7 +368,8 @@ namespace AgeOfSurvival.Runtime.Resources
             _indicatorSprite = CreateSprite(
                 _indicatorTexture,
                 IndicatorSizePixels,
-                "Generated Debug Resource Target Sprite");
+                "Generated Debug Resource Target Sprite",
+                new Vector2(0.5f, 0.5f));
         }
 
         private void CreateMarkers()
@@ -349,14 +388,13 @@ namespace AgeOfSurvival.Runtime.Resources
 
                 var bodyRenderer = markerObject.AddComponent<SpriteRenderer>();
                 bodyRenderer.sprite = _resourceSprite;
-                bodyRenderer.sortingOrder = 90;
+                bodyRenderer.spriteSortPoint = SpriteSortPoint.Pivot;
 
                 var targetObject = new GameObject("Target Indicator");
                 targetObject.transform.SetParent(markerObject.transform, false);
                 targetObject.transform.localPosition = new Vector3(0f, -0.02f, 0f);
                 var targetRenderer = targetObject.AddComponent<SpriteRenderer>();
                 targetRenderer.sprite = _indicatorSprite;
-                targetRenderer.sortingOrder = 89;
                 targetObject.SetActive(false);
 
                 var quantityObject = new GameObject("Ground Quantity");
@@ -368,21 +406,35 @@ namespace AgeOfSurvival.Runtime.Resources
                 quantityLabel.characterSize = 0.032f;
                 quantityLabel.color = new Color32(250, 244, 215, 255);
                 quantityLabel.anchor = TextAnchor.MiddleLeft;
-                quantityLabel.GetComponent<MeshRenderer>().sortingOrder = 94;
+                MeshRenderer quantityRenderer = quantityLabel.GetComponent<MeshRenderer>();
 
                 CreateProgressBar(
                     markerObject.transform,
                     out GameObject progressRoot,
+                    out SpriteRenderer progressBackground,
                     out SpriteRenderer progressFill);
 
-                _markers.Add(new ResourceMarker(
+                var marker = new ResourceMarker(
                     resource,
                     markerObject,
                     bodyRenderer,
                     targetObject,
+                    targetRenderer,
                     quantityLabel,
+                    quantityRenderer,
                     progressRoot,
-                    progressFill));
+                    progressBackground,
+                    progressFill);
+                _markers.Add(marker);
+                ResolveSortCoordinator().Register(
+                    resource.Id.Value,
+                    markerObject.transform,
+                    markerObject,
+                    new RendererOrderBinding(targetRenderer, 0),
+                    new RendererOrderBinding(bodyRenderer, 1),
+                    new RendererOrderBinding(quantityRenderer, 5),
+                    new RendererOrderBinding(progressBackground, 6),
+                    new RendererOrderBinding(progressFill, 7));
             }
         }
 
@@ -404,6 +456,7 @@ namespace AgeOfSurvival.Runtime.Resources
         private void CreateProgressBar(
             Transform marker,
             out GameObject progressRoot,
+            out SpriteRenderer progressBackground,
             out SpriteRenderer progressFill)
         {
             progressRoot = new GameObject("Transfer Progress");
@@ -412,10 +465,9 @@ namespace AgeOfSurvival.Runtime.Resources
 
             var backgroundObject = new GameObject("Background");
             backgroundObject.transform.SetParent(progressRoot.transform, false);
-            var background = backgroundObject.AddComponent<SpriteRenderer>();
-            background.sprite = _uiSprite;
-            background.color = new Color32(24, 29, 31, 230);
-            background.sortingOrder = 95;
+            progressBackground = backgroundObject.AddComponent<SpriteRenderer>();
+            progressBackground.sprite = _uiSprite;
+            progressBackground.color = new Color32(24, 29, 31, 230);
             backgroundObject.transform.localScale = new Vector3(
                 ProgressFullScaleX + 0.8f,
                 1.6f,
@@ -484,6 +536,7 @@ namespace AgeOfSurvival.Runtime.Resources
                             -0.05f);
                 }
             }
+
         }
 
         private static void SetProgress(SpriteRenderer fill, float progress)
@@ -550,6 +603,14 @@ namespace AgeOfSurvival.Runtime.Resources
 
         private void DestroyGeneratedHierarchy()
         {
+            if (_sortCoordinator != null)
+            {
+                for (int index = 0; index < _markers.Count; index++)
+                {
+                    _sortCoordinator.Unregister(_markers[index].Resource.Id.Value);
+                }
+            }
+
             if (_generatedRoot != null)
             {
                 DestroyUnityObject(_generatedRoot.gameObject);
@@ -575,6 +636,7 @@ namespace AgeOfSurvival.Runtime.Resources
             else
             {
                 DestroyUnityObject(_resourceSprite);
+                DestroyUnityObject(_groundSprite);
                 DestroyUnityObject(_indicatorSprite);
                 DestroyUnityObject(_bodyTexture);
                 DestroyUnityObject(_indicatorTexture);
@@ -607,17 +669,54 @@ namespace AgeOfSurvival.Runtime.Resources
         private static Sprite CreateSprite(
             Texture2D texture,
             int size,
-            string spriteName)
+            string spriteName,
+            Vector2 pivot)
         {
             Sprite sprite = Sprite.Create(
                 texture,
                 new Rect(0f, 0f, size, size),
-                new Vector2(0.5f, 0.5f),
+                pivot,
                 PixelsPerUnit,
                 0,
                 SpriteMeshType.FullRect);
             sprite.name = spriteName;
             return sprite;
+        }
+
+        public static void CreateFallbackBodySprites(
+            Texture2D sharedTexture,
+            out Sprite resourceSprite,
+            out Sprite groundSprite)
+        {
+            if (sharedTexture == null)
+            {
+                throw new System.ArgumentNullException(nameof(sharedTexture));
+            }
+
+            resourceSprite = CreateSprite(
+                sharedTexture,
+                sharedTexture.width,
+                "Generated Debug Resource Sprite",
+                new Vector2(ResourceGroundPivotX, ResourceGroundPivotY));
+            groundSprite = CreateSprite(
+                sharedTexture,
+                sharedTexture.width,
+                "Generated Debug Ground Pile Sprite",
+                new Vector2(ResourceGroundPivotX, GroundPilePivotY));
+        }
+
+        private GroundAnchorSortCoordinator ResolveSortCoordinator()
+        {
+            if (_sortCoordinator == null)
+            {
+                _sortCoordinator = GetComponent<GroundAnchorSortCoordinator>();
+                if (_sortCoordinator == null)
+                {
+                    _sortCoordinator = gameObject.AddComponent<GroundAnchorSortCoordinator>();
+                }
+            }
+
+            return _sortCoordinator;
         }
 
         private static Texture2D CreateDiamondTexture(
@@ -709,16 +808,22 @@ namespace AgeOfSurvival.Runtime.Resources
                 GameObject root,
                 SpriteRenderer bodyRenderer,
                 GameObject targetIndicator,
+                SpriteRenderer targetRenderer,
                 TextMesh quantityLabel,
+                MeshRenderer quantityRenderer,
                 GameObject progressRoot,
+                SpriteRenderer progressBackground,
                 SpriteRenderer progressFill)
             {
                 Resource = resource;
                 Root = root;
                 BodyRenderer = bodyRenderer;
                 TargetIndicator = targetIndicator;
+                TargetRenderer = targetRenderer;
                 QuantityLabel = quantityLabel;
+                QuantityRenderer = quantityRenderer;
                 ProgressRoot = progressRoot;
+                ProgressBackground = progressBackground;
                 ProgressFill = progressFill;
             }
 
@@ -726,9 +831,13 @@ namespace AgeOfSurvival.Runtime.Resources
             public GameObject Root { get; }
             public SpriteRenderer BodyRenderer { get; }
             public GameObject TargetIndicator { get; }
+            public SpriteRenderer TargetRenderer { get; }
             public TextMesh QuantityLabel { get; }
+            public MeshRenderer QuantityRenderer { get; }
             public GameObject ProgressRoot { get; }
+            public SpriteRenderer ProgressBackground { get; }
             public SpriteRenderer ProgressFill { get; }
         }
+
     }
 }

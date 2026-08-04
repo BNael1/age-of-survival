@@ -271,3 +271,26 @@ La validation Play Mode est acquise sur la capture de remplacement SHA-256
 `a182836b84bd27fbfa5ad04c47b12b404fef37a90ff8265bdc211c1ff8ce22db` :
 l'eau est distincte, le spawn et la caméra restent corrects, et le rapport
 visuel ne relève aucun motif d'erreur projet.
+
+## Lot 7D-A — caméra et calibrage visuel
+
+Le lot corrigé ajoute **32 cas EditMode**, pour un total de **348** :
+
+- cible de zoom dans les deux sens, facteur multiplicatif et sensibilité ;
+- normalisation `120 px/pas`, demi-pas, accumulation fractionnaire et
+  sensibilité appliquée après normalisation ;
+- rejet des calibrations pixel/pas nulles, négatives, `NaN` ou infinies ;
+- delta matériel réaliste sans clamp immédiat et clamps `2.5` / `8.0` ;
+- convergence amortie, monotonie et absence de dépassement ;
+- conservation X/Y de l'ancre et Z caméra pendant le zoom ;
+- pivots joueur/ressource/rendement, sprites fallback distincts sur texture
+  partagée et échelle joueur `1.20` ;
+- passe de tri unique par frame, joueur devant/derrière, égalités ordinales,
+  ressource masquée et indépendance aux ordres de synchronisation/création ;
+- absence de mutation de la position Core par le calibrage visuel.
+
+Validation finale du 4 août 2026 : **348/348 EditMode** et **1/1 PlayMode**, zéro
+échec, zéro ignoré ou inconclusif et code Unity `0` pour les deux exécutions. Le
+cas PlayMode rejouable charge `SampleScene`, produit les cinq captures de revue
+et valide tailles, ancres, passe unique de tri, ordres, échelle, Z caméra et
+Console. Les SHA-256 sont consignés dans les artefacts de revue du lot.

@@ -312,3 +312,22 @@ ressources et recherche le spawn sans dépendre d'Unity ni d'un ordre de chargem
 appelant. Le Runtime transforme les placements générés en `ResourceState`
 mutables pour le prototype, sans écrire dans la base générée. `DebugIsometricWorld`
 reste un adaptateur provisoire limité à un chunk et à la Tilemap existante.
+
+## Caméra progressive et profondeur visuelle
+
+Le lot 7D-A reste entièrement dans `AgeOfSurvival.Runtime`. L'état testable
+`OrthographicZoomState` possède uniquement la taille courante, la cible et la
+vélocité d'amortissement ; `GroundAnchorCameraFollow` échantillonne Input System
+comme delta matériel en pixels, le normalise en pas logiques avec un réglage
+Runtime positif et fini, puis applique ces valeurs à `Camera`. La sensibilité
+est appliquée après cette normalisation. La simulation Core ne reçoit aucun
+état de zoom et la position joueur n'est jamais réécrite par la caméra.
+
+Le joueur et les ressources placent leur `Transform` visuel sur une ancre au
+sol explicite. `GroundAnchorSortCoordinator` attend leur synchronisation en
+`Update`, puis applique en `LateUpdate` une seule passe de `GroundAnchorSorting`
+sur le joueur et toutes les ressources actives. Y puis l'identifiant ordinal
+stable déterminent l'ordre de rendu. L'échelle `1.20` du joueur, les pivots et
+les ordres de rendu sont donc des données de présentation Runtime, sans effet
+sur les dimensions, interactions ou règles du Core. Le détail du contrat est
+centralisé dans `CAMERA_AND_SORTING.md`.

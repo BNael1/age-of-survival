@@ -232,3 +232,25 @@ teinte d'eau à `Color32(0,64,255,255)`, résout l'unique réserve de lisibilit�
 Ces paramètres sont retenus provisoirement pour le lot 7C ; ils ne constituent
 pas la direction artistique finale. Le lot ne décide pas les collisions, le
 streaming, le biome final ni le calibrage du lot 7D.
+
+## ADR-0016 — Zoom multiplicatif et tri par ancre au sol
+
+**Statut : proposé pour validation par Naël**
+**Date : 3 août 2026**
+
+Le lot 7D-A remplace la taille orthographique fixe par une cible multiplicative
+bornée à `[2.5, 8.0]`, initialisée à `4.0625` et amortie sur environ `0.12 s`.
+La molette Input System fournit un delta matériel en pixels : l'adaptateur le
+normalise provisoirement à `120 pixels par pas logique`, puis applique la
+sensibilité à ces pas avant de modifier la cible. Le facteur `1.10` par pas et
+la sensibilité `1.0` restent des paramètres Runtime préparés pour le futur menu
+Options.
+
+Le joueur est agrandi visuellement à `1.20` sans changement logique. Joueur et
+ressources utilisent leurs pivots de pieds/sol comme ancres. Leur ordre est
+calculé depuis Y ; une comparaison ordinale stable de l'identifiant avec
+`StringComparison.Ordinal` départage les égalités. Un coordinateur Runtime
+applique l'unique classement en `LateUpdate`, au maximum une fois par frame,
+après la synchronisation visuelle du joueur et des ressources.
+La caméra, le tri et l'échelle demeurent des adaptateurs Unity et ne mutent pas
+le Core. Aucun framework, asset ou package supplémentaire n'est introduit.
