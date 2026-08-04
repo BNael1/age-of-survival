@@ -92,6 +92,7 @@ namespace AgeOfSurvival.Runtime.Player
                 : new WorldPosition(startPosition.x, startPosition.y);
             _player = new PlayerState(initialPosition);
             _clock = new FixedTickClock(ticksPerSecond, maxTicksPerFrame);
+            worldRenderer.SynchronizeStreaming(_player.Position);
             SynchronizeMovementState();
 
             CreateVisual();
@@ -150,6 +151,7 @@ namespace AgeOfSurvival.Runtime.Player
                     tickDuration);
                 CurrentLoadRatio = movementState.LoadRatio;
                 CurrentMovementMultiplier = movementState.SpeedMultiplier;
+                worldRenderer.SynchronizeStreaming(_player.Position);
                 resourceInteraction?.SimulateTick(
                     _player.Position,
                     worldDirection.sqrMagnitude > 0.0001f);

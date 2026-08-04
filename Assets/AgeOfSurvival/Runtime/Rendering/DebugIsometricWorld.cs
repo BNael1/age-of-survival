@@ -15,7 +15,7 @@ namespace AgeOfSurvival.Runtime.Rendering
     /// simulation state and contains no gameplay rules.
     /// </summary>
     [DefaultExecutionOrder(-20)]
-    public sealed class DebugIsometricWorld : MonoBehaviour
+    public sealed partial class DebugIsometricWorld : MonoBehaviour
     {
         private const string GridRootName = "Debug Isometric Grid";
         private const string TilemapName = "Ground";
@@ -57,6 +57,11 @@ namespace AgeOfSurvival.Runtime.Rendering
             float visualYOffset,
             float visualZ)
         {
+            if (_streamingInitialized)
+            {
+                return StreamingLogicalToWorldPosition(logicalPosition, visualYOffset, visualZ);
+            }
+
             if (_tilemap == null)
             {
                 return transform.position;
@@ -101,6 +106,11 @@ namespace AgeOfSurvival.Runtime.Rendering
 
         public IReadOnlyList<ResourceState> CreateGeneratedResourceStates()
         {
+            if (_streamingInitialized)
+            {
+                return CreateStreamingGeneratedResourceStates();
+            }
+
             if (_populationChunk == null)
             {
                 return Array.Empty<ResourceState>();
@@ -151,6 +161,7 @@ namespace AgeOfSurvival.Runtime.Rendering
 
             CreateTiles();
             PopulateTilemap();
+            InitializeChunkStreaming();
         }
 
         private DenseGrid<byte> CreateGeneratedPopulationWorld()
@@ -204,6 +215,7 @@ namespace AgeOfSurvival.Runtime.Rendering
 
         private void OnDestroy()
         {
+            ResetChunkStreamingState();
             DestroyGeneratedAssets();
         }
 
@@ -397,6 +409,7 @@ namespace AgeOfSurvival.Runtime.Rendering
 
         private void DestroyGeneratedHierarchy()
         {
+            ResetChunkStreamingState();
             Transform existing = transform.Find(GridRootName);
             if (existing != null)
             {

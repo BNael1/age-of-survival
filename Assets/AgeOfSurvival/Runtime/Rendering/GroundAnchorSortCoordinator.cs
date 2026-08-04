@@ -20,6 +20,8 @@ namespace AgeOfSurvival.Runtime.Rendering
         public int LastAppliedFrame { get; private set; } = -1;
         public int ApplicationsInLastAppliedFrame { get; private set; }
         public int ActiveEntryCount { get; private set; }
+        public int SaturatedEntryCount => Math.Max(
+            0, ActiveEntryCount - GroundAnchorSorting.MaximumDistinctRankCount);
 
         private void LateUpdate()
         {

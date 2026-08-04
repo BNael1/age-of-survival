@@ -13,6 +13,9 @@ namespace AgeOfSurvival.Runtime.Rendering
         public const int MinimumOrder = -32768;
         public const int MaximumOrder = 32767;
 
+        public const int MaximumDistinctRankCount =
+            ((MaximumOrder - DynamicLayerBaseOrder - (OrdersPerVisual - 1)) / OrdersPerVisual) + 1;
+
         public static int CompareBackToFront(
             float leftGroundAnchorY,
             string leftStableId,

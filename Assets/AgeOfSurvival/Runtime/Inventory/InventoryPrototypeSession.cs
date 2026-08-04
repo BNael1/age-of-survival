@@ -10,7 +10,7 @@ namespace AgeOfSurvival.Runtime.Inventory
     /// <summary>
     /// Plain C# prototype session that owns Core state. MonoBehaviours only adapt it.
     /// </summary>
-    public sealed class InventoryPrototypeSession
+    public sealed partial class InventoryPrototypeSession
     {
         private readonly List<ResourceState> _resources = new List<ResourceState>();
         private readonly List<GroundContainerState> _groundContainers = new List<GroundContainerState>();

@@ -20,7 +20,7 @@ namespace AgeOfSurvival.Runtime.Resources
     // Automatic construction, input subscription and Update remain Play Mode-only.
     [ExecuteAlways]
     [DefaultExecutionOrder(-10)]
-    public sealed class DebugResourceInteraction : MonoBehaviour
+    public sealed partial class DebugResourceInteraction : MonoBehaviour
     {
         private const string GeneratedRootName = "Debug Resource Markers";
         private const int MarkerSizePixels = 24;
@@ -181,6 +181,7 @@ namespace AgeOfSurvival.Runtime.Resources
             {
                 ResolveSortCoordinator();
                 Rebuild();
+                AttachChunkStreaming();
             }
         }
 
@@ -232,6 +233,7 @@ namespace AgeOfSurvival.Runtime.Resources
 
         private void OnDestroy()
         {
+            DetachChunkStreaming();
             DestroyGeneratedHierarchy();
             DestroyGeneratedAssets();
         }
@@ -398,6 +400,13 @@ namespace AgeOfSurvival.Runtime.Resources
             for (int index = 0; index < _session.Resources.Count; index++)
             {
                 ResourceState resource = _session.Resources[index];
+                if (worldRenderer != null
+                    && worldRenderer.UsesChunkStreaming
+                    && !worldRenderer.IsWorldPositionVisible(resource.Position))
+                {
+                    continue;
+                }
+
                 var markerObject = new GameObject($"Resource {resource.Id}");
                 markerObject.transform.SetParent(_generatedRoot, false);
 
