@@ -235,8 +235,9 @@ streaming, le biome final ni le calibrage du lot 7D.
 
 ## ADR-0016 — Zoom multiplicatif et tri par ancre au sol
 
-**Statut : proposé pour validation par Naël**
+**Statut : active, validée par Naël**
 **Date : 3 août 2026**
+**Validation : 4 août 2026**
 
 Le lot 7D-A remplace la taille orthographique fixe par une cible multiplicative
 bornée à `[2.5, 8.0]`, initialisée à `4.0625` et amortie sur environ `0.12 s`.

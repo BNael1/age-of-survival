@@ -1,6 +1,6 @@
 # État du projet
 
-Dernière mise à jour : 3 août 2026
+Dernière mise à jour : 4 août 2026
 
 ## Moteur
 
@@ -11,7 +11,9 @@ Dernière mise à jour : 3 août 2026
 
 ## État actuel
 
-Le dépôt Unity est sur la branche locale `codex/lot7da-progressive-camera`.
+La branche `main` du dépôt Unity public
+[`BNael1/age-of-survival`](https://github.com/BNael1/age-of-survival) est
+synchronisée avec `origin/main`.
 
 Lots validés et commités :
 
@@ -33,7 +35,9 @@ Lots validés et commités :
 - `93c22db` — `docs: close lot 6b terrain review` ;
 - `4df2a2e` — `fix: remove isometric terrain seams` ;
 - `a46e994` — `feat: add ground-anchor camera follow` ;
-- `15fae58` — `feat: add deterministic world generation foundation`.
+- `15fae58` — `feat: add deterministic world generation foundation` ;
+- `07023ead` — `feat: add deterministic world population` ;
+- `686eaf3` — `feat: add progressive camera and ground-anchor sorting`.
 
 État validé au commit `26a1a27` :
 
@@ -208,10 +212,13 @@ ne relève aucun motif d'erreur projet. Naël avait accepté tous les autres cho
 visibles lors de la première revue ; l'unique réserve est résolue. La validation
 visuelle 7C est acquise.
 
-## Lot 7D-A en revue
+## Lot 7D-A fermé
 
-Le lot 7D-A est installé sans commit sur `codex/lot7da-progressive-camera`,
-directement depuis `07023eadf81ea1468a90ec6ed422326aebd4907b`. Il ajoute le
+Le lot 7D-A est validé par Naël et fermé. Il est intégré sur `main` au commit
+`686eaf329a664cd8b797400f869ac3edbb9c8643`, arbre
+`52bb1ec1b6a9a4eed6971260f252abc33b1adb16`, depuis le parent
+`07023eadf81ea1468a90ec6ed422326aebd4907b`. L'intégration est une avance rapide
+pure. Le commit porte **26 chemins, 1870 insertions et 37 suppressions**. Il ajoute le
 zoom orthographique multiplicatif amorti, conserve le suivi de l'ancre joueur,
 agrandit uniquement le visuel joueur à `1.20` et trie joueur/ressources selon
 leurs ancres au sol avec un départage ordinal stable. La correction de revue
@@ -224,7 +231,11 @@ Validation finale de la correction : **348/348 EditMode** et **1/1 PlayMode**,
 zéro échec ou cas ignoré/inconclusif, code Unity `0` pour les deux exécutions.
 Les cinq captures ont été régénérées et confirment les trois tailles, les deux
 chevauchements et la passe unique de tri ; l'instrumentation relève zéro erreur
-projet. Le lot attend l'autorisation explicite de Naël avant tout commit.
+projet. La validation manuelle de Naël est acquise.
+
+Après l'intégration, `main` et `origin/main` pointaient sur le même commit et le
+worktree était propre. Les essais Unity AI ont été retirés sans commit : aucun
+paquet ni réglage Unity AI additionnel ne subsiste dans le projet.
 
 ## Limites techniques connues
 
@@ -240,9 +251,20 @@ projet. Le lot attend l'autorisation explicite de Naël avant tout commit.
 
 ## Prochaine action
 
-1. Soumettre le lot 7D-A et ses artefacts à Naël, puis s'arrêter sans commit.
-2. Après autorisation seulement, créer un commit unique sur la branche dédiée.
-3. Ne commencer 7D-B qu'après intégration approuvée de 7D-A sur `main`.
+Le prochain lot est **7D-B**, dont le périmètre est déjà validé par Naël :
+
+- créer une scène d'accueil séparée avec `Nouvelle partie`, `Charger`, `Options`
+  et `Quitter` ;
+- laisser `Charger` visible mais désactivé en l'absence de sauvegarde ;
+- faire lancer provisoirement la seed `0` par `Nouvelle partie` ;
+- proposer dans le menu pause `Reprendre`, `Options`, `Retour au menu principal`
+  et `Quitter` ;
+- adopter un style sombre de survie, avec le monde procédural assombri en
+  arrière-plan ;
+- réaliser l'interface avec UI Toolkit.
+
+La sauvegarde, le remappage des contrôles, l'audio et la création de personnage
+restent hors périmètre de 7D-B.
 
 ## Dépôts archivés
 

@@ -81,8 +81,10 @@ Le clavier et le marqueur peuvent être remplacés sans modifier la règle de d�
 `GroundAnchorCameraFollow` est un adaptateur Unity local au Runtime. Il reçoit
 uniquement la caméra et le `Transform` qui représente le point d'ancrage au sol
 du visuel joueur. Le contrôleur synchronise ce visuel depuis `PlayerState` en
-`Update`, puis la caméra le suit en `LateUpdate`, sans amortissement. Le suivi
-conserve Z et applique le zoom technique fixe provisoire `4.0625`.
+`Update`, puis la caméra le suit en `LateUpdate`. Le suivi conserve Z. Depuis le
+lot 7D-A, la taille orthographique part de `4.0625`, vise une cible
+multiplicative bornée à `[2.5, 8.0]` et amortit uniquement le zoom ; le suivi de
+l'ancre joueur reste instantané.
 
 Cette frontière interdit au Core toute référence à `UnityEngine.Camera` et
 interdit à la simulation de dépendre du zoom. L'adaptateur ne consulte ni la
