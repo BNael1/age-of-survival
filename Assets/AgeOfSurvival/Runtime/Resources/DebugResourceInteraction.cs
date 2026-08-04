@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Resources;
+using AgeOfSurvival.Runtime.Frontend;
 using AgeOfSurvival.Runtime.Inventory;
 using AgeOfSurvival.Runtime.Rendering;
 using UnityEngine;
@@ -202,6 +203,11 @@ namespace AgeOfSurvival.Runtime.Resources
                 return;
             }
 
+            if (GameplayInputGate.IsBlocked)
+            {
+                return;
+            }
+
             if (_keyboard == null || _keyboard != Keyboard.current)
             {
                 ResolveInteractionKey();
@@ -269,7 +275,10 @@ namespace AgeOfSurvival.Runtime.Resources
 
         public void QueueInteraction()
         {
-            _interactionRequested = true;
+            if (!GameplayInputGate.IsBlocked)
+            {
+                _interactionRequested = true;
+            }
         }
 
         /// <summary>
@@ -283,6 +292,12 @@ namespace AgeOfSurvival.Runtime.Resources
 
         public void SimulateTick(WorldPosition playerPosition, bool playerMoved)
         {
+            if (GameplayInputGate.IsBlocked)
+            {
+                _interactionRequested = false;
+                return;
+            }
+
             long simulationTick = _session.BeginSimulationTick(playerPosition);
             _hasPlayerPosition = true;
             SynchronizeInteractionRadius(playerPosition);

@@ -255,3 +255,34 @@ applique l'unique classement en `LateUpdate`, au maximum une fois par frame,
 après la synchronisation visuelle du joueur et des ressources.
 La caméra, le tri et l'échelle demeurent des adaptateurs Unity et ne mutent pas
 le Core. Aucun framework, asset ou package supplémentaire n'est introduit.
+
+## ADR-0017 — Frontend UI Toolkit et routes en ligne différées
+
+**Statut : active, validée par Naël**
+**Date : 4 août 2026**
+
+Le frontend utilise une scène `MainMenu` séparée et une interface UI Toolkit
+verticale à gauche, inspirée de la sobriété de Project Zomboid sans copier ses
+assets ni son habillage. Le monde procédural de seed `0` reste visible derrière
+un voile sombre. Les routes principales sont `Nouvelle partie`, `Charger`, `En
+ligne`, `Options` et `Quitter`.
+
+`Nouvelle partie` charge directement `SampleScene`, dont le monde généré reste
+provisoirement en seed `0`. `Charger` est visible mais désactivé tant qu'aucun
+service de sauvegarde réel n'est disponible. Le panneau `En ligne` expose
+`Rejoindre un serveur`, `Héberger une partie` et `Serveurs favoris`, mais ces
+actions restent désactivées : le lot ne prétend pas fournir de transport,
+d'authentification ou de serveur. Le futur client et le serveur autoritaire sur
+VPS devront remplacer les services de disponibilité derrière ces mêmes routes.
+
+Le menu pause propose `Reprendre`, `Options`, `Retour au menu principal` et
+`Quitter`. `Échap` ouvre ou ferme la pause ; depuis le panneau Options, il
+revient d'abord au panneau Pause. La pause bloque le déplacement, les
+interactions, le zoom et l'avancement du tick fixe via un verrou Runtime commun,
+sans modifier le Core ni dépendre de `Time.timeScale`. Les transitions de scène
+sont asynchrones et conservent le verrou uniquement lorsqu'un chargement démarre
+réellement.
+
+Les panneaux Options sont des écrans d'attente explicites. La sauvegarde, le
+remappage, l'audio, la création de personnage et le réseau effectif restent hors
+périmètre. Aucun package ou asset tiers n'est introduit.

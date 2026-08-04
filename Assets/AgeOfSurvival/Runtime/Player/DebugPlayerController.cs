@@ -1,6 +1,7 @@
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Simulation;
+using AgeOfSurvival.Runtime.Frontend;
 using AgeOfSurvival.Runtime.Inventory;
 using AgeOfSurvival.Runtime.Rendering;
 using AgeOfSurvival.Runtime.Resources;
@@ -112,13 +113,24 @@ namespace AgeOfSurvival.Runtime.Player
 
             SynchronizeVisual();
             cameraFollow?.Track(_visual);
-            resourceInteraction?.SimulateTick(_player.Position);
+            if (!GameplayInputGate.IsBlocked)
+            {
+                resourceInteraction?.SimulateTick(_player.Position);
+            }
         }
 
         private void Update()
         {
             if (_player == null || _clock == null)
             {
+                return;
+            }
+
+            if (GameplayInputGate.IsBlocked)
+            {
+                resourceInteraction?.SimulateTick(_player.Position);
+                SynchronizeMovementState();
+                SynchronizeVisual();
                 return;
             }
 

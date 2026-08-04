@@ -11,9 +11,13 @@ Dernière mise à jour : 4 août 2026
 
 ## État actuel
 
-La branche `main` du dépôt Unity public
-[`BNael1/age-of-survival`](https://github.com/BNael1/age-of-survival) est
-synchronisée avec `origin/main`.
+Le présent arbre local de `main` du dépôt Unity public
+[`BNael1/age-of-survival`](https://github.com/BNael1/age-of-survival) intègre le
+lot 7D-B sur le parent
+`c75000d11a30e97f3020aca08e1ba819ca77bd17`. `origin/main` reste à
+`686eaf329a664cd8b797400f869ac3edbb9c8643` : tant qu'aucun push n'est
+explicitement autorisé, l'historique local contient donc deux commits non
+poussés, `c75000d` et le présent commit 7D-B.
 
 Lots validés et commités :
 
@@ -37,7 +41,9 @@ Lots validés et commités :
 - `a46e994` — `feat: add ground-anchor camera follow` ;
 - `15fae58` — `feat: add deterministic world generation foundation` ;
 - `07023ead` — `feat: add deterministic world population` ;
-- `686eaf3` — `feat: add progressive camera and ground-anchor sorting`.
+- `686eaf3` — `feat: add progressive camera and ground-anchor sorting` ;
+- `c75000d` — `docs: close lot 7da project state` ;
+- présent commit, parent `c75000d` — `feat: add main menu and pause frontend`.
 
 État validé au commit `26a1a27` :
 
@@ -237,6 +243,39 @@ Après l'intégration, `main` et `origin/main` pointaient sur le même commit et
 worktree était propre. Les essais Unity AI ont été retirés sans commit : aucun
 paquet ni réglage Unity AI additionnel ne subsiste dans le projet.
 
+## Lot 7D-B intégré
+
+Le lot 7D-B ajoute une scène `MainMenu` séparée et un frontend UI Toolkit
+programmatique. Le menu principal affiche le monde procédural de seed `0` sous
+un voile sombre et propose `Nouvelle partie`, `Charger`, `En ligne`, `Options`
+et `Quitter`. `Charger` reste désactivé tant que la persistance n'expose aucune
+sauvegarde. Le panneau `En ligne` conserve `Rejoindre un serveur`, `Héberger une
+partie` et `Serveurs favoris`, tous visibles mais inactifs jusqu'à
+l'implémentation du client et du serveur autoritaire sur VPS.
+
+`Nouvelle partie` charge `SampleScene` de manière asynchrone. Le menu pause
+propose `Reprendre`, `Options`, `Retour au menu principal` et `Quitter`.
+`GameplayInputGate` bloque le déplacement, l'interaction, le zoom et
+l'avancement du tick fixe pendant les menus, sans déplacer cette règle dans le
+Core. Une transition refusée ou en exception restaure l'état antérieur du
+verrou. Une pause demandée avant la construction différée du document UI est
+réappliquée dès que celui-ci existe. Une interaction mise en attente juste avant
+la pause est annulée pendant le blocage et ne se déclenche pas à la reprise.
+
+La première importation a révélé une collision entre `UnityEngine.Resources` et
+le namespace `AgeOfSurvival.Runtime.Resources`; les deux chargements de thème
+sont désormais qualifiés explicitement. La revue du patch a ensuite corrigé la
+course de construction du menu pause et la restauration du verrou lors d'un
+échec de transition. Le test PlayMode de reprise attend maintenant le prochain
+tick fixe réel au lieu d'un nombre arbitraire de frames.
+
+Validation finale du 4 août 2026 : **358/358 EditMode** et **7/7 PlayMode**.
+La Console et la validation visuelle de Naël sont propres. Les tests couvrent
+notamment la seed `0`, les routes visibles mais différées, le chargement
+asynchrone, la pause précoce, l'annulation d'une interaction en attente, le
+blocage puis la reprise du tick et le retour au menu principal. Aucun package
+ou asset tiers n'est ajouté.
+
 ## Limites techniques connues
 
 - `ground_water.png` contient provisoirement l'apparence de grass et ne
@@ -247,24 +286,24 @@ paquet ni réglage Unity AI additionnel ne subsiste dans le projet.
 - retirer directement un objet unique équipé via une opération de conteneur peut
   laisser une référence d'équipement orpheline. Avant d'autoriser le dépôt au
   sol, la destruction ou la persistance d'objets uniques équipés, les mutations
-  devront passer par une frontière agrégée qui maintient ces deux invariants.
+  devront passer par une frontière agrégée qui maintient ces deux invariants ;
+- `NoSaveAvailability` maintient provisoirement `Charger` désactivé : aucun
+  format de sauvegarde Runtime n'est branché sur le frontend ;
+- les routes `En ligne` sont uniquement des contrats d'interface désactivés.
+  Aucun transport, authentification, navigateur de serveurs ou protocole VPS
+  n'est implémenté dans ce lot.
 
 ## Prochaine action
 
-Le prochain lot est **7D-B**, dont le périmètre est déjà validé par Naël :
+Vérifier que le commit unique `feat: add main menu and pause frontend` possède
+le parent `c75000d11a30e97f3020aca08e1ba819ca77bd17`, contient exactement les
+36 chemins revus et laisse le worktree propre. Les validations acquises restent
+**358/358 EditMode** et **7/7 PlayMode**. Aucun push n'est inclus dans cette
+action ; il exige une autorisation distincte de Naël.
 
-- créer une scène d'accueil séparée avec `Nouvelle partie`, `Charger`, `Options`
-  et `Quitter` ;
-- laisser `Charger` visible mais désactivé en l'absence de sauvegarde ;
-- faire lancer provisoirement la seed `0` par `Nouvelle partie` ;
-- proposer dans le menu pause `Reprendre`, `Options`, `Retour au menu principal`
-  et `Quitter` ;
-- adopter un style sombre de survie, avec le monde procédural assombri en
-  arrière-plan ;
-- réaliser l'interface avec UI Toolkit.
-
-La sauvegarde, le remappage des contrôles, l'audio et la création de personnage
-restent hors périmètre de 7D-B.
+Cadrer ensuite séparément le lot 7E de streaming de chunks et
+de monde extensible, sans y mélanger la sauvegarde, le réseau, le remappage,
+l'audio ou la création de personnage.
 
 ## Dépôts archivés
 

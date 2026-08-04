@@ -43,3 +43,11 @@ Les règles de construction, de refuges et de familiarité déjà validées ne s
 - sauvegarde des ressources récoltées et migrations correspondantes ;
 - asset d'eau final et calibrage artistique, à traiter avec le lot 7D ou un lot
   d'assets dédié.
+
+## Reporté après le lot 7D-B
+
+- client réseau et protocole de connexion au futur VPS ;
+- serveur autoritaire dédié, déploiement et supervision ;
+- navigateur de serveurs, favoris persistants et historique ;
+- authentification, permissions, administration et sécurité réseau ;
+- hébergement de partie depuis le client et invitations.

@@ -1,4 +1,5 @@
 using System;
+using AgeOfSurvival.Runtime.Frontend;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
@@ -55,6 +56,11 @@ namespace AgeOfSurvival.Runtime.Rendering
 
         private void Update()
         {
+            if (GameplayInputGate.IsBlocked)
+            {
+                return;
+            }
+
             Mouse mouse = Mouse.current;
             if (mouse != null)
             {
@@ -64,7 +70,10 @@ namespace AgeOfSurvival.Runtime.Rendering
 
         private void LateUpdate()
         {
-            AdvanceZoom(Time.deltaTime);
+            if (!GameplayInputGate.IsBlocked)
+            {
+                AdvanceZoom(Time.deltaTime);
+            }
             Synchronize();
         }
 

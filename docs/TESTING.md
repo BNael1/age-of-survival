@@ -294,3 +294,40 @@ Validation finale du 4 août 2026 : **348/348 EditMode** et **1/1 PlayMode**, z�
 cas PlayMode rejouable charge `SampleScene`, produit les cinq captures de revue
 et valide tailles, ancres, passe unique de tri, ordres, échelle, Z caméra et
 Console. Les SHA-256 sont consignés dans les artefacts de revue du lot.
+
+## Lot 7D-B — frontend et menu pause
+
+Le lot ajoute **10 cas EditMode**, pour un total de **358** :
+
+- verrou global des entrées et libération explicite ;
+- lancement de la scène de gameplay et refus d'une seconde transition active ;
+- retour au menu principal et passage par l'adaptateur de fermeture ;
+- refus de `Charger` sans sauvegarde ;
+- présence des routes principales et désactivation des fonctions futures ;
+- navigation entre Accueil, En ligne et Options ;
+- contenu et visibilité initiale du menu pause ;
+- restauration de l'état précédent du verrou lorsqu'une transition ne démarre
+  pas.
+
+Le lot ajoute **6 cas PlayMode**, pour un total de **7** :
+
+- construction du menu principal au-dessus du monde assombri et commandes de
+  gameplay bloquées ;
+- transition `Nouvelle partie` vers `SampleScene` et vérification effective de
+  la seed `0` dans le chunk peuplé ;
+- pause, immobilité du tick, reprise puis attente du prochain tick fixe réel ;
+- annulation d'une interaction mise en attente avant la pause, sans déclenchement
+  différé à la reprise ;
+- retour depuis la partie vers `MainMenu` ;
+- pause demandée avant la construction différée du document, ensuite visible et
+  correctement libérée au déchargement.
+
+Validation finale du 4 août 2026 : **358/358 EditMode** et **7/7 PlayMode**.
+La première compilation avait révélé une collision de namespace sur
+`Resources.Load`; elle est corrigée par qualification `UnityEngine.Resources`.
+La revue a ensuite ajouté les régressions de pause précoce et de restauration du
+verrou. Le test de reprise n'attend plus deux frames arbitraires : il attend que
+`PrototypeSession.CurrentTick` dépasse le tick observé pendant la pause. Une
+régression supplémentaire vérifie qu'une commande `E` déjà mise en attente est
+annulée pendant le blocage. La Console et la validation visuelle de Naël sont
+propres.

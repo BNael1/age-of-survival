@@ -333,3 +333,41 @@ stable déterminent l'ordre de rendu. L'échelle `1.20` du joueur, les pivots et
 les ordres de rendu sont donc des données de présentation Runtime, sans effet
 sur les dimensions, interactions ou règles du Core. Le détail du contrat est
 centralisé dans `CAMERA_AND_SORTING.md`.
+
+## Frontend, navigation et pause
+
+Le lot 7D-B reste dans `AgeOfSurvival.Runtime`. `FrontendRuntimeBootstrap`
+observe les scènes chargées et installe l'adaptateur approprié :
+`MainMenuBehaviour` dans `MainMenu`, `PauseMenuBehaviour` dans `SampleScene`.
+Les documents UI Toolkit sont construits par code et ne possèdent ni état de
+simulation, ni persistance, ni connexion réseau.
+
+`FrontendController` dépend uniquement de petites interfaces testables :
+`IFrontendSceneLoader`, `IApplicationQuitter`, `ISaveAvailability` et
+`IOnlineFrontendAvailability`. Les adaptateurs Unity utilisent
+`SceneManager.LoadSceneAsync` en mode `Single` et `Application.Quit`. Une
+transition verrouille les commandes avant le chargement ; si elle est refusée
+ou lève une exception, l'état précédent du verrou est restauré.
+
+`GameplayInputGate` est un verrou local au processus et au Runtime. Les
+adaptateurs joueur, ressources et caméra le consultent avant de lire les
+commandes physiques ou de faire avancer le tick fixe. Lorsque le verrou est
+actif, le contrôleur joueur appelle néanmoins la branche bloquée de l'adaptateur
+de ressources afin d'annuler une interaction déjà mise en attente, sans avancer
+le tick. La pause arrête donc le prototype et ses interactions sans utiliser
+`Time.timeScale` et sans exposer le menu au Core. L'état de pause est réappliqué
+après la construction différée du
+`UIDocument`, ce qui évite un jeu bloqué avec une interface encore masquée.
+
+La scène `MainMenu` réutilise provisoirement `DebugIsometricWorld` avec la seed
+`0` comme arrière-plan non interactif. Le frontend d'inventaire y est désactivé
+et un voile sombre sépare le décor de la navigation verticale. `Nouvelle
+partie` charge la scène de gameplay existante ; la seed reste vérifiée dans le
+monde généré, pas stockée comme état mutable du menu.
+
+La sauvegarde et le réseau sont représentés par des services de disponibilité.
+Leurs implémentations actuelles retournent `false`, ce qui conserve `Charger`,
+`Rejoindre`, `Héberger` et `Serveurs favoris` dans la structure de navigation
+sans simuler un backend inexistant. Le futur client et le serveur autoritaire
+VPS remplaceront ces adaptateurs sans déplacer la simulation ou la sauvegarde
+centrale hors du contrôle du projet.
