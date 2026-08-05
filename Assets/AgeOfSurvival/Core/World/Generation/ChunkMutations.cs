@@ -400,6 +400,14 @@ namespace AgeOfSurvival.Core.World.Generation
             _states.Remove(coordinate);
             return true;
         }
+
+        internal ChunkMutationState[] CaptureCanonicalStates()
+        {
+            var states = new List<ChunkMutationState>(_states.Values);
+            states.Sort((left, right) =>
+                left.Coordinate.CompareTo(right.Coordinate));
+            return states.ToArray();
+        }
     }
 
     public sealed class ActiveChunkState
@@ -739,6 +747,52 @@ namespace AgeOfSurvival.Core.World.Generation
                 retentionRadius);
             for (int index = 0; index < plan.Count; index++) Evict(plan[index]);
             return plan.Count;
+        }
+
+        internal IReadOnlyList<ChunkMutationState> CaptureCanonicalMutations()
+        {
+            var canonical = new List<ChunkMutationState>();
+            var knownCoordinates = new HashSet<ChunkCoordinate>();
+
+            ChunkMutationState[] stored = Store.CaptureCanonicalStates();
+            for (int index = 0; index < stored.Length; index++)
+            {
+                ChunkMutationState mutation = stored[index];
+                if (mutation == null || mutation.IsEmpty)
+                {
+                    throw new InvalidOperationException(
+                        "The mutation store contains an invalid save-facing state.");
+                }
+
+                if (!knownCoordinates.Add(mutation.Coordinate))
+                {
+                    throw new InvalidOperationException(
+                        "A chunk mutation coordinate is duplicated.");
+                }
+
+                canonical.Add(mutation);
+            }
+
+            foreach (KeyValuePair<ChunkCoordinate, ActiveChunkState> pair in _active)
+            {
+                ChunkMutationState mutation = ChunkStateTransfer.Extract(pair.Value);
+                if (mutation.IsEmpty)
+                {
+                    continue;
+                }
+
+                if (!knownCoordinates.Add(mutation.Coordinate))
+                {
+                    throw new InvalidOperationException(
+                        "A chunk cannot be active and stored at the same time.");
+                }
+
+                canonical.Add(mutation);
+            }
+
+            canonical.Sort((left, right) =>
+                left.Coordinate.CompareTo(right.Coordinate));
+            return Array.AsReadOnly(canonical.ToArray());
         }
 
         public IReadOnlyList<ChunkCoordinate> CopyActiveCoordinates()

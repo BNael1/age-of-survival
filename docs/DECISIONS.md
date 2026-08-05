@@ -339,3 +339,24 @@ uniques devront passer par une frontière agrégée.
 
 Le lot ne choisit ni format binaire, ni compression, ni emplacement de fichier,
 ni politique d'autosave. Ces décisions restent dans 7F-A2, 7F-B et 7F-C.
+
+<!-- LOT7FA2A_DECISION -->
+## ADR-0020 — Snapshot complet avant sérialisation
+
+**Statut : active pour la fondation de sauvegarde**
+
+**Date : 5 août 2026**
+
+Le codec ne reçoit pas directement les états Runtime, le cache de chunks ou les
+collections mutables. Une capture Core immuable regroupe d'abord l'identité du
+monde, le tick fixe, la position du joueur, l'inventaire canonique et toutes les
+mutations sparse.
+
+Les mutations des chunks actifs et évincés sont fusionnées sans éviction ni
+consommation du store. Les chunks actifs non modifiés sont omis et toute
+collision de propriété active/stockée est rejetée. La sauvegarde logique reste
+ainsi indépendante de la fenêtre de streaming au moment de la capture.
+
+Cette décision ne fige pas encore le format binaire. La magie, la version, les
+limites, l'intégrité et le décodage appartiennent à 7F-A2b. Le disque atomique
+reste 7F-B et l'intégration visible reste 7F-C.

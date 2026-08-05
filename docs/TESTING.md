@@ -416,3 +416,24 @@ Le lot ajoute **17 cas EditMode Core**, pour un total de **427** :
 Validation du 5 août 2026 : **427/427 EditMode**, zéro échec et zéro cas ignoré,
 avec résultat `Passed`. Le lot ne modifie aucun adaptateur Runtime, scène,
 contrôle ou rendu ; aucun nouveau PlayMode n'est requis.
+
+<!-- LOT7FA2A_TESTING -->
+## Lot 7F-A2a — validation du snapshot complet de partie
+
+Le lot ajoute **17 cas EditMode Core**, pour un total de **444** :
+
+- capture complète de l'identité monde, du tick, du joueur et de l'inventaire ;
+- copie et ordre canonique des mutations évincées ;
+- capture non destructive des mutations du store ;
+- capture d'un chunk actif modifié sans éviction ;
+- fusion canonique des mutations actives et stockées ;
+- omission d'un chunk actif non modifié ;
+- rejet d'une coordonnée simultanément active et stockée ;
+- immutabilité de la collection capturée après remplacement dans le store ;
+- normalisation de `-0.0` ;
+- rejet des profils invalides, ticks négatifs, mutations vides, dispositions
+  incompatibles et coordonnées dupliquées.
+
+Validation du 5 août 2026 : **444/444 EditMode**, zéro échec et zéro cas ignoré,
+avec résultat `Passed`. Le lot ne modifie aucun adaptateur Runtime, scène,
+contrôle ou rendu ; aucun nouveau PlayMode n'est requis.

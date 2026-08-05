@@ -366,10 +366,12 @@ existant n'a été modifié. Les preuves locales sont conservées sous
 <!-- LOT7FA1_PROJECT_STATE -->
 ## Lot 7F-A1 — invariants d'agrégat et snapshot canonique
 
-Le présent arbre ajoute une capture immuable et déterministe de l'inventaire.
-La construction, la restauration d'équipement et la capture refusent les
-instances dupliquées, les références de conteneurs absentes ou ambiguës, les
-cycles de possession et les équipements absents, dupliqués ou incompatibles.
+Le lot est intégré et poussé sur `main` au commit
+`1a4612dd561959905eb0d8731b6720e44cc2fa76`. Il ajoute une capture immuable et
+déterministe de l'inventaire. La construction, la restauration d'équipement et
+la capture refusent les instances dupliquées, les références de conteneurs
+absentes ou ambiguës, les cycles de possession et les équipements absents,
+dupliqués ou incompatibles.
 
 Les définitions, conteneurs et entrées sont exportés dans un ordre ordinal
 stable. Les empreintes incluent les règles d'équipement mais excluent les textes
@@ -379,9 +381,26 @@ Validation acquise le 5 août 2026 : **427/427 EditMode**, résultat `Passed`,
 zéro échec et zéro cas ignoré. Le périmètre fonctionnel reste limité au Core et
 aux tests ; aucun PlayMode supplémentaire n'est requis.
 
+<!-- LOT7FA2A_PROJECT_STATE -->
+## Lot 7F-A2a — snapshot complet de partie
+
+Le lot en cours ajoute une frontière `GameSaveSnapshot` entièrement en mémoire.
+Elle regroupe l'identité du monde généré, le tick fixe, la position du joueur,
+le snapshot canonique d'inventaire et les mutations sparse de chunks.
+
+La capture réunit les mutations des chunks évincés et celles des chunks encore
+actifs sans modifier le lifecycle. Les chunks actifs sans modification sont
+omis ; une coordonnée possédée simultanément par le store et le cache actif est
+rejetée. Les mutations sont triées et validées contre la disposition du monde.
+
+Validation locale du 5 août 2026 : **444/444 EditMode**, résultat `Passed`,
+zéro échec et zéro cas ignoré. Le lot touche uniquement le Core et les tests ;
+aucun PlayMode supplémentaire n'est requis. Aucun codec, accès disque, Runtime,
+UI ou package n'est ajouté.
+
 ### Prochaine action
 
-Relire le diff final et créer, après autorisation explicite de Naël, le commit
-séparé `fix: enforce inventory snapshot invariants`. Le lot 7F-A2 pourra ensuite
-définir le schéma et le codec binaire V1 en mémoire. L'accès disque atomique
-reste 7F-B et l'UX de chargement reste 7F-C.
+Relire le diff technique et documentaire final, puis créer le commit 7F-A2a
+uniquement après autorisation explicite de Naël. Le lot suivant est 7F-A2b :
+codec binaire V1 déterministe en mémoire. L'accès disque atomique reste 7F-B et
+l'intégration Runtime/UX reste 7F-C.

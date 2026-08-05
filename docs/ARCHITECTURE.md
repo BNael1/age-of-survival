@@ -453,3 +453,26 @@ clients macOS ARM64 et Windows x86-64 ainsi que du serveur Linux x86-64. Les
 scènes actives viennent des réglages de build ; l'architecture précédente de
 l'éditeur est restaurée après chaque construction. Les artefacts de build ne
 sont pas des sources de vérité et ne doivent pas être commités.
+
+<!-- LOT7FA2A_ARCHITECTURE -->
+## Snapshot complet de partie
+
+Le lot 7F-A2a introduit `AgeOfSurvival.Core.Persistence` comme frontière
+d'agrégation précédant tout codec. `WorldIdentitySnapshot` conserve l'identité
+reconstructible du monde : seed, version de générateur, disposition des chunks,
+identifiant du profil de population et révision.
+
+`GameSaveSnapshot` regroupe cette identité, le tick fixe, la position continue
+du joueur, le `PlayerInventorySnapshot` canonique et les mutations sparse de
+chunks. Il copie et trie la collection de mutations, rejette les coordonnées
+dupliquées, les mutations vides et les dispositions incompatibles, puis
+normalise `-0.0` en `+0.0` pour stabiliser le futur encodage binaire.
+
+La capture des mutations appartient à `ChunkStateLifecycle` afin de réunir sans
+effet de bord les chunks déjà évincés dans `ChunkMutationStore` et les chunks
+encore actifs. Les chunks actifs non modifiés sont omis. Une coordonnée ne peut
+pas être simultanément active et stockée. La fenêtre de streaming au moment de
+la sauvegarde ne change donc pas le contenu logique capturé.
+
+Le snapshot reste un objet Core en mémoire. Il ne définit ni octet de format,
+ni chemin disque, ni migration, ni commande Runtime ou UX.

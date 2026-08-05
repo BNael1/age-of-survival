@@ -97,3 +97,23 @@ comme contenu et les équipements absents, dupliqués ou incompatibles.
 La version, la magie, les longueurs bornées, l'intégrité SHA-256, le décodage et
 les migrations appartiennent au lot 7F-A2. L'écriture atomique sur disque reste
 hors périmètre jusqu'au lot 7F-B.
+
+<!-- LOT7FA2A_SAVE_FORMAT -->
+## Snapshot complet préparé par le lot 7F-A2a
+
+Le futur codec reçoit désormais un `GameSaveSnapshot` canonique contenant :
+
+- la seed, la version du générateur et la disposition des chunks ;
+- l'identifiant et la révision du profil de population ;
+- le tick fixe non négatif ;
+- la position finie du joueur, avec zéro flottant normalisé ;
+- le snapshot canonique d'inventaire 7F-A1 ;
+- toutes les mutations sparse non vides, triées par coordonnées.
+
+Les mutations sont capturées indépendamment de leur résidence au moment de la
+sauvegarde : store évincé et chunks actifs sont réunis sans modifier l'état
+vivant. Une disposition incompatible, une coordonnée dupliquée ou une mutation
+vide rend la capture invalide.
+
+Le lot ne définit toujours aucun octet et n'écrit aucun fichier. Le format
+binaire V1, ses limites, son intégrité et son décodage appartiennent à 7F-A2b.
