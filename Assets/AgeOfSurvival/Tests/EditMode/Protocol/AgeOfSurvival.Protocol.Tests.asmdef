@@ -1,20 +1,22 @@
 {
-  "name": "AgeOfSurvival.Runtime",
-  "rootNamespace": "AgeOfSurvival.Runtime",
+  "name": "AgeOfSurvival.Protocol.Tests",
+  "rootNamespace": "AgeOfSurvival.Protocol.Tests",
   "references": [
     "GUID:34f4281227b457e9df0427ea4d1386b4",
-    "Unity.InputSystem",
-    "AgeOfSurvival.Protocol",
-    "Unity.Networking.Transport",
-    "Unity.Collections"
+    "GUID:4f2993450424443e90af4c92d7a83251"
   ],
-  "includePlatforms": [],
+  "includePlatforms": [
+    "Editor"
+  ],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
   "overrideReferences": false,
   "precompiledReferences": [],
-  "autoReferenced": true,
+  "autoReferenced": false,
   "defineConstraints": [],
   "versionDefines": [],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
   "noEngineReferences": false
 }

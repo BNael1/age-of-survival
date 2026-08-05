@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using AgeOfSurvival.Core.Characters;
+using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Resources;
 using AgeOfSurvival.Core.World.Generation;
 using AgeOfSurvival.Runtime.Inventory;
@@ -153,6 +154,188 @@ namespace AgeOfSurvival.Runtime.Tests
 
             Assert.Throws<System.InvalidOperationException>(() =>
                 session.SynchronizeGeneratedResources(new[] { moved }));
+        }
+
+        [Test]
+        public void LongTraversalStabilizesAtFortyNineCachedChunks()
+        {
+            _world.PreparePendingChunks(64);
+            _world.StabilizeRetention();
+
+            for (int chunkX = 1; chunkX <= 24; chunkX++)
+            {
+                Assert.That(
+                    _world.SynchronizeStreaming(new WorldPosition((chunkX * 32) + 0.5, 0.5)),
+                    Is.True);
+                _world.PreparePendingChunks(64);
+                _world.StabilizeRetention();
+
+                Assert.That(_world.CachedChunkCount, Is.LessThanOrEqualTo(49));
+                Assert.That(_world.VisibleChunkCount, Is.EqualTo(9));
+                Assert.That(_world.PendingPreparationCount, Is.Zero);
+            }
+
+            Assert.That(_world.EvictionCount, Is.GreaterThan(0));
+            Assert.That(_world.CachedChunkCount, Is.EqualTo(30));
+        }
+
+        [Test]
+        public void NegativeLongTraversalDoesNotGrowCacheContinuously()
+        {
+            _world.PreparePendingChunks(64);
+            for (int step = 1; step <= 16; step++)
+            {
+                _world.SynchronizeStreaming(new WorldPosition((-step * 32) - 0.25, (-step * 32) - 0.25));
+                _world.PreparePendingChunks(64);
+                _world.StabilizeRetention();
+                Assert.That(_world.CachedChunkCount, Is.LessThanOrEqualTo(49));
+            }
+
+            Assert.That(_world.StreamingCenter, Is.EqualTo(new ChunkCoordinate(-17, -17)));
+        }
+
+        [Test]
+        public void HarvestAndGroundRemainderSurviveRuntimeEvictionAndReturn()
+        {
+            _world.PreparePendingChunks(64);
+            _world.StabilizeRetention();
+            IReadOnlyList<ResourceState> generated = _world.CreateCachedGeneratedResourceStates();
+            var session = new InventoryPrototypeSession(_world.CreateGeneratedResourceStates());
+            session.SynchronizeGeneratedChunkResources(
+                generated,
+                _world.CachedChunks,
+                _world.PopulationChunk.Layout);
+            ResourceState target = session.Resources[0];
+            ResourceYieldResult yield = session.HarvestAndStartTransfer(target.Position, 0d, 1);
+            Assert.That(yield.Succeeded, Is.True);
+            session.AdvanceTransfer(10000, target.Position, false);
+            int remainder = InventoryOperations.Count(
+                yield.Ground.Container,
+                InventoryPrototypeCatalog.Branches.Id);
+            Assert.That(remainder, Is.GreaterThan(0));
+            ResourceId targetId = target.Id;
+
+            _world.SynchronizeStreaming(new WorldPosition(256.5, 0.5));
+            _world.PreparePendingChunks(64);
+            _world.StabilizeRetention();
+            session.SynchronizeGeneratedChunkResources(
+                _world.CreateCachedGeneratedResourceStates(),
+                _world.CachedChunks,
+                _world.PopulationChunk.Layout);
+            Assert.That(session.FindResource(targetId), Is.Null);
+            Assert.That(session.MutatedChunkCount, Is.GreaterThan(0));
+
+            _world.SynchronizeStreaming(target.Position);
+            _world.PreparePendingChunks(64);
+            _world.StabilizeRetention();
+            session.SynchronizeGeneratedChunkResources(
+                _world.CreateCachedGeneratedResourceStates(),
+                _world.CachedChunks,
+                _world.PopulationChunk.Layout);
+
+            Assert.That(session.FindResource(targetId).Availability, Is.EqualTo(ResourceAvailability.Harvested));
+            GroundContainerState restored = session.FindGround(yield.Ground.Container.Id);
+            Assert.That(restored, Is.Not.Null);
+            Assert.That(
+                InventoryOperations.Count(restored.Container, InventoryPrototypeCatalog.Branches.Id),
+                Is.EqualTo(remainder));
+        }
+
+        [Test]
+        public void ActiveTransferDefersWorldAndSessionEvictionUntilItCompletes()
+        {
+            _world.PreparePendingChunks(64);
+            _world.StabilizeRetention();
+            var session = new InventoryPrototypeSession(_world.CreateGeneratedResourceStates());
+            session.SynchronizeGeneratedChunkResources(
+                _world.CreateCachedGeneratedResourceStates(),
+                _world.CachedChunks,
+                _world.PopulationChunk.Layout);
+            ResourceState target = session.Resources[0];
+            ResourceYieldResult yield = session.HarvestAndStartTransfer(target.Position, 0d, 1);
+            Assert.That(yield.Succeeded, Is.True);
+
+            _world.ChunkEvictionRequested += (generated, retained) =>
+                session.TrySynchronizeGeneratedChunkResources(
+                    generated,
+                    retained,
+                    _world.PopulationChunk.Layout);
+
+            _world.SynchronizeStreaming(new WorldPosition(256.5, 0.5));
+            _world.PreparePendingChunks(64);
+            int cacheBeforeDeferredEviction = _world.CachedChunkCount;
+            int worldEvictionsBefore = _world.EvictionCount;
+
+            Assert.That(_world.StabilizeRetention(), Is.Zero);
+            Assert.That(_world.CachedChunkCount, Is.EqualTo(cacheBeforeDeferredEviction));
+            Assert.That(_world.EvictionCount, Is.EqualTo(worldEvictionsBefore));
+            Assert.That(session.FindResource(target.Id), Is.SameAs(target));
+            Assert.That(session.MutatedChunkCount, Is.Zero);
+
+            session.AdvanceTransfer(10000, target.Position, false);
+            Assert.That(_world.StabilizeRetention(), Is.GreaterThan(0));
+            Assert.That(_world.CachedChunkCount, Is.LessThanOrEqualTo(49));
+            Assert.That(session.FindResource(target.Id), Is.Null);
+            Assert.That(session.MutatedChunkCount, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void FailedSessionPrevalidationLeavesAllChunkStateUnchanged()
+        {
+            _world.PreparePendingChunks(64);
+            _world.StabilizeRetention();
+            var session = new InventoryPrototypeSession(_world.CreateGeneratedResourceStates());
+            session.SynchronizeGeneratedChunkResources(
+                _world.CreateCachedGeneratedResourceStates(),
+                _world.CachedChunks,
+                _world.PopulationChunk.Layout);
+
+            var retained = new List<ChunkCoordinate>(_world.CachedChunks);
+            ChunkCoordinate omitted = retained[0];
+            retained.RemoveAt(0);
+            IReadOnlyList<ResourceState> baseline = _world.CreateCachedGeneratedResourceStates();
+            var changed = new List<ResourceState>();
+            ResourceState movedOriginal = null;
+            for (int index = 0; index < baseline.Count; index++)
+            {
+                ResourceState candidate = baseline[index];
+                if (ChunkPositioning.Locate(
+                        candidate.Position,
+                        _world.PopulationChunk.Layout).Equals(omitted))
+                {
+                    continue;
+                }
+
+                if (movedOriginal == null)
+                {
+                    movedOriginal = session.FindResource(candidate.Id);
+                    changed.Add(new ResourceState(
+                        candidate.Id,
+                        new WorldPosition(candidate.Position.X + 0.25, candidate.Position.Y)));
+                }
+                else
+                {
+                    changed.Add(candidate);
+                }
+            }
+
+            Assert.That(movedOriginal, Is.Not.Null);
+            int resourceCount = session.Resources.Count;
+            int mutatedCount = session.MutatedChunkCount;
+            int evictionCount = session.ChunkStateEvictionCount;
+            int restorationCount = session.ChunkStateRestorationCount;
+
+            Assert.Throws<System.InvalidOperationException>(() =>
+                session.TrySynchronizeGeneratedChunkResources(
+                    changed,
+                    retained,
+                    _world.PopulationChunk.Layout));
+
+            Assert.That(session.Resources.Count, Is.EqualTo(resourceCount));
+            Assert.That(session.FindResource(movedOriginal.Id), Is.SameAs(movedOriginal));
+            Assert.That(session.MutatedChunkCount, Is.EqualTo(mutatedCount));
+            Assert.That(session.ChunkStateEvictionCount, Is.EqualTo(evictionCount));
+            Assert.That(session.ChunkStateRestorationCount, Is.EqualTo(restorationCount));
         }
     }
 }

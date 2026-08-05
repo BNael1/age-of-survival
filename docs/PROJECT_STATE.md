@@ -308,3 +308,66 @@ l'audio ou la création de personnage.
 ## Dépôts archivés
 
 Le prototype Godot et le benchmark moteur restent des références historiques séparées. Ils ne doivent pas être modifiés par ce dépôt.
+
+<!-- LOT7EB_PROJECT_STATE -->
+## Lot 7E-B — mutations sparse, cache borné et tranche multijoueur autoritaire
+
+Le lot 7E-B est préparé dans le worktree de `main` sur le parent
+`9ee8676a6905d633be9d888641e2a7425c14472d`. Il n'est pas encore commité ni
+poussé. Avant la présente documentation, le périmètre technique porte 33 chemins
+et ajoute 3 805 lignes pour 4 suppressions ; les sept documents du lot complètent
+ce périmètre sans modifier le gameplay ou la direction artistique.
+
+Le sous-lot B1 ajoute dans le Core une représentation sparse et canonique des
+mutations de chunks. Une ressource récoltée et un conteneur de sol non vide
+peuvent être extraits d'un chunk actif, stockés séparément de la base générée,
+puis restaurés contre cette base sans perte, duplication ou changement
+d'identifiant. Un chunk ne peut pas être simultanément actif et stocké.
+
+Le sous-lot B2 borne le cache Runtime avec un rayon de rétention technique de
+`3`, soit au plus `7 x 7 = 49` chunks générés autour du centre. La fenêtre
+visible reste `3 x 3` et la fenêtre préparée `5 x 5`. L'éviction est
+transactionnelle : le monde calcule d'abord le futur ensemble retenu, l'unique
+propriétaire d'état prévalide et capture les mutations, puis le cache est
+modifié. Une source de transfert active hors rétention diffère l'éviction au
+lieu de laisser monde, inventaire et rendu diverger.
+
+Le sous-lot B3 fournit une tranche verticale multijoueur autoritaire limitée au
+scénario de validation. Le serveur possède la simulation, accepte deux clients,
+applique une récolte, rejette une commande invalide, diffuse des snapshots,
+force une éviction/restauration et vérifie la convergence après reconnexion. Le
+protocole binaire versionné et borné est isolé dans son propre assembly ; le
+transport Unity utilise un pipeline fiable et séquencé. Les erreurs propres à un
+pair entraînent son rejet, pas l'arrêt du serveur.
+
+Validation locale finale du 5 août 2026 :
+
+- **410/410 EditMode**, zéro échec, zéro ignoré ou inconclusif ;
+- **8/8 PlayMode**, zéro échec, zéro ignoré ou inconclusif ;
+- client macOS ARM64 construit ;
+- client Windows x86-64 construit, sans prétendre à une exécution Windows ;
+- serveur Linux x86-64 construit ;
+- smoke local à trois processus réussi : `server=0`, `observer=0`,
+  `harvester=0` ;
+- digest convergent `131296B9BAF759FF`, une éviction et une restauration ;
+- `git diff --check` propre.
+
+Le smoke VPS du binaire Linux final est acquis le 5 août 2026. Le serveur
+`7E-B.1` a démarré sur UDP `17779`, puis deux clients macOS distincts ont validé
+le rejet d'une commande invalide et la convergence après reconnexion. Les trois
+processus ont quitté avec le code `0` et convergent sur le digest
+`131296B9BAF759FF`, avec une éviction et une restauration.
+
+L'archive Linux transférée porte le SHA-256
+`b52ace1a1e82b11241d3d084d15e5e9f05c89842fa5b6e081fdaa0cef5cd164d`.
+La règle UDP temporaire a été retirée après le test et son absence a été
+vérifiée. Aucun domaine, hôte Nginx, service web ou répertoire applicatif
+existant n'a été modifié. Les preuves locales sont conservées sous
+`TestResults/7eb-final-validation/vps-smoke-20260805-092509/`.
+
+### Prochaine action
+
+Relire le diff complet et l'état Git final, puis créer, après autorisation
+explicite de Naël, un commit unique du lot 7E-B sur le parent
+`9ee8676a6905d633be9d888641e2a7425c14472d`. Le push reste une autorisation
+distincte et n'est pas inclus dans cette clôture.

@@ -371,3 +371,71 @@ Leurs implémentations actuelles retournent `false`, ce qui conserve `Charger`,
 sans simuler un backend inexistant. Le futur client et le serveur autoritaire
 VPS remplaceront ces adaptateurs sans déplacer la simulation ou la sauvegarde
 centrale hors du contrôle du projet.
+
+<!-- LOT7EB_ARCHITECTURE -->
+## Mutations sparse et cycle de vie des chunks
+
+`ChunkMutationStore` appartient au Core et stocke uniquement les différences
+non reconstructibles d'un chunk : ressources récoltées et conteneurs de sol non
+vides, avec identifiants, positions, définitions et quantités nécessaires à une
+restauration exacte. Les collections sont validées puis ordonnées
+canoniquement. La base `PopulatedChunk` reste immuable et n'est jamais remplacée
+par une copie sérialisée de l'état actif.
+
+`ChunkStateLifecycle` impose une propriété exclusive : un chunk est soit actif,
+soit représenté dans le store sparse, jamais les deux. L'activation génère la
+base puis applique éventuellement la mutation ; l'éviction extrait la mutation
+avant de retirer l'état actif. Un échec de restauration remet la mutation dans
+le store afin de ne pas consommer partiellement l'état persistant.
+
+Le Runtime conserve son propre raccord à la session prototype. Avant une
+éviction, `DebugIsometricWorld` construit la fenêtre prospective et appelle un
+unique propriétaire transactionnel. `InventoryPrototypeSession` prépare les
+ressources et conteneurs futurs, vérifie les identités stables et les transferts
+actifs, puis committe toutes ses collections en une seule étape. Le cache du
+monde n'est déchargé qu'après cette prévalidation.
+
+## Cache Runtime borné
+
+La visibilité (`3 x 3`) et la préparation (`5 x 5`) restent séparées de la
+rétention (`7 x 7`, rayon `3`). Les neuf Tilemaps visibles continuent d'être
+mises en pool. Les chunks générés situés hors rétention sont supprimés du cache,
+tandis que leurs seules mutations non reconstructibles restent dans le store.
+La limite de 49 concerne le cache actif, pas l'étendue logique du monde ni le
+nombre futur de mutations persistées.
+
+## Tranche réseau autoritaire
+
+`AgeOfSurvival.Protocol` contient le codec binaire et ses contrats sans posséder
+le transport Unity. Le protocole version `1` borne chaque message à `1024`
+octets, refuse les types inconnus, les octets réservés non nuls, les chaînes de
+contrôle, les données terminales et les versions incompatibles. La version de
+build de la tranche est `7E-B.1`.
+
+`MultiplayerProcessSession` sélectionne au démarrage un rôle serveur ou client de
+smoke par arguments de ligne de commande. Le serveur utilise Unity Transport
+`2.7.4` avec un pipeline fiable et séquencé. Chaque connexion possède son état
+d'authentification et de préparation. Les paquets ou transitions invalides
+rejettent uniquement le pair concerné. Les envois défaillants sont confinés au
+pair au lieu de remonter au gestionnaire fatal du processus.
+
+`AuthoritativeMultiplayerSimulation` reste dans le Core. Le serveur seul applique
+les commandes et produit `AuthoritativeWorldSnapshot`. Le digest couvre la
+révision, l'identifiant et la disponibilité de la ressource ainsi que les
+compteurs d'éviction et de restauration. Un client refuse une réécriture
+divergente à révision identique et ne déclare sa complétion qu'après convergence.
+
+Cette tranche n'est pas l'architecture multijoueur complète. Elle n'introduit
+ni authentification de compte, chiffrement applicatif, navigateur de serveurs,
+NAT traversal, prédiction, rollback, réplication générale des entités,
+persistance serveur, administration, anti-triche ou serveur autoritaire de
+production. Elle valide uniquement les frontières Core/protocole/transport et
+les builds multiplateformes.
+
+## Builds multiplateformes
+
+`AgeOfSurvival.Editor.MultiplayerBuild` centralise les builds batchmode des
+clients macOS ARM64 et Windows x86-64 ainsi que du serveur Linux x86-64. Les
+scènes actives viennent des réglages de build ; l'architecture précédente de
+l'éditeur est restaurée après chaque construction. Les artefacts de build ne
+sont pas des sources de vérité et ne doivent pas être commités.

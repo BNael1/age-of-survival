@@ -64,3 +64,28 @@ Aucun package, code, asset ou framework tiers n'est ajouté. Le lot réutilise
 Input System `1.19.0`, `Camera`, `Mathf` et le rendu 2D fournis par Unity. Les
 samples du package Input System, couverts par la Unity Companion License, ont
 uniquement servi de référence locale ; aucun fichier n'est copié dans `Assets`.
+
+<!-- LOT7EB_THIRD_PARTY -->
+## Lot 7E-B — transport et toolchains officiels Unity
+
+Le lot ajoute uniquement des packages officiels provenant du registre Unity :
+
+- `com.unity.transport` `2.7.4` pour le transport UDP fiable/séquencé de la
+  tranche de smoke ;
+- `com.unity.toolchain.macos-arm64-linux` `1.1.0` pour la compilation Linux
+  depuis macOS ARM64 ;
+- `com.unity.sdk.linux-x86_64` `1.1.0` pour le serveur Linux retenu ;
+- `com.unity.sdk.linux-arm64` `1.1.0`, installé avec la toolchain mais non retenu
+  comme cible serveur du lot.
+
+Le verrou de packages introduit aussi les dépendances officielles nécessaires,
+notamment le sysroot Unity et les dépendances de Unity Transport vers Burst,
+Collections et Mathematics. Leur présence transitive ne constitue pas une
+adoption de DOTS, Jobs ou Burst pour l'architecture de simulation. Le Core du
+jeu reste en C# pur et ne dépend pas de ces packages.
+
+Aucun code communautaire, asset, service réseau tiers, SDK de compte,
+matchmaking ou bibliothèque de sérialisation n'est ajouté. Unity Transport ne
+possède ni la simulation autoritaire, ni le store de mutations, ni la future
+sauvegarde. Une stratégie de sortie reste possible derrière le codec et les
+adaptateurs de transport séparés.

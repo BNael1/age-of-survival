@@ -286,3 +286,33 @@ réellement.
 Les panneaux Options sont des écrans d'attente explicites. La sauvegarde, le
 remappage, l'audio, la création de personnage et le réseau effectif restent hors
 périmètre. Aucun package ou asset tiers n'est introduit.
+
+<!-- LOT7EB_DECISION -->
+## ADR-0018 — Mutations sparse, rétention bornée et tranche autoritaire
+
+**Statut : active pour le prototype 7E-B**
+**Date : 5 août 2026**
+
+Les chunks générés restent reconstructibles depuis la seed, les versions et le
+profil. Seules leurs mutations non reconstructibles sont stockées. La propriété
+d'un état de chunk est exclusive entre état actif et store sparse ; toute
+transition doit être atomique du point de vue du monde, des ressources et de
+l'inventaire.
+
+Le Runtime retient provisoirement un rayon de `3` autour du chunk central, soit
+au plus 49 chunks générés. Ce rayon est un paramètre technique réversible et ne
+constitue ni une distance d'affichage finale, ni une limite de carte. Une action
+de transfert utilisant un conteneur du chunk à évincer diffère la transition ;
+elle n'est ni annulée silencieusement ni partiellement persistée.
+
+La première preuve réseau utilise Unity Transport `2.7.4`, UDP direct et un
+pipeline fiable/séquencé. Le serveur est autoritaire : il valide les commandes,
+possède la révision et diffuse les snapshots. Le protocole est explicitement
+versionné, limité à 1 024 octets et indépendant des `GameObject`. Un paquet ou
+un pair invalide doit être isolé sans arrêter le serveur.
+
+Cette décision autorise une tranche verticale et les builds macOS ARM64,
+Windows x86-64 et Linux x86-64. Elle n'autorise pas à confier à Unity Transport
+la simulation, la sauvegarde, la progression ou l'API de modding. Elle ne valide
+pas encore le réseau de production, l'ouverture permanente d'un port VPS, le
+matchmaking, la sécurité applicative ou le gameplay multijoueur complet.

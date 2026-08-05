@@ -16,6 +16,7 @@ namespace AgeOfSurvival.Runtime.Resources
                 return;
             }
 
+            worldRenderer.ChunkEvictionRequested += HandleChunkEvictionRequested;
             worldRenderer.PopulationWindowChanged += HandlePopulationWindowChanged;
             _streamingWorldAttached = true;
         }
@@ -27,8 +28,22 @@ namespace AgeOfSurvival.Runtime.Resources
                 return;
             }
 
+            worldRenderer.ChunkEvictionRequested -= HandleChunkEvictionRequested;
             worldRenderer.PopulationWindowChanged -= HandlePopulationWindowChanged;
             _streamingWorldAttached = false;
+        }
+
+
+        private bool HandleChunkEvictionRequested(
+            IReadOnlyList<ResourceState> retainedGeneratedResources,
+            IReadOnlyList<AgeOfSurvival.Core.World.Generation.ChunkCoordinate> retainedChunks)
+        {
+            return _session == null
+                || worldRenderer == null
+                || _session.TrySynchronizeGeneratedChunkResources(
+                    retainedGeneratedResources,
+                    retainedChunks,
+                    worldRenderer.PopulationChunk.Layout);
         }
 
         private void HandlePopulationWindowChanged()
@@ -39,8 +54,11 @@ namespace AgeOfSurvival.Runtime.Resources
             }
 
             IReadOnlyList<ResourceState> generated =
-                worldRenderer.CreateGeneratedResourceStates();
-            _session.SynchronizeGeneratedResources(generated);
+                worldRenderer.CreateCachedGeneratedResourceStates();
+            _session.SynchronizeGeneratedChunkResources(
+                generated,
+                worldRenderer.CachedChunks,
+                worldRenderer.PopulationChunk.Layout);
 
             DestroyGeneratedHierarchy();
             CreateMarkers();

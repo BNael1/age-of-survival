@@ -102,3 +102,39 @@ la fenêtre `3 x 3`, la préparation `5 x 5`, le pooling, les coordonnées
 négatives, la continuité du mapping visuel, l'absence de repli synchrone après
 préparation, l'unicité des ressources, la conservation de leur état mutable et
 l'absence de saturation du tri dans la scène prototype.
+
+<!-- LOT7EB_CHUNK_STREAMING -->
+## Extension 7E-B1/B2 — mutations et rétention
+
+La fenêtre visible reste de rayon `1` (`3 x 3`) et la fenêtre préparée de rayon
+`2` (`5 x 5`). Le cache généré reçoit une troisième politique indépendante : un
+rayon de rétention `3`, soit une borne de `49` chunks autour du centre après
+stabilisation.
+
+Lorsqu'un chunk sort de cette rétention, sa base générée peut être supprimée.
+Le Core extrait uniquement les ressources récoltées et les conteneurs de sol non
+vides. Les entrées stockées conservent leurs identifiants stables, positions,
+types, quantités et encombrements ; leur ordre exporté est canonique. Un chunk
+sans mutation ne crée aucun enregistrement sparse.
+
+La transition Runtime suit deux phases :
+
+1. calcul du futur ensemble retenu, capture/restauration prospective et
+   validation de toutes les identités ;
+2. commit de la session puis retrait effectif des chunks du cache monde.
+
+Il doit exister exactement un propriétaire transactionnel de l'état lié aux
+chunks. Une prévalidation échouée laisse inchangés cache, ressources,
+conteneurs, compteurs et store. Une action de transfert active dont la source
+sortirait de la rétention diffère l'éviction jusqu'à sa terminaison.
+
+Les compteurs `ChunkStateEvictionCount` et `ChunkStateRestorationCount` servent
+à l'instrumentation et aux preuves de cycle de vie. Ils ne remplacent ni la
+mutation sparse ni un format de sauvegarde.
+
+## Extension 7E-B3 — preuve réseau
+
+La simulation autoritaire de smoke exerce volontairement une récolte suivie
+d'une éviction et d'une restauration. Le snapshot répliqué inclut les compteurs
+et son digest les couvre, afin que la reconnexion prouve à la fois l'état de
+jeu et le passage effectif par le cycle de vie chunké.

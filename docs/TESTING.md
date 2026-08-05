@@ -331,3 +331,67 @@ verrou. Le test de reprise n'attend plus deux frames arbitraires : il attend que
 régression supplémentaire vérifie qu'une commande `E` déjà mise en attente est
 annulée pendant le blocage. La Console et la validation visuelle de Naël sont
 propres.
+
+<!-- LOT7EB_TESTING -->
+## Lot 7E-B — validation finale locale
+
+Le lot ajoute **30 cas EditMode** au total précédent de 380 :
+
+- 13 cas Core sur l'extraction, l'ordre canonique, l'éviction, la restauration,
+  les coordonnées négatives, les limites `Int64`, les identifiants inconnus,
+  les quantités invalides et la propriété active/store exclusive ;
+- 12 cas protocole et simulation autoritaire sur les deux clients, les commandes
+  invalides ou rejouées, la reconnexion, les versions, les tailles et chaînes
+  bornées, les octets réservés, les digests et les révisions divergentes ;
+- 5 cas Runtime supplémentaires sur le cache maximal de 49, les traversées
+  positives et négatives, la restauration exacte d'une récolte et d'un reste au
+  sol, le report d'éviction pendant un transfert et l'atomicité d'une
+  prévalidation échouée.
+
+Validation finale du 5 août 2026 : **410/410 EditMode** et **8/8 PlayMode**,
+zéro échec, zéro cas ignoré ou inconclusif. Les exécutions batchmode quittent
+avec le code `0`.
+
+Les trois cibles ont été reconstruites depuis le code final :
+
+- macOS : Mach-O 64 bits ARM64 ;
+- Windows : PE32+ x86-64, build seulement ;
+- Linux Dedicated Server : ELF 64 bits x86-64.
+
+Le smoke local lance un serveur et deux clients macOS séparés. Le récolteur
+applique la mutation puis vérifie le rejet d'une commande invalide ;
+l'observateur confirme la convergence après reconnexion. Les trois processus
+quittent avec le code `0` et produisent :
+
+```text
+[AOS-NET] client_smoke_pass id=local-harvester reason=invalid_rejected digest=131296B9BAF759FF evictions=1 restorations=1
+[AOS-NET] client_smoke_pass id=local-observer reason=reconnect_converged digest=131296B9BAF759FF evictions=1 restorations=1
+[AOS-NET] server_smoke_pass clients=2 digest=131296B9BAF759FF evictions=1 restorations=1
+```
+
+`git diff --check` est propre. Les journaux de build peuvent contenir des
+messages de finalisation de threads lors de la fermeture rapide de Unity ; les
+builds retenus se terminent par le marqueur `AOS_BUILD_OK` et une sortie
+batchmode réussie.
+
+### Validation distante acquise
+
+Le 5 août 2026, le binaire Linux x86-64 final a été transféré sur le VPS et
+lancé avec une ouverture temporaire de UDP `17779`. Deux clients macOS ont
+exécuté le même scénario autoritaire que le smoke local. Le serveur, l'observateur
+et le récolteur ont tous quitté avec le code `0` :
+
+```text
+[AOS-NET] client_smoke_pass id=vps-observer reason=reconnect_converged digest=131296B9BAF759FF evictions=1 restorations=1
+[AOS-NET] client_smoke_pass id=vps-harvester reason=invalid_rejected digest=131296B9BAF759FF evictions=1 restorations=1
+[AOS-NET] server_smoke_pass clients=2 digest=131296B9BAF759FF evictions=1 restorations=1
+```
+
+L'archive Linux vérifiée sur les deux machines porte le SHA-256
+`b52ace1a1e82b11241d3d084d15e5e9f05c89842fa5b6e081fdaa0cef5cd164d`.
+La règle de pare-feu temporaire a été supprimée dans le nettoyage du test et
+`firewall_rule_after_cleanup=absent` a été vérifié. Les preuves sont conservées
+sous `TestResults/7eb-final-validation/vps-smoke-20260805-092509/`.
+
+Le client Windows reste validé comme build x86-64 uniquement ; aucune exécution
+Windows n'est revendiquée.

@@ -22,12 +22,15 @@ namespace AgeOfSurvival.Runtime.Rendering
             new ProfilerMarker("AgeOfSurvival.WorldStreaming.RenderChunk");
         private static readonly ProfilerMarker ShiftWindowMarker =
             new ProfilerMarker("AgeOfSurvival.WorldStreaming.ShiftWindow");
+        private static readonly ProfilerMarker EvictChunkMarker =
+            new ProfilerMarker("AgeOfSurvival.WorldStreaming.EvictChunk");
 
         [SerializeField, Min(0)] private int visibleChunkRadius =
             ChunkStreamingWindowDefaults.VisibleRadius;
         [SerializeField, Min(0)] private int preparationChunkRadius =
             ChunkStreamingWindowDefaults.PreparationRadius;
         [SerializeField, Min(1)] private int preparedChunksPerFrame = 2;
+        [SerializeField, Min(0)] private int retentionChunkRadius = 3;
 
         private readonly Dictionary<ChunkCoordinate, StreamingChunkView> _visibleChunkViews =
             new Dictionary<ChunkCoordinate, StreamingChunkView>();
@@ -45,7 +48,12 @@ namespace AgeOfSurvival.Runtime.Rendering
         private bool _streamingInitialized;
         private int _createdChunkViewCount;
 
+        public delegate bool ChunkEvictionRequestHandler(
+            IReadOnlyList<ResourceState> retainedGeneratedResources,
+            IReadOnlyList<ChunkCoordinate> retainedChunks);
+
         public event Action PopulationWindowChanged;
+        public event ChunkEvictionRequestHandler ChunkEvictionRequested;
 
         public bool UsesChunkStreaming => _streamingInitialized;
         public ChunkCoordinate StreamingCenter => _streamingPlan != null
@@ -66,6 +74,14 @@ namespace AgeOfSurvival.Runtime.Rendering
         public int LastWindowSynchronousGenerationCount { get; private set; }
         public int WindowRevision { get; private set; }
         public int VisibleGeneratedResourceCount => CountVisibleGeneratedResources();
+        public int EvictionCount { get; private set; }
+        public int LastEvictedChunksThisFrame { get; private set; }
+        public int RetentionRadius => Math.Max(
+            preparationChunkRadius,
+            Math.Min(retentionChunkRadius, ChunkStreamingWindowSettings.MaximumRadius));
+        public IReadOnlyList<ChunkCoordinate> CachedChunks => _streamingWorld != null
+            ? _streamingWorld.CopyLoadedCoordinates()
+            : (IReadOnlyList<ChunkCoordinate>)Array.Empty<ChunkCoordinate>();
 
         private void Update()
         {
@@ -75,6 +91,9 @@ namespace AgeOfSurvival.Runtime.Rendering
             }
 
             LastPreparedChunksThisFrame = PreparePendingChunks(preparedChunksPerFrame);
+            LastEvictedChunksThisFrame = _preparationQueue.Count == 0
+                ? EvictOutsideRetention()
+                : 0;
         }
 
         public bool SynchronizeStreaming(WorldPosition playerPosition)
@@ -124,6 +143,18 @@ namespace AgeOfSurvival.Runtime.Rendering
             }
 
             return prepared;
+        }
+
+        public int StabilizeRetention()
+        {
+            if (_preparationQueue.Count != 0)
+            {
+                throw new InvalidOperationException(
+                    "The prepared window must be complete before retention can evict chunks.");
+            }
+
+            LastEvictedChunksThisFrame = EvictOutsideRetention();
+            return LastEvictedChunksThisFrame;
         }
 
         public bool IsChunkVisible(ChunkCoordinate coordinate)
@@ -440,6 +471,119 @@ namespace AgeOfSurvival.Runtime.Rendering
             return resources.AsReadOnly();
         }
 
+        public IReadOnlyList<ResourceState> CreateCachedGeneratedResourceStates()
+        {
+            if (!_streamingInitialized)
+            {
+                return CreateGeneratedResourceStates();
+            }
+
+            var resources = new List<ResourceState>();
+            IReadOnlyList<ChunkCoordinate> coordinates = _streamingWorld.CopyLoadedCoordinates();
+            for (int chunkIndex = 0; chunkIndex < coordinates.Count; chunkIndex++)
+            {
+                if (!_streamingWorld.TryGetLoadedChunk(coordinates[chunkIndex], out PopulatedChunk chunk))
+                {
+                    continue;
+                }
+
+                for (int resourceIndex = 0; resourceIndex < chunk.Resources.Count; resourceIndex++)
+                {
+                    GeneratedResourcePlacement placement = chunk.Resources[resourceIndex];
+                    resources.Add(new ResourceState(
+                        placement.Id,
+                        new WorldPosition(placement.Cell.X, placement.Cell.Y)));
+                }
+            }
+
+            return resources.AsReadOnly();
+        }
+
+        private int EvictOutsideRetention()
+        {
+            if (!_streamingInitialized) return 0;
+            IReadOnlyList<ChunkCoordinate> loaded = _streamingWorld.CopyLoadedCoordinates();
+            IReadOnlyList<ChunkCoordinate> plan = ChunkEvictionPlanner.Create(
+                loaded,
+                _streamingPlan.Center,
+                RetentionRadius);
+            if (plan.Count == 0) return 0;
+
+            var evicted = new HashSet<ChunkCoordinate>(plan);
+            var retainedChunks = new List<ChunkCoordinate>(loaded.Count - plan.Count);
+            var retainedResources = new List<ResourceState>();
+            for (int index = 0; index < loaded.Count; index++)
+            {
+                ChunkCoordinate coordinate = loaded[index];
+                if (evicted.Contains(coordinate))
+                {
+                    if (_visibleChunkViews.ContainsKey(coordinate))
+                    {
+                        throw new InvalidOperationException("A visible chunk cannot be evicted.");
+                    }
+
+                    continue;
+                }
+
+                retainedChunks.Add(coordinate);
+                if (!_streamingWorld.TryGetLoadedChunk(coordinate, out PopulatedChunk chunk))
+                {
+                    throw new InvalidOperationException(
+                        "The generated chunk cache changed while preparing an eviction.");
+                }
+
+                for (int resourceIndex = 0; resourceIndex < chunk.Resources.Count; resourceIndex++)
+                {
+                    GeneratedResourcePlacement placement = chunk.Resources[resourceIndex];
+                    retainedResources.Add(new ResourceState(
+                        placement.Id,
+                        new WorldPosition(placement.Cell.X, placement.Cell.Y)));
+                }
+            }
+
+            if (!RequestChunkEviction(
+                    retainedResources.AsReadOnly(),
+                    retainedChunks.AsReadOnly()))
+            {
+                return 0;
+            }
+
+            using (EvictChunkMarker.Auto())
+            {
+                for (int index = 0; index < plan.Count; index++)
+                {
+                    if (!_streamingWorld.UnloadChunk(plan[index]))
+                    {
+                        throw new InvalidOperationException(
+                            "A prevalidated generated chunk could not be evicted.");
+                    }
+                }
+            }
+
+            EvictionCount += plan.Count;
+            PopulationWindowChanged?.Invoke();
+            return plan.Count;
+        }
+
+        private bool RequestChunkEviction(
+            IReadOnlyList<ResourceState> retainedGeneratedResources,
+            IReadOnlyList<ChunkCoordinate> retainedChunks)
+        {
+            ChunkEvictionRequestHandler handlers = ChunkEvictionRequested;
+            if (handlers == null) return true;
+
+            Delegate[] invocationList = handlers.GetInvocationList();
+            if (invocationList.Length != 1)
+            {
+                throw new InvalidOperationException(
+                    "Chunk eviction requires exactly one transactional state owner.");
+            }
+
+            return ((ChunkEvictionRequestHandler)invocationList[0])(
+                retainedGeneratedResources,
+                retainedChunks);
+        }
+
         private Vector3 StreamingLogicalToWorldPosition(
             WorldPosition logicalPosition,
             float visualYOffset,
@@ -553,6 +697,8 @@ namespace AgeOfSurvival.Runtime.Rendering
             LastPreparedChunksThisFrame = 0;
             SynchronousFallbackGenerationCount = 0;
             LastWindowSynchronousGenerationCount = 0;
+            EvictionCount = 0;
+            LastEvictedChunksThisFrame = 0;
             WindowRevision = 0;
         }
 

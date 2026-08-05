@@ -47,3 +47,29 @@ et de la version du générateur :
 Le contenu reconstructible d'un `PopulatedChunk` ne doit pas être sérialisé par
 défaut. Modifier les paramètres d'un profil déjà persisté sans changer sa
 révision est interdit.
+
+<!-- LOT7EB_SAVE_FORMAT -->
+## Substrat sparse préparé par le lot 7E-B
+
+Le lot 7E-B n'écrit toujours aucun fichier de sauvegarde et ne définit pas de
+schéma disque. Il fournit toutefois le premier état mutable chunké exportable :
+
+- coordonnées du chunk propriétaire ;
+- ressources récoltées avec identifiant stable et position attendue ;
+- conteneurs de sol non vides avec identifiant, position, définition de
+  conteneur et capacité ;
+- entrées empilées ou uniques avec identifiants, quantité, encombrement et
+  référence éventuelle de conteneur imbriqué ;
+- ordre canonique indépendant de l'ordre d'insertion Runtime.
+
+Une future sauvegarde devra associer ces mutations à l'identité complète du
+monde généré et du profil de population, puis les versionner et les migrer
+explicitement. La restauration doit continuer à régénérer la base avant
+d'appliquer la mutation ; sérialiser les 49 chunks du cache ou les Tilemaps est
+interdit comme format principal.
+
+Les révisions et digests du protocole multijoueur sont des contrats de
+réplication de la tranche 7E-B. Ils ne constituent pas automatiquement la
+version du futur format de sauvegarde. Les compteurs d'éviction et de
+restauration sont de l'instrumentation et n'ont pas à être persistés sauf besoin
+de diagnostic décidé ultérieurement.

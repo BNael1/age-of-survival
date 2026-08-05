@@ -367,6 +367,13 @@ namespace AgeOfSurvival.Core.World.Generation
             return _loadedChunks.Remove(coordinate);
         }
 
+        public IReadOnlyList<ChunkCoordinate> CopyLoadedCoordinates()
+        {
+            var coordinates = new List<ChunkCoordinate>(_loadedChunks.Keys);
+            coordinates.Sort();
+            return coordinates.AsReadOnly();
+        }
+
         public void Clear()
         {
             _loadedChunks.Clear();
