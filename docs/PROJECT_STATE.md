@@ -1,6 +1,6 @@
 # État du projet
 
-Dernière mise à jour : 4 août 2026
+Dernière mise à jour : 5 août 2026
 
 ## Moteur
 
@@ -11,13 +11,12 @@ Dernière mise à jour : 4 août 2026
 
 ## État actuel
 
-Le présent arbre local de `main` du dépôt Unity public
-[`BNael1/age-of-survival`](https://github.com/BNael1/age-of-survival) intègre le
-lot 7D-B sur le parent
-`c75000d11a30e97f3020aca08e1ba819ca77bd17`. `origin/main` reste à
-`686eaf329a664cd8b797400f869ac3edbb9c8643` : tant qu'aucun push n'est
-explicitement autorisé, l'historique local contient donc deux commits non
-poussés, `c75000d` et le présent commit 7D-B.
+Le dépôt Unity public
+[`BNael1/age-of-survival`](https://github.com/BNael1/age-of-survival) est
+synchronisé sur `main` et `origin/main` au commit
+`4abf29cd899593cac494033b89ed8cd526454dba`, parent
+`9ee8676a6905d633be9d888641e2a7425c14472d`. Le lot 7E-B est validé,
+commité et poussé ; le worktree de clôture est propre.
 
 Lots validés et commités :
 
@@ -43,7 +42,10 @@ Lots validés et commités :
 - `07023ead` — `feat: add deterministic world population` ;
 - `686eaf3` — `feat: add progressive camera and ground-anchor sorting` ;
 - `c75000d` — `docs: close lot 7da project state` ;
-- présent commit, parent `c75000d` — `feat: add main menu and pause frontend`.
+- `224a5fb` — `feat: add main menu and pause frontend` ;
+- `8d8d87e` — `feat: add chunk streaming window planner` ;
+- `9ee8676` — `feat: stream terrain and resources across chunks` ;
+- `4abf29c` — `feat: add bounded chunk mutations and authoritative multiplayer slice`.
 
 État validé au commit `26a1a27` :
 
@@ -293,17 +295,13 @@ ou asset tiers n'est ajouté.
   Aucun transport, authentification, navigateur de serveurs ou protocole VPS
   n'est implémenté dans ce lot.
 
-## Prochaine action
+## Transition 7D-B vers 7E
 
-Vérifier que le commit unique `feat: add main menu and pause frontend` possède
-le parent `c75000d11a30e97f3020aca08e1ba819ca77bd17`, contient exactement les
-36 chemins revus et laisse le worktree propre. Les validations acquises restent
-**358/358 EditMode** et **7/7 PlayMode**. Aucun push n'est inclus dans cette
-action ; il exige une autorisation distincte de Naël.
-
-Cadrer ensuite séparément le lot 7E de streaming de chunks et
-de monde extensible, sans y mélanger la sauvegarde, le réseau, le remappage,
-l'audio ou la création de personnage.
+Le lot 7D-B a été intégré au commit
+`224a5fb15655efefda3862e3fd29a3a7697f1b5c`. Les commits
+`8d8d87e542d93224f00b6bf8db7cbdbfd26c92aa` et
+`9ee8676a6905d633be9d888641e2a7425c14472d` ont ensuite établi la
+planification puis le streaming effectif des chunks avant le lot 7E-B.
 
 ## Dépôts archivés
 
@@ -312,11 +310,11 @@ Le prototype Godot et le benchmark moteur restent des références historiques s
 <!-- LOT7EB_PROJECT_STATE -->
 ## Lot 7E-B — mutations sparse, cache borné et tranche multijoueur autoritaire
 
-Le lot 7E-B est préparé dans le worktree de `main` sur le parent
-`9ee8676a6905d633be9d888641e2a7425c14472d`. Il n'est pas encore commité ni
-poussé. Avant la présente documentation, le périmètre technique porte 33 chemins
-et ajoute 3 805 lignes pour 4 suppressions ; les sept documents du lot complètent
-ce périmètre sans modifier le gameplay ou la direction artistique.
+Le lot 7E-B est intégré et poussé sur `main` au commit
+`4abf29cd899593cac494033b89ed8cd526454dba`, parent
+`9ee8676a6905d633be9d888641e2a7425c14472d`. Le commit porte 40 chemins,
+4 154 insertions et 4 suppressions, sans modification du gameplay ou de la
+direction artistique. `HEAD`, `origin/main` et `origin/HEAD` sont synchronisés.
 
 Le sous-lot B1 ajoute dans le Core une représentation sparse et canonique des
 mutations de chunks. Une ressource récoltée et un conteneur de sol non vide
@@ -367,7 +365,9 @@ existant n'a été modifié. Les preuves locales sont conservées sous
 
 ### Prochaine action
 
-Relire le diff complet et l'état Git final, puis créer, après autorisation
-explicite de Naël, un commit unique du lot 7E-B sur le parent
-`9ee8676a6905d633be9d888641e2a7425c14472d`. Le push reste une autorisation
-distincte et n'est pas inclus dans cette clôture.
+Cadrer le lot 7F-A en C# pur avant tout accès disque. Le premier sous-lot doit
+fermer les invariants d'agrégat nécessaires à une sauvegarde fiable — unicité
+globale des instances, validité des références d'équipement et capture
+canonique — puis le second peut définir le schéma et le codec binaire V1 en
+mémoire. L'écriture atomique, le frontend de chargement et l'autosave restent
+des lots séparés.
