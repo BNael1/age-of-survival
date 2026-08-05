@@ -437,3 +437,29 @@ Le lot ajoute **17 cas EditMode Core**, pour un total de **444** :
 Validation du 5 août 2026 : **444/444 EditMode**, zéro échec et zéro cas ignoré,
 avec résultat `Passed`. Le lot ne modifie aucun adaptateur Runtime, scène,
 contrôle ou rendu ; aucun nouveau PlayMode n'est requis.
+
+<!-- LOT7F_COMBINED_TESTING -->
+## Lot 7F combiné — codec, stockage et restauration
+
+Le lot ajoute **24 cas EditMode** : 21 dans le Core et 3 sur le raccord Runtime.
+La validation locale exécutée sous Unity `6000.3.19f1` passe à
+**468/468 EditMode** et conserve **8/8 PlayMode**, avec zéro échec et zéro cas
+ignoré.
+
+La matrice couvre le round-trip complet, la stabilité octet pour octet,
+l'enveloppe V1, les versions et flags inconnus, les limites, longueurs et hashes
+invalides, l'écriture principale, le backup, la récupération après corruption,
+les slots sûrs, l'absence de temporaire après promotion, la résolution
+éditoriale, la reconstruction de l'inventaire et du lifecycle de chunks, le
+refus des définitions incompatibles, la provenance backup du coordinateur et le
+chemin `persistentDataPath`.
+
+La revue finale ajoute un durcissement de complexité sans changement de
+comportement : les définitions sont indexées par identifiant pendant la
+validation et la restauration. Les suites complètes ont été relancées après ce
+correctif sans régression : **468/468 EditMode** et **8/8 PlayMode**.
+
+Les tests disque utilisent des répertoires temporaires isolés. Le remplacement
+principal/backup est validé sur APFS par cette exécution. Une validation
+supplémentaire de coupure et de remplacement reste requise sur NTFS et le
+système de fichiers Linux cible avant de revendiquer une durabilité matérielle.

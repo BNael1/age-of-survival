@@ -117,3 +117,34 @@ vide rend la capture invalide.
 
 Le lot ne définit toujours aucun octet et n'écrit aucun fichier. Le format
 binaire V1, ses limites, son intégrité et son décodage appartiennent à 7F-A2b.
+
+<!-- LOT7F_V1_SAVE_FORMAT -->
+## Format binaire V1
+
+Tous les entiers utilisent l'ordre little-endian. L'enveloppe est fixe :
+
+| Offset | Taille | Champ |
+|---:|---:|---|
+| 0 | 8 | magie ASCII `AOSSAVE\0` |
+| 8 | 2 | version, `1` |
+| 10 | 2 | flags, `0` |
+| 12 | 4 | longueur du payload |
+| 16 | 32 | SHA-256 du payload |
+| 48 | N | payload canonique |
+
+Le payload encode dans l'ordre l'identité monde, le tick et la position joueur,
+l'inventaire puis les mutations sparse. Les chaînes sont précédées d'une
+longueur `u32`, utilisent UTF-8 strict sans BOM et sont limitées à 4096 octets.
+Les identifiants optionnels utilisent une longueur nulle ; les champs
+obligatoires refusent cette représentation.
+
+Les limites V1 sont : payload 256 MiB, 4096 définitions, 4096 conteneurs joueur,
+65536 entrées par conteneur, 1000000 chunks mutés, 65536 ressources récoltées ou
+conteneurs au sol par chunk et 65536 objets par conteneur au sol. Le décodeur
+vérifie la limite avant toute allocation dépendant du fichier.
+
+Un slot disque utilise `<slot>.aos`, `<slot>.bak` et `<slot>.tmp`. La principale
+est essayée en premier, puis le backup. Les fichiers invalides sont conservés
+pour diagnostic ; aucune migration, promotion ou quarantaine implicite n'existe
+en V1. Les écritures sont synchrones et exigent un seul écrivain à la fois pour
+un même slot.

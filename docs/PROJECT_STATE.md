@@ -384,23 +384,44 @@ aux tests ; aucun PlayMode supplémentaire n'est requis.
 <!-- LOT7FA2A_PROJECT_STATE -->
 ## Lot 7F-A2a — snapshot complet de partie
 
-Le lot en cours ajoute une frontière `GameSaveSnapshot` entièrement en mémoire.
-Elle regroupe l'identité du monde généré, le tick fixe, la position du joueur,
-le snapshot canonique d'inventaire et les mutations sparse de chunks.
+Le lot est intégré et poussé sur `main` au commit
+`40a2db94784f16689d6978b9e38b84f83e8f71ac`, parent
+`1a4612dd561959905eb0d8731b6720e44cc2fa76`. Il ajoute la frontière
+`GameSaveSnapshot`, la capture complète des mutations actives et évincées et la
+documentation de cette frontière.
 
-La capture réunit les mutations des chunks évincés et celles des chunks encore
-actifs sans modifier le lifecycle. Les chunks actifs sans modification sont
-omis ; une coordonnée possédée simultanément par le store et le cache actif est
-rejetée. Les mutations sont triées et validées contre la disposition du monde.
+Validation acquise le 5 août 2026 : **444/444 EditMode**, résultat `Passed`,
+zéro échec et zéro cas ignoré. `main`, la branche 7F-A2a et leurs références
+distantes ont été vérifiées sur le même commit.
 
-Validation locale du 5 août 2026 : **444/444 EditMode**, résultat `Passed`,
-zéro échec et zéro cas ignoré. Le lot touche uniquement le Core et les tests ;
-aucun PlayMode supplémentaire n'est requis. Aucun codec, accès disque, Runtime,
-UI ou package n'est ajouté.
+<!-- LOT7F_COMBINED_PROJECT_STATE -->
+## Lot 7F combiné — A2b, B et intégration technique C
+
+Le lot a été développé et validé sur `feature/lot7f-combined-persistence-v1`
+depuis `main` à `40a2db94784f16689d6978b9e38b84f83e8f71ac`. Aucun bouton,
+raccourci, autosave, nombre de slots visible ou message joueur n'est décidé.
+
+Le lot ajoute les factories internes nécessaires à la reconstruction stricte du
+snapshot d'inventaire, un codec binaire V1 SHA-256 borné et canonique, un
+stockage principal/backup/temporaire, un restaurateur créant un nouvel état Core
+et un coordinateur Runtime qui ne remplace pas implicitement la session active.
+La revue finale indexe les définitions par identifiant stable pendant la
+validation et la restauration, afin d'éviter une recherche
+définitions × entrées sur les sauvegardes de forte cardinalité.
+
+Validation locale sur Unity `6000.3.19f1` macOS ARM64 : **468/468 EditMode** et
+**8/8 PlayMode**, zéro échec et zéro cas ignoré. Le périmètre reste limité à
+30 chemins Core, Runtime, tests et documentation. Le fichier
+`ProjectSettings/SceneTemplateSettings.json` généré par PlayMode a été retiré.
+
+Limites actives : écritures synchrones avec un seul écrivain par slot ; aucune
+politique UX ; aucune promotion ou réparation implicite après récupération du
+backup ; validation de durabilité matérielle encore requise sur NTFS et le
+système de fichiers Linux cible.
 
 ### Prochaine action
 
-Relire le diff technique et documentaire final, puis créer le commit 7F-A2a
-uniquement après autorisation explicite de Naël. Le lot suivant est 7F-A2b :
-codec binaire V1 déterministe en mémoire. L'accès disque atomique reste 7F-B et
-l'intégration Runtime/UX reste 7F-C.
+Cadrer avec Naël la politique UX visible de sauvegarde et chargement — slots,
+sauvegarde manuelle, autosave, écrasement, messages et chargement en partie —
+avant tout raccord aux menus existants. Les validations NTFS et Linux restent
+requises avant de revendiquer la durabilité matérielle multiplateforme.

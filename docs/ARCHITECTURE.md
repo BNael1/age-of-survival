@@ -476,3 +476,36 @@ la sauvegarde ne change donc pas le contenu logique capturé.
 
 Le snapshot reste un objet Core en mémoire. Il ne définit ni octet de format,
 ni chemin disque, ni migration, ni commande Runtime ou UX.
+
+<!-- LOT7F_COMBINED_ARCHITECTURE -->
+## Pipeline de persistance V1
+
+Le lot combiné 7F termine la première verticale technique de persistance sans
+ajouter de politique d'interface. `GameSaveBinaryCodec` encode exclusivement un
+`GameSaveSnapshot` canonique. L'enveloppe V1 porte la magie `AOSSAVE\0`, la
+version, les flags, la longueur du payload et son SHA-256. Les entiers sont
+little-endian, les chaînes utilisent UTF-8 strict sans BOM et toutes les
+allocations pilotées par le fichier sont bornées avant création.
+
+Le décodeur rejette les versions et flags inconnus, les longueurs incohérentes,
+les hashes invalides, les données terminales, les booléens et enums inconnus,
+les UTF-8 invalides, les doublons et les ordres non canoniques. Les factories de
+restauration de l'inventaire reconstruisent directement les snapshots immuables
+et réappliquent les invariants globaux de 7F-A1 sans reflection ni agrégat
+mutable intermédiaire. Les définitions sont indexées par identifiant stable
+pendant la validation et la restauration afin que le coût reste linéaire dans
+le nombre d'entrées, plutôt que proportionnel au produit définitions × entrées.
+
+`AtomicGameSaveStorage` utilise trois fichiers par slot : `.aos`, `.bak` et
+`.tmp`. L'encodage est effectué en mémoire, le temporaire est écrit puis flushé,
+et la promotion remplace la principale en conservant la précédente comme
+backup. Le chargement essaie la principale puis le backup, retourne la
+provenance et ne réécrit jamais implicitement une sauvegarde lue. Les appels
+sont synchrones et le contrat V1 impose un seul écrivain à la fois par slot.
+
+`GameSaveSnapshotRestorer` résout les données éditoriales du build courant,
+vérifie leurs empreintes, reconstruit un nouvel inventaire et initialise un
+`ChunkStateLifecycle` avec le store sparse restauré. Le Runtime fournit
+uniquement le chemin plateforme et un `GameSaveCoordinator` sans UI. Le caller
+n'installe la nouvelle session qu'après succès complet du décodage et de la
+restauration.

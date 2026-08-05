@@ -360,3 +360,28 @@ ainsi indépendante de la fenêtre de streaming au moment de la capture.
 Cette décision ne fige pas encore le format binaire. La magie, la version, les
 limites, l'intégrité et le décodage appartiennent à 7F-A2b. Le disque atomique
 reste 7F-B et l'intégration visible reste 7F-C.
+
+<!-- LOT7F_COMBINED_DECISION -->
+## ADR-0021 — Format V1 propriétaire et intégration technique sans politique UX
+
+**Statut : active pour la première verticale de persistance**
+
+**Date : 5 août 2026**
+
+Le format de sauvegarde V1 reste sous contrôle direct d'Age of Survival. Il est
+binaire, déterministe, versionné et borné. Son enveloppe contient une magie de
+huit octets, une version `1`, des flags nuls, une longueur de payload et un
+SHA-256. Aucun package de sérialisation externe n'est introduit.
+
+La principale et la sauvegarde précédente sont séparées. Une lecture invalide
+de la principale peut récupérer le backup, mais une simple lecture ne migre,
+ne répare et ne supprime aucun fichier. L'atomicité signifie ici absence de
+principale partiellement promue selon les primitives testées sur les plateformes
+cibles ; aucune garantie universelle après toute panne matérielle n'est
+revendiquée. Les écritures V1 sont synchrones et séquentielles : plusieurs
+écrivains concurrents sur le même slot sont hors contrat.
+
+L'intégration Runtime est volontairement sans bouton, raccourci, slot visible,
+autosave, confirmation ou message joueur. Le coordinateur expose uniquement les
+opérations techniques et la provenance principal/backup. Les choix visibles
+restent à Naël et ne sont pas déduits de ce lot.
