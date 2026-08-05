@@ -316,3 +316,26 @@ Windows x86-64 et Linux x86-64. Elle n'autorise pas à confier à Unity Transpor
 la simulation, la sauvegarde, la progression ou l'API de modding. Elle ne valide
 pas encore le réseau de production, l'ouverture permanente d'un port VPS, le
 matchmaking, la sécurité applicative ou le gameplay multijoueur complet.
+
+<!-- LOT7FA1_DECISION -->
+## ADR-0019 — Snapshot canonique d'inventaire et rejet des agrégats incohérents
+
+**Statut : active pour la fondation de sauvegarde**
+**Date : 5 août 2026**
+
+La sauvegarde ne sérialise pas directement les collections mutables du
+prototype. `PlayerInventoryState` produit d'abord un snapshot immuable dont les
+définitions, conteneurs et entrées suivent un ordre ordinal stable.
+
+La capture est interdite lorsque l'agrégat contient une instance unique
+dupliquée, une référence de conteneur absente ou ambiguë, un cycle de possession,
+ou une référence d'équipement absente, répétée ou incompatible. La même
+validation s'applique à la restauration de l'équipement.
+
+Cette décision protège la frontière de persistance sans prétendre que les
+opérations locales de `ContainerState` préservent déjà tous les invariants en
+continu. Les futures commandes de dépôt, destruction et transfert d'objets
+uniques devront passer par une frontière agrégée.
+
+Le lot ne choisit ni format binaire, ni compression, ni emplacement de fichier,
+ni politique d'autosave. Ces décisions restent dans 7F-A2, 7F-B et 7F-C.

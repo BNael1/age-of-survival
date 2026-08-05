@@ -73,3 +73,27 @@ réplication de la tranche 7E-B. Ils ne constituent pas automatiquement la
 version du futur format de sauvegarde. Les compteurs d'éviction et de
 restauration sont de l'instrumentation et n'ont pas à être persistés sauf besoin
 de diagnostic décidé ultérieurement.
+
+<!-- LOT7FA1_SAVE_FORMAT -->
+## Snapshot canonique d'inventaire préparé par le lot 7F-A1
+
+Le lot 7F-A1 ne définit toujours aucun octet de format et n'écrit aucun fichier.
+Il fournit l'entrée Core validée du futur codec :
+
+- identifiant du conteneur principal ;
+- définitions triées avec type d'état, encombrement et règles d'équipement ;
+- conteneurs triés avec identifiant, clé stable et capacité ;
+- entrées triées avec définition, quantité, instance et conteneur imbriqué ;
+- trois références d'équipement dans un ordre d'emplacements fixé.
+
+Les textes d'affichage sont exclus des empreintes de compatibilité afin de ne
+pas lier les sauvegardes à la localisation. La capture est une copie immuable :
+une mutation ultérieure du jeu ne modifie pas le snapshot déjà produit.
+
+Avant capture, le Core rejette les instances dupliquées, les conteneurs contenus
+absents, possédés plusieurs fois ou cycliques, le conteneur principal utilisé
+comme contenu et les équipements absents, dupliqués ou incompatibles.
+
+La version, la magie, les longueurs bornées, l'intégrité SHA-256, le décodage et
+les migrations appartiennent au lot 7F-A2. L'écriture atomique sur disque reste
+hors périmètre jusqu'au lot 7F-B.

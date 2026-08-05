@@ -180,12 +180,26 @@ l'empreinte d'une définition après retrait de la
 dernière entrée. Une mutation ultérieure ne peut donc introduire ni identifiant
 inconnu, ni données physiques différentes pour contourner la capacité.
 
-La frontière actuelle de `InventoryOperations` est locale à un conteneur. Elle
-ne suffit pas encore à garantir qu'une même `ItemInstanceId` n'existe jamais
-dans deux conteneurs d'un même joueur, ni qu'un retrait d'objet unique efface ou
-refuse une référence d'équipement active. Ces invariants devront être portés par
-une opération agrégée avant d'autoriser le dépôt au sol, la destruction ou la
-persistance d'objets uniques équipés.
+<!-- LOT7FA1_ARCHITECTURE -->
+Depuis le lot 7F-A1, `PlayerInventoryState` valide la frontière de persistance à
+sa construction, lors d'une restauration d'équipement et avant chaque
+`CaptureSnapshot()`. L'agrégat refuse les identités d'instances dupliquées, les
+conteneurs contenus absents ou possédés plusieurs fois, l'utilisation du
+conteneur principal comme contenu, les cycles de possession, ainsi que les
+références d'équipement absentes, dupliquées ou incompatibles.
+
+`InventoryOperations` reste une frontière locale à un conteneur et peut encore
+produire temporairement un état inter-conteneurs incohérent si un appelant la
+contourne au niveau agrégé. Cet état ne peut plus être capturé. Les futures
+opérations de dépôt, destruction et déplacement d'objets uniques devront
+préserver ces invariants en continu au lieu de compter seulement sur le rejet
+avant sauvegarde.
+
+`PlayerInventorySnapshot` est une copie immuable et canonique. Définitions,
+conteneurs et entrées sont triés par identifiants ordinaux ; les empreintes de
+définition incluent le type d'état, l'encombrement et les règles d'équipement.
+La capture ne dépend ni de `UnityEngine`, ni d'un `GameObject`, ni de l'ordre
+d'insertion Runtime. Elle ne définit encore aucun codec, fichier ou migration.
 
 Ce lot ne contient ni `MonoBehaviour`, ni rendu, ni UI, ni état possédé par un
 `GameObject`. Les adaptateurs Unity et l'équipement sont introduits dans les lots

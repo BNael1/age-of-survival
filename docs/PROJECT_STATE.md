@@ -11,12 +11,11 @@ Dernière mise à jour : 5 août 2026
 
 ## État actuel
 
-Le dépôt Unity public
-[`BNael1/age-of-survival`](https://github.com/BNael1/age-of-survival) est
-synchronisé sur `main` et `origin/main` au commit
-`4abf29cd899593cac494033b89ed8cd526454dba`, parent
-`9ee8676a6905d633be9d888641e2a7425c14472d`. Le lot 7E-B est validé,
-commité et poussé ; le worktree de clôture est propre.
+La base publique du lot 7F-A1 est synchronisée sur `main` et `origin/main` au
+commit `9d9d7b094b3ccd04d90ab8fb25fb97b3b810550a`, parent
+`4abf29cd899593cac494033b89ed8cd526454dba`. Le présent arbre de
+`feature/lot7fa1-inventory-snapshot` ajoute la frontière de snapshot
+d'inventaire en C# pur, sans changement de gameplay ou de Runtime.
 
 Lots validés et commités :
 
@@ -45,7 +44,8 @@ Lots validés et commités :
 - `224a5fb` — `feat: add main menu and pause frontend` ;
 - `8d8d87e` — `feat: add chunk streaming window planner` ;
 - `9ee8676` — `feat: stream terrain and resources across chunks` ;
-- `4abf29c` — `feat: add bounded chunk mutations and authoritative multiplayer slice`.
+- `4abf29c` — `feat: add bounded chunk mutations and authoritative multiplayer slice` ;
+- `9d9d7b0` — `docs: close lot 7eb project state`.
 
 État validé au commit `26a1a27` :
 
@@ -363,11 +363,25 @@ vérifiée. Aucun domaine, hôte Nginx, service web ou répertoire applicatif
 existant n'a été modifié. Les preuves locales sont conservées sous
 `TestResults/7eb-final-validation/vps-smoke-20260805-092509/`.
 
+<!-- LOT7FA1_PROJECT_STATE -->
+## Lot 7F-A1 — invariants d'agrégat et snapshot canonique
+
+Le présent arbre ajoute une capture immuable et déterministe de l'inventaire.
+La construction, la restauration d'équipement et la capture refusent les
+instances dupliquées, les références de conteneurs absentes ou ambiguës, les
+cycles de possession et les équipements absents, dupliqués ou incompatibles.
+
+Les définitions, conteneurs et entrées sont exportés dans un ordre ordinal
+stable. Les empreintes incluent les règles d'équipement mais excluent les textes
+d'affichage. Le Core reste indépendant de Unity et aucun package n'est ajouté.
+
+Validation acquise le 5 août 2026 : **427/427 EditMode**, résultat `Passed`,
+zéro échec et zéro cas ignoré. Le périmètre fonctionnel reste limité au Core et
+aux tests ; aucun PlayMode supplémentaire n'est requis.
+
 ### Prochaine action
 
-Cadrer le lot 7F-A en C# pur avant tout accès disque. Le premier sous-lot doit
-fermer les invariants d'agrégat nécessaires à une sauvegarde fiable — unicité
-globale des instances, validité des références d'équipement et capture
-canonique — puis le second peut définir le schéma et le codec binaire V1 en
-mémoire. L'écriture atomique, le frontend de chargement et l'autosave restent
-des lots séparés.
+Relire le diff final et créer, après autorisation explicite de Naël, le commit
+séparé `fix: enforce inventory snapshot invariants`. Le lot 7F-A2 pourra ensuite
+définir le schéma et le codec binaire V1 en mémoire. L'accès disque atomique
+reste 7F-B et l'UX de chargement reste 7F-C.

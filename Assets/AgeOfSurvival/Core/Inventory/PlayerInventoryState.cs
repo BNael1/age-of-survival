@@ -9,6 +9,13 @@ namespace AgeOfSurvival.Core.Inventory
     /// </summary>
     public sealed class PlayerInventoryState
     {
+        private static readonly EquipmentSlot[] StableEquipmentSlotOrder =
+        {
+            EquipmentSlot.LeftHand,
+            EquipmentSlot.RightHand,
+            EquipmentSlot.Back
+        };
+
         private readonly List<ItemDefinition> _definitions;
         private readonly List<ContainerState> _containers;
         private readonly IReadOnlyList<ItemDefinition> _readOnlyDefinitions;
@@ -18,6 +25,19 @@ namespace AgeOfSurvival.Core.Inventory
             ContainerId mainContainerId,
             IEnumerable<ItemDefinition> definitions,
             IEnumerable<ContainerState> containers)
+            : this(
+                mainContainerId,
+                definitions,
+                containers,
+                default)
+        {
+        }
+
+        public PlayerInventoryState(
+            ContainerId mainContainerId,
+            IEnumerable<ItemDefinition> definitions,
+            IEnumerable<ContainerState> containers,
+            InventoryEquipmentSnapshot equipment)
         {
             if (!mainContainerId.IsValid)
             {
@@ -29,10 +49,11 @@ namespace AgeOfSurvival.Core.Inventory
 
             _definitions = new List<ItemDefinition>(definitions);
             _containers = new List<ContainerState>(containers);
-            ValidateRegistries(mainContainerId);
+            ValidateRegistries(mainContainerId, equipment);
 
             MainContainer = FindContainer(mainContainerId);
             Equipment = new EquipmentState();
+            Equipment.Restore(equipment);
             _readOnlyDefinitions = _definitions.AsReadOnly();
             _readOnlyContainers = _containers.AsReadOnly();
         }
@@ -95,7 +116,16 @@ namespace AgeOfSurvival.Core.Inventory
             return false;
         }
 
-        private void ValidateRegistries(ContainerId mainContainerId)
+        public PlayerInventorySnapshot CaptureSnapshot()
+        {
+            InventoryEquipmentSnapshot equipment = Equipment.CaptureSnapshot();
+            ValidateCurrentAggregate(equipment);
+            return PlayerInventorySnapshot.Capture(this, equipment);
+        }
+
+        private void ValidateRegistries(
+            ContainerId mainContainerId,
+            InventoryEquipmentSnapshot equipment)
         {
             for (int index = 0; index < _definitions.Count; index++)
             {
@@ -130,6 +160,23 @@ namespace AgeOfSurvival.Core.Inventory
                     nameof(mainContainerId));
             }
 
+            ValidateCanonicalDefinitions();
+            ValidateAggregateInvariants(mainContainerId, equipment);
+
+            for (int containerIndex = 0; containerIndex < _containers.Count; containerIndex++)
+            {
+                _containers[containerIndex].BindCanonicalDefinitions(_definitions);
+            }
+        }
+
+        private void ValidateCurrentAggregate(InventoryEquipmentSnapshot equipment)
+        {
+            ValidateCanonicalDefinitions();
+            ValidateAggregateInvariants(MainContainer.Id, equipment);
+        }
+
+        private void ValidateCanonicalDefinitions()
+        {
             for (int containerIndex = 0; containerIndex < _containers.Count; containerIndex++)
             {
                 try
@@ -144,11 +191,171 @@ namespace AgeOfSurvival.Core.Inventory
                         exception);
                 }
             }
+        }
+
+        private void ValidateAggregateInvariants(
+            ContainerId mainContainerId,
+            InventoryEquipmentSnapshot equipment)
+        {
+            var uniqueInstances = new List<ItemInstanceId>();
+            var containedContainers = new List<ContainerId>();
+            var containerOwners = new Dictionary<ContainerId, ContainerId>();
 
             for (int containerIndex = 0; containerIndex < _containers.Count; containerIndex++)
             {
-                _containers[containerIndex].BindCanonicalDefinitions(_definitions);
+                ContainerState container = _containers[containerIndex];
+                for (int entryIndex = 0; entryIndex < container.Entries.Count; entryIndex++)
+                {
+                    InventoryEntry entry = container.Entries[entryIndex];
+                    if (entry.Kind != ItemStateKind.Unique)
+                    {
+                        continue;
+                    }
+
+                    UniqueItemState item = entry.UniqueItem;
+                    if (Contains(uniqueInstances, item.InstanceId))
+                    {
+                        throw Violation(
+                            InventoryAggregateViolation.DuplicateItemInstance,
+                            $"Unique item instance '{item.InstanceId}' appears more than once.");
+                    }
+
+                    uniqueInstances.Add(item.InstanceId);
+                    if (!item.HasContainedContainer)
+                    {
+                        continue;
+                    }
+
+                    if (item.ContainedContainerId.Equals(mainContainerId))
+                    {
+                        throw Violation(
+                            InventoryAggregateViolation.MainContainerContained,
+                            "The main container cannot be owned by a contained item.");
+                    }
+
+                    if (FindContainer(item.ContainedContainerId) == null)
+                    {
+                        throw Violation(
+                            InventoryAggregateViolation.MissingContainedContainer,
+                            $"Contained container '{item.ContainedContainerId}' is not registered.");
+                    }
+
+                    if (Contains(containedContainers, item.ContainedContainerId))
+                    {
+                        throw Violation(
+                            InventoryAggregateViolation.DuplicateContainedContainerOwner,
+                            $"Contained container '{item.ContainedContainerId}' has more than one owning item.");
+                    }
+
+                    containedContainers.Add(item.ContainedContainerId);
+                    containerOwners.Add(item.ContainedContainerId, container.Id);
+                }
+            }
+
+            ValidateContainedContainerGraph(
+                containedContainers,
+                containerOwners);
+
+            var equippedInstances = new List<ItemInstanceId>();
+            for (int slotIndex = 0; slotIndex < StableEquipmentSlotOrder.Length; slotIndex++)
+            {
+                EquipmentSlot slot = StableEquipmentSlotOrder[slotIndex];
+                ItemInstanceId instanceId = equipment.Get(slot);
+                if (!instanceId.IsValid)
+                {
+                    continue;
+                }
+
+                if (Contains(equippedInstances, instanceId))
+                {
+                    throw Violation(
+                        InventoryAggregateViolation.EquipmentItemDuplicated,
+                        $"Unique item instance '{instanceId}' occupies more than one equipment slot.");
+                }
+
+                if (!TryFindUnique(
+                    instanceId,
+                    out _,
+                    out ItemDefinition definition,
+                    out _))
+                {
+                    throw Violation(
+                        InventoryAggregateViolation.EquipmentItemMissing,
+                        $"Equipped item instance '{instanceId}' is missing from the aggregate.");
+                }
+
+                if (definition.Equipment == null || !definition.Equipment.Supports(slot))
+                {
+                    throw Violation(
+                        InventoryAggregateViolation.EquipmentItemIncompatible,
+                        $"Equipped item instance '{instanceId}' is incompatible with slot '{slot}'.");
+                }
+
+                equippedInstances.Add(instanceId);
             }
         }
+
+        private static void ValidateContainedContainerGraph(
+            IReadOnlyList<ContainerId> containedContainers,
+            IReadOnlyDictionary<ContainerId, ContainerId> containerOwners)
+        {
+            var validated = new HashSet<ContainerId>();
+            for (int startIndex = 0; startIndex < containedContainers.Count; startIndex++)
+            {
+                var path = new HashSet<ContainerId>();
+                ContainerId current = containedContainers[startIndex];
+
+                while (containerOwners.TryGetValue(current, out ContainerId owner))
+                {
+                    if (validated.Contains(current))
+                    {
+                        break;
+                    }
+
+                    if (!path.Add(current))
+                    {
+                        throw Violation(
+                            InventoryAggregateViolation.ContainedContainerCycle,
+                            $"Contained container ownership contains a cycle through '{current}'.");
+                    }
+
+                    current = owner;
+                }
+
+                foreach (ContainerId containerId in path)
+                {
+                    validated.Add(containerId);
+                }
+            }
+        }
+
+        private static bool Contains(
+            IReadOnlyList<ItemInstanceId> ids,
+            ItemInstanceId id)
+        {
+            for (int index = 0; index < ids.Count; index++)
+            {
+                if (ids[index].Equals(id)) return true;
+            }
+
+            return false;
+        }
+
+        private static bool Contains(
+            IReadOnlyList<ContainerId> ids,
+            ContainerId id)
+        {
+            for (int index = 0; index < ids.Count; index++)
+            {
+                if (ids[index].Equals(id)) return true;
+            }
+
+            return false;
+        }
+
+        private static InventoryAggregateException Violation(
+            InventoryAggregateViolation violation,
+            string message) =>
+            new InventoryAggregateException(violation, message);
     }
 }

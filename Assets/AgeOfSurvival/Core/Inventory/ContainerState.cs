@@ -208,17 +208,38 @@ namespace AgeOfSurvival.Core.Inventory
                 Id = definition.Id;
                 StateKind = definition.StateKind;
                 UnitEncumbrance = definition.UnitEncumbrance;
+                HasEquipment = definition.Equipment != null;
+                CompatibleSlots = definition.Equipment == null
+                    ? EquipmentSlotMask.None
+                    : definition.Equipment.CompatibleSlots;
+                ContainedContainerReductionPercent = definition.Equipment == null
+                    ? 0
+                    : definition.Equipment.ContainedContainerReductionPercent;
             }
 
             public ItemDefinitionId Id { get; }
             private ItemStateKind StateKind { get; }
             private EncumbranceValue UnitEncumbrance { get; }
+            private bool HasEquipment { get; }
+            private EquipmentSlotMask CompatibleSlots { get; }
+            private int ContainedContainerReductionPercent { get; }
 
-            public bool Matches(ItemDefinition definition) =>
-                definition != null
-                && Id.Equals(definition.Id)
-                && StateKind == definition.StateKind
-                && UnitEncumbrance.Equals(definition.UnitEncumbrance);
+            public bool Matches(ItemDefinition definition)
+            {
+                if (definition == null
+                    || !Id.Equals(definition.Id)
+                    || StateKind != definition.StateKind
+                    || !UnitEncumbrance.Equals(definition.UnitEncumbrance)
+                    || HasEquipment != (definition.Equipment != null))
+                {
+                    return false;
+                }
+
+                return !HasEquipment
+                    || (CompatibleSlots == definition.Equipment.CompatibleSlots
+                        && ContainedContainerReductionPercent
+                            == definition.Equipment.ContainedContainerReductionPercent);
+            }
         }
     }
 }

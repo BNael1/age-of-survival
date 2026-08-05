@@ -31,6 +31,16 @@ namespace AgeOfSurvival.Core.Inventory
                     || _back.Equals(instanceId));
         }
 
+        internal InventoryEquipmentSnapshot CaptureSnapshot() =>
+            new InventoryEquipmentSnapshot(_leftHand, _rightHand, _back);
+
+        internal void Restore(InventoryEquipmentSnapshot snapshot)
+        {
+            _leftHand = snapshot.LeftHand;
+            _rightHand = snapshot.RightHand;
+            _back = snapshot.Back;
+        }
+
         internal void Set(EquipmentSlot slot, ItemInstanceId instanceId)
         {
             switch (slot)

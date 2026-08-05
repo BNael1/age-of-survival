@@ -395,3 +395,24 @@ sous `TestResults/7eb-final-validation/vps-smoke-20260805-092509/`.
 
 Le client Windows reste validé comme build x86-64 uniquement ; aucune exécution
 Windows n'est revendiquée.
+
+<!-- LOT7FA1_TESTING -->
+## Lot 7F-A1 — validation du snapshot d'inventaire
+
+Le lot ajoute **17 cas EditMode Core**, pour un total de **427** :
+
+- unicité globale des instances entre conteneurs ;
+- existence et propriétaire unique des conteneurs imbriqués ;
+- refus du conteneur principal comme contenu ;
+- refus des auto-références et cycles de possession ;
+- restauration et validation des trois emplacements d'équipement ;
+- rejet des équipements absents, dupliqués ou incompatibles ;
+- rejet avant capture d'une duplication ou d'un équipement orphelin introduit
+  après construction ;
+- ordre canonique indépendant de l'ordre d'insertion ;
+- immutabilité de la capture après mutation de l'état vivant ;
+- empreinte canonique incluant les règles d'équipement.
+
+Validation du 5 août 2026 : **427/427 EditMode**, zéro échec et zéro cas ignoré,
+avec résultat `Passed`. Le lot ne modifie aucun adaptateur Runtime, scène,
+contrôle ou rendu ; aucun nouveau PlayMode n'est requis.
