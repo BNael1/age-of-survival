@@ -148,3 +148,16 @@ est essayée en premier, puis le backup. Les fichiers invalides sont conservés
 pour diagnostic ; aucune migration, promotion ou quarantaine implicite n'existe
 en V1. Les écritures sont synchrones et exigent un seul écrivain à la fois pour
 un même slot.
+<!-- LOT7GA_SLOT_METADATA -->
+## Métadonnées de chronologie V1
+
+Chaque slot `slot-1` à `slot-3` peut posséder un fichier d'affichage
+`slot-N.aosmeta`. Il contient une version, l'index du slot, l'horodatage UTC, la
+durée jouée, la seed et un indicateur de récupération depuis le backup. Son
+écriture utilise un temporaire et un remplacement avec backup.
+
+Ce fichier n'appartient pas au format autoritaire de partie. Son absence ou sa
+corruption ne doit pas rendre `.aos` ou `.bak` illisible; l'interface affiche
+alors que les informations sont indisponibles et tente le chargement normal.
+Aucune migration du codec V1 n'est requise pour modifier ultérieurement ces
+métadonnées d'interface.

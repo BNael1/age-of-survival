@@ -401,7 +401,7 @@ namespace AgeOfSurvival.Core.World.Generation
             return true;
         }
 
-        internal ChunkMutationState[] CaptureCanonicalStates()
+        public ChunkMutationState[] CaptureCanonicalStates()
         {
             var states = new List<ChunkMutationState>(_states.Values);
             states.Sort((left, right) =>

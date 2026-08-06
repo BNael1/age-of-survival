@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.Resources;
 using UnityEngine;
 
@@ -263,10 +264,22 @@ namespace AgeOfSurvival.Runtime.Inventory
             return _current;
         }
 
+        public static InventoryPrototypeSession Install(
+            RestoredGameState restored)
+        {
+            _current = new InventoryPrototypeSession(restored);
+            return _current;
+        }
+
+        public static void ResetForNewGame()
+        {
+            _current = new InventoryPrototypeSession();
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetForPlayMode()
         {
-            _current = new InventoryPrototypeSession();
+            ResetForNewGame();
         }
     }
 }

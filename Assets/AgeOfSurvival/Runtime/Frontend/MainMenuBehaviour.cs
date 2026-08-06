@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using AgeOfSurvival.Runtime.Persistence;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -5,18 +7,28 @@ namespace AgeOfSurvival.Runtime.Frontend
 {
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(-900)]
-    public sealed class MainMenuBehaviour : MonoBehaviour, IMainMenuActions
+    public sealed class MainMenuBehaviour :
+        MonoBehaviour,
+        IMainMenuActions,
+        ISaveMainMenuActions
     {
+        private sealed class SaveAvailability : ISaveAvailability
+        {
+            public bool HasSave => PrototypeSaveRuntime.HasAnySave();
+        }
+
         private UIDocument _document;
         private PanelSettings _generatedPanelSettings;
         private FrontendController _controller;
 
         public MainMenuDocument Ui { get; private set; }
-        public bool HasSave => _controller?.HasSave ?? false;
+        public bool HasSave => PrototypeSaveRuntime.HasAnySave();
         public bool IsBusy => _controller?.IsBusy ?? false;
         public IOnlineFrontendAvailability Online =>
             _controller?.Online
             ?? DeferredOnlineFrontendAvailability.Instance;
+        public IReadOnlyList<SaveSlotView> SaveSlots =>
+            PrototypeSaveRuntime.ReadSlots();
 
         private void Awake()
         {
@@ -28,7 +40,7 @@ namespace AgeOfSurvival.Runtime.Frontend
             _controller = new FrontendController(
                 new UnityFrontendSceneLoader(),
                 new UnityApplicationQuitter(),
-                NoSaveAvailability.Instance,
+                new SaveAvailability(),
                 DeferredOnlineFrontendAvailability.Instance);
             CreateDocument();
             _document.rootVisualElement.schedule.Execute(BuildUi);
@@ -41,22 +53,43 @@ namespace AgeOfSurvival.Runtime.Frontend
 
         public bool StartNewGame()
         {
-            bool started = _controller != null
-                && _controller.StartNewGame();
+            return StartNewGameInSlot(1);
+        }
+
+        public bool LoadGame()
+        {
+            return ContinueMostRecent();
+        }
+
+        public bool ContinueMostRecent()
+        {
+            return PrototypeSaveRuntime.TryGetMostRecent(out SaveSlotId slot)
+                && LoadGameFromSlot(slot.Index);
+        }
+
+        public bool StartNewGameInSlot(int slotIndex)
+        {
+            if (_controller == null) return false;
+            var slot = new SaveSlotId(slotIndex);
+            bool started = _controller.StartNewGame();
             if (started)
             {
+                PrototypeSaveRuntime.BeginNewGame(slot);
                 Ui?.SetBusy(true);
             }
 
             return started;
         }
 
-        public bool LoadGame()
+        public bool LoadGameFromSlot(int slotIndex)
         {
-            bool started = _controller != null
-                && _controller.LoadGame();
+            if (_controller == null) return false;
+            var slot = new SaveSlotId(slotIndex);
+            if (!PrototypeSaveRuntime.Exists(slot)) return false;
+            bool started = _controller.LoadGame();
             if (started)
             {
+                PrototypeSaveRuntime.BeginLoadGame(slot);
                 Ui?.SetBusy(true);
             }
 
@@ -97,24 +130,14 @@ namespace AgeOfSurvival.Runtime.Frontend
             Ui = new MainMenuDocument(
                 _document.rootVisualElement,
                 this);
+            Ui.SetHomeStatus(PrototypeSaveRuntime.ConsumeFrontendMessage());
         }
 
         private void DestroyGeneratedPanelSettings()
         {
-            if (_generatedPanelSettings == null)
-            {
-                return;
-            }
-
-            if (Application.isPlaying)
-            {
-                Destroy(_generatedPanelSettings);
-            }
-            else
-            {
-                DestroyImmediate(_generatedPanelSettings);
-            }
-
+            if (_generatedPanelSettings == null) return;
+            if (Application.isPlaying) Destroy(_generatedPanelSettings);
+            else DestroyImmediate(_generatedPanelSettings);
             _generatedPanelSettings = null;
         }
     }

@@ -463,3 +463,27 @@ Les tests disque utilisent des répertoires temporaires isolés. Le remplacement
 principal/backup est validé sur APFS par cette exécution. Une validation
 supplémentaire de coupure et de remplacement reste requise sur NTFS et le
 système de fichiers Linux cible avant de revendiquer une durabilité matérielle.
+<!-- LOT7GA_TESTING -->
+## Validation du lot 7G-A
+
+La suite EditMode ajoute **23 cas** autour des trois slots, du planificateur
+d'autosave, des métadonnées best-effort, des résolveurs éditoriaux, du
+round-trip canonique du monde et de l'isolation multi-slot. Elle couvre aussi un
+sidecar parseable dont la durée dépasse `TimeSpan`, ainsi que l'annulation réelle
+d'un transfert actif sans déplacement d'objet. Total final validé :
+**491/491 EditMode**.
+
+La suite PlayMode passe à **10/10**. Elle vérifie les transitions de frontend, la
+pause et les entrées, le raccord de l'adaptateur de ressources à la session
+installée par le bootstrap, puis un round-trip Runtime complet : position, tick,
+inventaire, équipement, ressource récoltée, reliquat au sol, mutations de chunks,
+rendu du tas et seconde sauvegarde stable.
+
+Les tests disque utilisent des répertoires temporaires et les scénarios PlayMode
+neutralisent la sélection statique lorsqu'ils ne doivent pas écrire de slot
+utilisateur. Tout défaut de persistance découvert manuellement doit être ajouté
+comme régression automatique lorsqu'il est reproductible.
+
+Validation manuelle résiduelle : lisibilité, libellés, disposition et absence
+d'erreur Console. L'intégrité des données et l'isolation des slots sont prouvées
+principalement par les suites automatiques.

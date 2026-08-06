@@ -1,3 +1,4 @@
+using AgeOfSurvival.Runtime.Persistence;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
@@ -6,7 +7,10 @@ namespace AgeOfSurvival.Runtime.Frontend
 {
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(-900)]
-    public sealed class PauseMenuBehaviour : MonoBehaviour, IPauseMenuActions
+    public sealed class PauseMenuBehaviour :
+        MonoBehaviour,
+        IPauseMenuActions,
+        ISavePauseMenuActions
     {
         private UIDocument _document;
         private PanelSettings _generatedPanelSettings;
@@ -15,7 +19,15 @@ namespace AgeOfSurvival.Runtime.Frontend
 
         public PauseMenuDocument Ui { get; private set; }
         public bool IsPaused => _isPaused;
-        public bool IsBusy => _controller?.IsBusy ?? false;
+        public bool IsBusy =>
+            (_controller?.IsBusy ?? false)
+            || (PrototypeSaveRuntimeBehaviour.Instance?.IsBusy ?? false);
+        public string SaveStatus =>
+            PrototypeSaveRuntimeBehaviour.Instance?.StatusText
+            ?? string.Empty;
+        public bool CanQuitWithoutSaving =>
+            PrototypeSaveRuntimeBehaviour.Instance?.HasSaveFailure
+            ?? false;
 
         private void Start()
         {
@@ -30,6 +42,13 @@ namespace AgeOfSurvival.Runtime.Frontend
 
         private void Update()
         {
+            if (Ui != null)
+            {
+                Ui.SetSaveStatus(SaveStatus);
+                Ui.SetBusy(IsBusy);
+                Ui.SetQuitWithoutSavingVisible(CanQuitWithoutSaving);
+            }
+
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null
                 || IsBusy
@@ -51,10 +70,7 @@ namespace AgeOfSurvival.Runtime.Frontend
 
         private void OnDisable()
         {
-            if (!IsBusy)
-            {
-                GameplayInputGate.SetBlocked(false);
-            }
+            if (!IsBusy) GameplayInputGate.SetBlocked(false);
         }
 
         private void OnDestroy()
@@ -64,18 +80,11 @@ namespace AgeOfSurvival.Runtime.Frontend
 
         public void SetPaused(bool paused)
         {
-            if (IsBusy && !paused)
-            {
-                return;
-            }
-
+            if (IsBusy && !paused) return;
             _isPaused = paused;
             GameplayInputGate.SetBlocked(paused);
             Ui?.SetVisible(paused);
-            if (paused)
-            {
-                Ui?.ShowPause();
-            }
+            if (paused) Ui?.ShowPause();
         }
 
         public void Resume()
@@ -83,25 +92,59 @@ namespace AgeOfSurvival.Runtime.Frontend
             SetPaused(false);
         }
 
+        public void SaveGame()
+        {
+            PrototypeSaveRuntimeBehaviour.Instance?.RequestManualSave();
+        }
+
+        public void SaveAndReturnToMainMenu()
+        {
+            if (!PrototypeSaveRuntime.HasCurrentSlot)
+            {
+                _controller?.ReturnToMainMenu();
+                return;
+            }
+
+            PrototypeSaveRuntimeBehaviour.Instance?.RequestSaveAndReturnToMainMenu();
+        }
+
+        public void SaveAndQuit()
+        {
+            if (!PrototypeSaveRuntime.HasCurrentSlot)
+            {
+                _controller?.Quit();
+                return;
+            }
+
+            PrototypeSaveRuntimeBehaviour.Instance?.RequestSaveAndQuit();
+        }
+
+        public void QuitWithoutSaving()
+        {
+            PrototypeSaveRuntimeBehaviour.Instance?.QuitWithoutSaving();
+        }
+
         public bool ReturnToMainMenu()
         {
-            if (_controller == null)
+            if (PrototypeSaveRuntimeBehaviour.Instance == null
+                || !PrototypeSaveRuntime.HasCurrentSlot)
             {
-                return false;
+                return _controller != null
+                    && _controller.ReturnToMainMenu();
             }
 
-            GameplayInputGate.SetBlocked(true);
-            bool started = _controller.ReturnToMainMenu();
-            if (started)
-            {
-                Ui?.SetBusy(true);
-            }
-
-            return started;
+            SaveAndReturnToMainMenu();
+            return true;
         }
 
         public void Quit()
         {
+            if (PrototypeSaveRuntimeBehaviour.Instance != null)
+            {
+                SaveAndQuit();
+                return;
+            }
+
             _controller?.Quit();
         }
 
@@ -135,28 +178,14 @@ namespace AgeOfSurvival.Runtime.Frontend
                 _document.rootVisualElement,
                 this);
             Ui.SetVisible(_isPaused);
-            if (_isPaused)
-            {
-                Ui.ShowPause();
-            }
+            if (_isPaused) Ui.ShowPause();
         }
 
         private void DestroyGeneratedPanelSettings()
         {
-            if (_generatedPanelSettings == null)
-            {
-                return;
-            }
-
-            if (Application.isPlaying)
-            {
-                Destroy(_generatedPanelSettings);
-            }
-            else
-            {
-                DestroyImmediate(_generatedPanelSettings);
-            }
-
+            if (_generatedPanelSettings == null) return;
+            if (Application.isPlaying) Destroy(_generatedPanelSettings);
+            else DestroyImmediate(_generatedPanelSettings);
             _generatedPanelSettings = null;
         }
     }

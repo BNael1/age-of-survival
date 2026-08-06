@@ -259,9 +259,42 @@ namespace AgeOfSurvival.Runtime.Resources
                 : null;
             if (generatedResources != null)
             {
-                _session = Application.isPlaying
-                    ? InventoryPrototypeSessionProvider.ConfigureResources(generatedResources)
-                    : new InventoryPrototypeSession(generatedResources);
+                if (!Application.isPlaying)
+                {
+                    _session = new InventoryPrototypeSession(
+                        generatedResources);
+                }
+                else
+                {
+                    InventoryPrototypeSession current =
+                        InventoryPrototypeSessionProvider.Current;
+                    if (!current.RestoredFromSave)
+                    {
+                        current =
+                            InventoryPrototypeSessionProvider.ConfigureResources(
+                                System.Array.Empty<ResourceState>());
+                    }
+
+                    if (worldRenderer.UsesChunkStreaming)
+                    {
+                        current.SynchronizeGeneratedChunkResources(
+                            worldRenderer.CreateCachedGeneratedResourceStates(),
+                            worldRenderer.CachedChunks,
+                            worldRenderer.PopulationChunk.Layout);
+                    }
+                    else
+                    {
+                        current.SynchronizeGeneratedChunkResources(
+                            generatedResources,
+                            new[]
+                            {
+                                worldRenderer.PopulationChunk.Coordinate
+                            },
+                            worldRenderer.PopulationChunk.Layout);
+                    }
+
+                    _session = current;
+                }
             }
             else
             {

@@ -425,3 +425,26 @@ Cadrer avec Naël la politique UX visible de sauvegarde et chargement — slots,
 sauvegarde manuelle, autosave, écrasement, messages et chargement en partie —
 avant tout raccord aux menus existants. Les validations NTFS et Linux restent
 requises avant de revendiquer la durabilité matérielle multiplateforme.
+<!-- LOT7GA_PROJECT_STATE -->
+## Lot 7G-A validé, non commité
+
+Le pipeline 7F est raccordé aux menus avec trois chronologies, `Continuer`,
+nouvelle partie avec confirmation d'écrasement, chargement depuis le menu
+principal, métadonnées informatives, autosave à dix minutes, sauvegarde manuelle
+et sauvegarde avant retour ou fermeture normale.
+
+Les défauts découverts pendant la validation ont été convertis en régressions :
+métadonnées non autoritaires, résolveurs éditoriaux bornés, reprise après échec,
+restauration de position et d'état récolté, synchronisation de la fenêtre
+initiale de chunks, raccord de tous les adaptateurs à la session active et
+isolation des trois slots. Une durée de sidecar hors plage est également traitée
+comme information indisponible au lieu de bloquer le menu.
+
+Validation finale acquise après ce dernier durcissement : **491/491 EditMode**
+et **10/10 PlayMode**, zéro échec et zéro ignoré. La validation visuelle de Naël
+est acquise sur les trois slots, leurs positions distinctes, les récoltes et les
+messages. Le périmètre reste de 26 chemins, sans commit ni push.
+
+La revue de l'archive normalisée finale est acquise. Prochaine action :
+autorisation explicite d'un commit local unique. Le push reste une décision
+séparée.

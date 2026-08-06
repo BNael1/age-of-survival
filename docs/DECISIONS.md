@@ -385,3 +385,33 @@ L'intégration Runtime est volontairement sans bouton, raccourci, slot visible,
 autosave, confirmation ou message joueur. Le coordinateur expose uniquement les
 opérations techniques et la provenance principal/backup. Les choix visibles
 restent à Naël et ne sont pas déduits de ce lot.
+<!-- ADR_7GA_SAVE_LOAD_UX -->
+## ADR-0024 — politique visible de sauvegarde V1
+
+Décision du 5 août 2026 : trois chronologies persistantes, `Continuer` sur la
+plus récente, nouvelle partie avec confirmation d'écrasement, chargement depuis
+le menu principal seulement, sauvegarde manuelle depuis la pause et autosave
+toutes les dix minutes réelles au prochain point sûr. Il n'existe pas de
+`Sauvegarder sous`, quicksave ou quickload.
+
+Une action de transfert active diffère l'autosave et la sauvegarde manuelle.
+`Sauvegarder et retourner` ou `Sauvegarder et quitter` interrompt cette action
+sans appliquer de mutation, puis capture la partie. Une récupération depuis
+`.bak` est annoncée sans promotion implicite du backup.
+
+Dans l'éditeur, l'arrêt du Play Mode ne déclenche pas la sauvegarde de fermeture,
+afin que les tests et les essais ne modifient pas les parties de l'utilisateur.
+La sauvegarde de fermeture normale est active dans un Player autonome. Elle ne
+constitue pas une garantie en cas de crash ou d'arrêt forcé.
+
+Les métadonnées `.aosmeta` restent strictement informatives : leur absence, leur
+corruption ou un échec d'écriture ne bloque ni la sauvegarde autoritaire ni le
+chargement de `.aos` ou `.bak`. Après un échec de sauvegarde de sortie, les
+actions du menu sont réactivées et `Quitter sans sauvegarder` devient disponible.
+
+
+Invariant Runtime associé : après le bootstrap de nouvelle partie ou de
+chargement, tous les adaptateurs de scène utilisent la même session active. La
+reconstruction des ressources conserve une session restaurée et synchronise la
+fenêtre initiale de chunks avant toute sauvegarde. Cet invariant est couvert par
+un round-trip PlayMode complet et par l'isolation automatique des trois slots.

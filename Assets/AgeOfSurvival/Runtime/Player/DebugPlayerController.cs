@@ -86,10 +86,14 @@ namespace AgeOfSurvival.Runtime.Player
                 return;
             }
 
-            WorldPosition initialPosition = worldRenderer.TryGetGeneratedSpawnPosition(
-                out WorldPosition generatedSpawn)
-                ? generatedSpawn
-                : new WorldPosition(startPosition.x, startPosition.y);
+            InventoryPrototypeSession prototypeSession =
+                InventoryPrototypeSessionProvider.Current;
+            WorldPosition initialPosition = prototypeSession.RestoredFromSave
+                ? prototypeSession.CurrentPlayerPosition
+                : worldRenderer.TryGetGeneratedSpawnPosition(
+                    out WorldPosition generatedSpawn)
+                    ? generatedSpawn
+                    : new WorldPosition(startPosition.x, startPosition.y);
             _player = new PlayerState(initialPosition);
             _clock = new FixedTickClock(ticksPerSecond, maxTicksPerFrame);
             worldRenderer.SynchronizeStreaming(_player.Position);

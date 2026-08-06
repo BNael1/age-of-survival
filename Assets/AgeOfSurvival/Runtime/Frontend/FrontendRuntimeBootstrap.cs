@@ -1,4 +1,5 @@
 using AgeOfSurvival.Runtime.Inventory;
+using AgeOfSurvival.Runtime.Persistence;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
@@ -54,6 +55,7 @@ namespace AgeOfSurvival.Runtime.Frontend
             if (scene.name == FrontendSceneNames.Gameplay)
             {
                 GameplayInputGate.SetBlocked(false);
+                EnsureHost<PrototypeSaveRuntimeBehaviour>(scene);
                 EnsureHost<PauseMenuBehaviour>(scene);
             }
         }

@@ -12,6 +12,7 @@ namespace AgeOfSurvival.Runtime.Frontend
     public sealed class PauseMenuDocument
     {
         private readonly IPauseMenuActions _actions;
+        private readonly ISavePauseMenuActions _saveActions;
         private readonly VisualElement _pausePanel;
         private readonly VisualElement _optionsPanel;
 
@@ -22,6 +23,7 @@ namespace AgeOfSurvival.Runtime.Frontend
             Root = root ?? throw new ArgumentNullException(nameof(root));
             _actions = actions
                 ?? throw new ArgumentNullException(nameof(actions));
+            _saveActions = actions as ISavePauseMenuActions;
 
             FrontendStyles.ConfigureRoot(Root);
             FrontendStyles.CreateBackdrop(Root, 0.76f);
@@ -31,25 +33,40 @@ namespace AgeOfSurvival.Runtime.Frontend
             _pausePanel = FrontendStyles.CreatePanel("pause-menu-home");
             _pausePanel.Add(FrontendStyles.CreateSectionTitle("PAUSE"));
             ResumeButton = FrontendStyles.CreateMenuButton(
-                "resume-button",
-                "Reprendre",
-                _actions.Resume);
+                "resume-button", "Reprendre", _actions.Resume);
+            SaveButton = FrontendStyles.CreateMenuButton(
+                "save-game-button", "Sauvegarder", RequestSave);
             OptionsButton = FrontendStyles.CreateMenuButton(
-                "pause-options-button",
-                "Options",
-                ShowOptions);
+                "pause-options-button", "Options", ShowOptions);
             MainMenuButton = FrontendStyles.CreateMenuButton(
                 "return-main-menu-button",
-                "Retour au menu principal",
+                _saveActions == null
+                    ? "Retour au menu principal"
+                    : "Sauvegarder et retourner",
                 RequestMainMenu);
             QuitButton = FrontendStyles.CreateMenuButton(
                 "pause-quit-button",
-                "Quitter",
-                _actions.Quit);
+                _saveActions == null ? "Quitter" : "Sauvegarder et quitter",
+                RequestQuit);
+            QuitWithoutSavingButton = FrontendStyles.CreateMenuButton(
+                "pause-quit-without-saving-button",
+                "Quitter sans sauvegarder",
+                RequestQuitWithoutSaving);
+            QuitWithoutSavingButton.style.display = DisplayStyle.None;
+            SaveStatusLabel = FrontendStyles.CreateMutedLabel(
+                _saveActions?.SaveStatus ?? string.Empty);
+            SaveStatusLabel.name = "save-status";
+
             _pausePanel.Add(ResumeButton);
+            if (_saveActions != null) _pausePanel.Add(SaveButton);
             _pausePanel.Add(OptionsButton);
             _pausePanel.Add(MainMenuButton);
             _pausePanel.Add(QuitButton);
+            if (_saveActions != null)
+            {
+                _pausePanel.Add(QuitWithoutSavingButton);
+                _pausePanel.Add(SaveStatusLabel);
+            }
             shell.Add(_pausePanel);
 
             _optionsPanel = FrontendStyles.CreatePanel("pause-menu-options");
@@ -57,9 +74,7 @@ namespace AgeOfSurvival.Runtime.Frontend
             _optionsPanel.Add(FrontendStyles.CreateMutedLabel(
                 "Les réglages seront ajoutés dans un lot dédié."));
             OptionsBackButton = FrontendStyles.CreateMenuButton(
-                "pause-options-back-button",
-                "Retour",
-                ShowPause);
+                "pause-options-back-button", "Retour", ShowPause);
             _optionsPanel.Add(OptionsBackButton);
             shell.Add(_optionsPanel);
 
@@ -73,10 +88,13 @@ namespace AgeOfSurvival.Runtime.Frontend
             Root.resolvedStyle.display != DisplayStyle.None
             && Root.style.display.value != DisplayStyle.None;
         public Button ResumeButton { get; }
+        public Button SaveButton { get; }
         public Button OptionsButton { get; }
         public Button MainMenuButton { get; }
         public Button QuitButton { get; }
+        public Button QuitWithoutSavingButton { get; }
         public Button OptionsBackButton { get; }
+        public Label SaveStatusLabel { get; }
 
         public void SetVisible(bool visible)
         {
@@ -102,22 +120,64 @@ namespace AgeOfSurvival.Runtime.Frontend
                 _optionsPanel);
         }
 
+        public void SetSaveStatus(string text)
+        {
+            SaveStatusLabel.text = text ?? string.Empty;
+        }
+
+        public void SetQuitWithoutSavingVisible(bool visible)
+        {
+            QuitWithoutSavingButton.style.display = visible
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
+        }
+
         public void SetBusy(bool busy)
         {
             bool enabled = !busy;
             ResumeButton.SetEnabled(enabled);
+            SaveButton.SetEnabled(enabled);
             OptionsButton.SetEnabled(enabled);
             MainMenuButton.SetEnabled(enabled);
             QuitButton.SetEnabled(enabled);
+            QuitWithoutSavingButton.SetEnabled(enabled);
             OptionsBackButton.SetEnabled(enabled);
+        }
+
+        private void RequestSave()
+        {
+            _saveActions?.SaveGame();
+            SetSaveStatus(_saveActions?.SaveStatus);
         }
 
         private void RequestMainMenu()
         {
-            if (_actions.ReturnToMainMenu())
+            if (_saveActions != null)
             {
+                _saveActions.SaveAndReturnToMainMenu();
                 SetBusy(true);
+                return;
             }
+
+            if (_actions.ReturnToMainMenu()) SetBusy(true);
+        }
+
+        private void RequestQuit()
+        {
+            if (_saveActions != null)
+            {
+                _saveActions.SaveAndQuit();
+                SetBusy(true);
+                return;
+            }
+
+            _actions.Quit();
+        }
+
+        private void RequestQuitWithoutSaving()
+        {
+            _saveActions?.QuitWithoutSaving();
+            SetBusy(true);
         }
     }
 }

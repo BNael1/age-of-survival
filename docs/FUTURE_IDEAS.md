@@ -51,3 +51,13 @@ Les règles de construction, de refuges et de familiarité déjà validées ne s
 - navigateur de serveurs, favoris persistants et historique ;
 - authentification, permissions, administration et sécurité réseau ;
 - hébergement de partie depuis le client et invitations.
+<!-- FUTURE_7GA_SAVE_TRIGGERS -->
+## Déclencheurs de sauvegarde différés
+
+- ajouter une sauvegarde après repos ou sommeil terminé lorsque ces systèmes
+  existent réellement dans le Runtime ;
+- raccorder la politique serveur autoritaire : le serveur sauvegarde, les
+  clients connectés n'exposent aucune sauvegarde locale ;
+- décider séparément d'un chargement pendant une partie, actuellement rejeté ;
+- ajouter les validations de durabilité matérielle sur NTFS et sur le système de
+  fichiers Linux cible avant toute revendication multiplateforme.

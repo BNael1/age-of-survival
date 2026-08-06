@@ -509,3 +509,42 @@ vérifie leurs empreintes, reconstruit un nouvel inventaire et initialise un
 uniquement le chemin plateforme et un `GameSaveCoordinator` sans UI. Le caller
 n'installe la nouvelle session qu'après succès complet du décodage et de la
 restauration.
+<!-- LOT7GA_SAVE_LOAD_UX -->
+## Lot 7G-A — orchestration visible de sauvegarde
+
+Le frontend dépend d'une frontière Runtime dédiée et non du format binaire. Le
+menu principal choisit une chronologie, le coordinateur Runtime installe une
+session restaurée avant le démarrage des adaptateurs de joueur, et le menu pause
+ne fait que demander une sauvegarde. La capture reste en C# pur et n'est
+exécutée qu'entre deux mutations cohérentes du tick fixe.
+
+`PrototypeSaveRuntimeBehaviour` possède la politique de cadence et les messages
+visibles. Il ne possède pas la simulation. `InventoryPrototypeSession` fournit
+un adaptateur provisoire entre l'état du prototype et `GameSaveSnapshot`; cette
+frontière devra être remplacée par le futur agrégat Runtime de partie sans
+modifier le codec V1.
+
+Les métadonnées `.aosmeta` servent uniquement à l'affichage des slots. Le fichier
+`.aos` et son `.bak` restent les seules sources autoritaires de restauration.
+
+<!-- LOT7GA_HARDENING_ARCHITECTURE -->
+### Durcissement de la frontière UX de sauvegarde
+
+Le résolveur du prototype ne reconstruit que les deux conteneurs éditoriaux
+connus (`player-main` et `prototype-bag`) avec leurs identifiants et capacités
+canoniques. Le sidecar `.aosmeta` est lu et écrit en mode best-effort : il ne
+participe jamais à la validité de l'état autoritaire. Une erreur de sauvegarde
+réactive le menu pause et expose une sortie explicite sans nouvelle écriture.
+
+
+Le bootstrap de sauvegarde est créé après les `Awake` des objets déjà présents
+lors du chargement de scène. Après l'installation d'une nouvelle session ou
+d'une session restaurée, il doit donc raccorder explicitement les adaptateurs de
+scène à `InventoryPrototypeSessionProvider.Current`. Un `Rebuild` de ressources
+ne peut jamais remplacer une session restaurée ni continuer à faire évoluer une
+ancienne session.
+
+La fenêtre initiale de chunks générés est synchronisée pendant ce raccord, avant
+la première capture. L'état récolté, les conteneurs au sol, l'inventaire, le tick
+et la position doivent ainsi appartenir au même agrégat dès la première frame
+jouable.
