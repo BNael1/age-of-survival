@@ -507,3 +507,23 @@ Validation locale du 6 août 2026 :
 - **10/10 PlayMode**, zéro échec et zéro cas ignoré ;
 - aucun `ProjectSettings/SceneTemplateSettings.json` laissé dans le dépôt ;
 - aucun changement du Core, du format de sauvegarde ou des règles de gameplay.
+
+<!-- LOT7HA1_TESTING -->
+## Lot 7H-A1 — validation santé
+
+Le sous-lot ajoute **25 tests EditMode** :
+
+- vingt tests Core couvrant construction, bornes, dégâts, mort, soins,
+  absence de résurrection, respawn, délai de régénération, cadence de deux
+  points par seconde, réinitialisation après dégât, rattrapage déterministe,
+  arrêt au maximum, refus du recul de tick, équivalence entre avancement
+  direct et fragmenté, et rejet atomique d'un calendrier de régénération
+  impossible à représenter ;
+- cinq tests Runtime couvrant la santé initiale de session, l'avancement par
+  le tick canonique, l'utilisation du tick courant pour les dégâts, la
+  distinction entre soin et respawn, et la restauration transitoire d'une
+  sauvegarde V1 à pleine santé sur son tick restauré.
+
+Validation batchmode du 6 août 2026 sous Unity `6000.3.19f1` :
+**517/517 EditMode**, zéro échec, zéro ignoré ou inconclusif, code de sortie
+`0`.

@@ -61,3 +61,17 @@ Les règles de construction, de refuges et de familiarité déjà validées ne s
 - décider séparément d'un chargement pendant une partie, actuellement rejeté ;
 - ajouter les validations de durabilité matérielle sur NTFS et sur le système de
   fichiers Linux cible avant toute revendication multiplateforme.
+
+<!-- LOT7HA1_FUTURE_INJURIES -->
+## Idée future — blessures localisées
+
+Le système vital global du lot 7H ne doit pas devenir un cadre générique de
+statistiques. Un système ultérieur pourra ajouter des états localisés par zone
+corporelle, notamment plaies, fractures, brûlures, morsures, saignement,
+douleur, infection et soins spécifiques.
+
+Ces blessures devront alimenter les conséquences globales — perte de vie,
+mobilité, vitesse d'action, capacité de travail ou risque d'infection — sans
+remplacer brutalement le contrat de santé vital et sans casser les sauvegardes
+existantes. Cette idée est volontairement reportée et n'est pas une décision
+d'implémentation active du lot 7H-A1.

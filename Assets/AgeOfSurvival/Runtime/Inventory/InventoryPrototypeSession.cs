@@ -65,6 +65,8 @@ namespace AgeOfSurvival.Runtime.Inventory
                 InventoryPrototypeCatalog.Definitions,
                 new[] { MainContainer, BagContainer });
             Commands = new InventoryPrototypeCommands(Inventory);
+            Health = new PlayerHealthState(
+                PlayerHealthRules.DefaultMaximumHealth);
 
             var resourceIds = new HashSet<ResourceId>();
             foreach (ResourceState resource in resources)
@@ -102,6 +104,7 @@ namespace AgeOfSurvival.Runtime.Inventory
         public UniqueItemState Tool { get; }
         public UniqueItemState Bag { get; }
         public InventoryPrototypeCommands Commands { get; }
+        public PlayerHealthState Health { get; }
         public IReadOnlyList<ResourceState> Resources => _readOnlyResources;
         public IReadOnlyList<GroundContainerState> GroundContainers => _readOnlyGroundContainers;
         public TransferActionState TransferAction { get; private set; }
@@ -110,10 +113,35 @@ namespace AgeOfSurvival.Runtime.Inventory
         public EncumbranceMovementState MovementState =>
             EncumbranceMovementOperations.Calculate(Inventory);
 
+        public PlayerHealthChangeResult ApplyDamage(int amount)
+        {
+            return PlayerHealthOperations.ApplyDamage(
+                Health,
+                amount,
+                CurrentTick);
+        }
+
+        public PlayerHealthChangeResult Heal(int amount)
+        {
+            return PlayerHealthOperations.Heal(
+                Health,
+                amount,
+                CurrentTick);
+        }
+
+        public PlayerHealthChangeResult RespawnHealth()
+        {
+            return PlayerHealthOperations.Respawn(
+                Health,
+                CurrentTick);
+        }
+
         public long BeginSimulationTick(WorldPosition playerPosition)
         {
             CurrentPlayerPosition = playerPosition;
-            return ++CurrentTick;
+            CurrentTick = checked(CurrentTick + 1L);
+            PlayerHealthOperations.AdvanceToTick(Health, CurrentTick);
+            return CurrentTick;
         }
 
         public ResourceYieldResult HarvestAndStartTransfer(

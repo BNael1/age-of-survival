@@ -220,6 +220,42 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
         }
 
         [Test]
+        public void PrototypeService_V1LoadInstallsFullHealthOnRestoredTick()
+        {
+            var service = new PrototypeSaveService(_temporaryDirectory);
+            var session = new InventoryPrototypeSession();
+            var position = new WorldPosition(17.25d, -9.5d);
+            session.BeginSimulationTick(position);
+            session.ApplyDamage(40);
+            SaveSlotId slot = new SaveSlotId(1);
+            service.Save(slot, session, 0d);
+
+            CoordinatedGameLoadResult loaded = service.Load(
+                slot,
+                0d,
+                out _);
+
+            try
+            {
+                InventoryPrototypeSession restored =
+                    InventoryPrototypeSessionProvider.Install(loaded.State);
+
+                Assert.That(restored.CurrentTick, Is.EqualTo(1L));
+                Assert.That(restored.Health.CurrentTick, Is.EqualTo(1L));
+                Assert.That(
+                    restored.Health.CurrentHealth,
+                    Is.EqualTo(PlayerHealthRules.DefaultMaximumHealth));
+                Assert.That(
+                    restored.Health.NextRegenerationTick,
+                    Is.Null);
+            }
+            finally
+            {
+                InventoryPrototypeSessionProvider.ResetForNewGame();
+            }
+        }
+
+        [Test]
         public void PrototypeService_ReportsThreeSlots()
         {
             var service = new PrototypeSaveService(_temporaryDirectory);

@@ -491,3 +491,28 @@ périmètre devra être cadré séparément avant son implémentation.
 
 Cadrer le premier petit lot consacré aux points de vie, avant la nourriture,
 les ressources, le craft et la construction.
+
+<!-- LOT7HA1_PROJECT_STATE -->
+## Lot 7H-A1 — noyau santé et session
+
+État de la branche `feature/lot7ha-health-loop` au 6 août 2026 :
+
+- modèle de santé déterministe en C# pur ;
+- `100` PV maximum ;
+- dégâts et soins bornés ;
+- régénération après huit secondes à deux PV par seconde ;
+- mort sans régénération ;
+- soin ordinaire sans résurrection ;
+- respawn de l'état vital à pleine santé ;
+- propriété canonique de la santé dans `InventoryPrototypeSession` ;
+- avancement de la santé par le tick fixe canonique de session ;
+- restauration transitoire des sauvegardes V1 à pleine santé ;
+- aucun HUD, source de dégâts Unity, téléportation de respawn ou format de
+  sauvegarde V2 dans ce sous-lot.
+
+Le sous-lot ajoute vingt tests Core et cinq tests Runtime. La suite complète
+passe à **517/517 EditMode**, zéro échec, zéro ignoré ou inconclusif, avec code
+Unity `0`.
+
+Prochaine action : lot 7H-A2, ajout d'un snapshot de santé au format de
+sauvegarde V2 avec lecture rétrocompatible des sauvegardes V1.

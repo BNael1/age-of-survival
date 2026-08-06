@@ -548,3 +548,26 @@ La fenêtre initiale de chunks générés est synchronisée pendant ce raccord, 
 la première capture. L'état récolté, les conteneurs au sol, l'inventaire, le tick
 et la position doivent ainsi appartenir au même agrégat dès la première frame
 jouable.
+
+<!-- LOT7HA1_ARCHITECTURE -->
+## Santé du joueur
+
+Le modèle vital initial appartient à `AgeOfSurvival.Core` et reste indépendant
+de Unity :
+
+- `PlayerHealthState` porte l'état mutable ;
+- `PlayerHealthRules` porte les constantes de simulation ;
+- `PlayerHealthOperations` applique dégâts, soins, régénération et respawn ;
+- toutes les durées sont exprimées en ticks entiers ;
+- l'avancement direct ou fragmenté produit le même état ;
+- les ticks ne peuvent pas reculer.
+
+`InventoryPrototypeSession` est actuellement le propriétaire de l'état vital
+canonique de la session prototype. Son `BeginSimulationTick` incrémente le tick
+fixe, puis avance exactement une fois la santé vers ce tick. Les MonoBehaviour
+ne possèdent pas cet état.
+
+La sauvegarde V1 ne contient pas encore de santé. Lors de sa restauration, le
+sous-lot 7H-A1 initialise donc temporairement la santé à son maximum sur le tick
+restauré. Le lot 7H-A2 remplacera ce comportement de transition par un snapshot
+versionné et une lecture rétrocompatible V1/V2.

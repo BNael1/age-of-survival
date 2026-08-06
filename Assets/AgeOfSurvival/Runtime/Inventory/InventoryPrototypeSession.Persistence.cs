@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.World.Generation;
@@ -50,6 +51,11 @@ namespace AgeOfSurvival.Runtime.Inventory
             Bag = bag;
             Commands = new InventoryPrototypeCommands(Inventory);
             CurrentTick = restored.FixedTick;
+            Health = new PlayerHealthState(
+                PlayerHealthRules.DefaultMaximumHealth,
+                PlayerHealthRules.DefaultMaximumHealth,
+                CurrentTick,
+                null);
             CurrentPlayerPosition = restored.PlayerPosition;
             _persistenceWorld = restored.World;
             _restoredFromSave = true;

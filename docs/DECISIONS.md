@@ -434,3 +434,22 @@ qui dépend de la résolution de la hiérarchie UI Toolkit.
 Cette décision ne crée aucun raccourci clavier, ne met pas le jeu en pause et
 ne bloque pas le déplacement ou les interactions lorsque l'inventaire est
 ouvert. Ces comportements restent des décisions UX séparées.
+
+<!-- LOT7HA1_DECISIONS -->
+## Lot 7H-A1 — santé vitale initiale
+
+Décisions actives :
+
+- le joueur possède `100` points de vie maximum et commence à `100/100` ;
+- les dégâts et soins sont bornés entre `0` et le maximum ;
+- la régénération démarre après huit secondes complètes sans dégâts ;
+- à `60 Hz`, le délai vaut `480` ticks et la régénération rend un point tous
+  les `30` ticks, soit deux points par seconde ;
+- après un dégât au tick `T`, le premier point est rendu au tick `T + 510` ;
+- un nouveau dégât réinitialise tout le délai ;
+- un joueur mort ne régénère pas ;
+- un soin ordinaire ne ressuscite pas ;
+- le respawn restaure tous les points de vie et efface le calendrier de
+  régénération ;
+- la mort et le respawn Runtime complet restent hors du sous-lot 7H-A1 ;
+- aucune dépendance externe n'est introduite pour ce système.
