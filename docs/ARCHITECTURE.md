@@ -567,7 +567,23 @@ canonique de la session prototype. Son `BeginSimulationTick` incrémente le tick
 fixe, puis avance exactement une fois la santé vers ce tick. Les MonoBehaviour
 ne possèdent pas cet état.
 
-La sauvegarde V1 ne contient pas encore de santé. Lors de sa restauration, le
-sous-lot 7H-A1 initialise donc temporairement la santé à son maximum sur le tick
-restauré. Le lot 7H-A2 remplacera ce comportement de transition par un snapshot
-versionné et une lecture rétrocompatible V1/V2.
+La sauvegarde V2 contient désormais un snapshot de santé. Le lecteur reste
+rétrocompatible avec la V1 et synthétise alors une santé pleine sur le tick
+restauré, sans réécriture automatique du fichier.
+
+<!-- LOT7HA2_ARCHITECTURE -->
+## Persistance versionnée de la santé
+
+`PlayerHealthSnapshot` est une valeur immuable du Core. Il copie le maximum,
+la valeur courante, le tick courant et le prochain tick de régénération, puis
+reconstruit un nouveau `PlayerHealthState` lors de la restauration.
+
+`GameSaveSnapshot` impose l'égalité entre son tick fixe et le tick du snapshot
+de santé. `GameSaveSnapshotRestorer` restaure un état vital indépendant avant
+de construire `RestoredGameState`, puis `InventoryPrototypeSession` adopte cet
+état comme propriétaire canonique de la session restaurée.
+
+Le codec écrit la V2 et lit V1/V2. La migration V1 est purement en mémoire :
+elle crée une santé pleine au tick sauvegardé et ne modifie aucun fichier sur
+disque. Le stockage atomique, le backup et la politique d'installation de
+session restent inchangés.

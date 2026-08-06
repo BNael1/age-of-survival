@@ -150,7 +150,7 @@ namespace AgeOfSurvival.Core.Persistence
             {
                 throw Violation(
                     GameSaveCodecViolation.InvalidStringLength,
-                    "A save string exceeds the V1 byte limit.");
+                    "A save string exceeds the configured byte limit.");
             }
 
             WriteUInt32(checked((uint)bytes.Length));
@@ -286,7 +286,7 @@ namespace AgeOfSurvival.Core.Persistence
             {
                 throw Violation(
                     GameSaveCodecViolation.CountLimitExceeded,
-                    $"{label} exceeds the V1 limit.");
+                    $"{label} exceeds the configured limit.");
             }
 
             return checked((int)raw);
@@ -318,7 +318,7 @@ namespace AgeOfSurvival.Core.Persistence
             {
                 throw Violation(
                     GameSaveCodecViolation.InvalidStringLength,
-                    "A save string exceeds the V1 byte limit.");
+                    "A save string exceeds the configured byte limit.");
             }
 
             int length = checked((int)rawLength);

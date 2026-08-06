@@ -33,6 +33,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 world,
                 42,
                 new WorldPosition(12.5, -3.25),
+                CreateHealth(42),
                 inventory,
                 chunks);
 
@@ -44,6 +45,12 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 snapshot.World.PopulationRevision,
                 Is.EqualTo(world.Profile.Revision));
             Assert.That(snapshot.FixedTick, Is.EqualTo(42));
+            Assert.That(snapshot.Health.MaximumHealth, Is.EqualTo(100));
+            Assert.That(snapshot.Health.CurrentHealth, Is.EqualTo(75));
+            Assert.That(snapshot.Health.CurrentTick, Is.EqualTo(42));
+            Assert.That(
+                snapshot.Health.NextRegenerationTick,
+                Is.EqualTo(552L));
             Assert.That(
                 snapshot.PlayerPosition,
                 Is.EqualTo(new WorldPosition(12.5, -3.25)));
@@ -69,6 +76,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 world,
                 0,
                 new WorldPosition(0, 0),
+                CreateHealth(0),
                 inventory,
                 chunks);
 
@@ -90,6 +98,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 world,
                 0,
                 new WorldPosition(0, 0),
+                CreateHealth(0),
                 CreateInventory(),
                 CreateLifecycle(world));
 
@@ -120,12 +129,14 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 world,
                 0,
                 new WorldPosition(0, 0),
+                CreateHealth(0),
                 CreateInventory(),
                 forward);
             GameSaveSnapshot reverseSnapshot = GameSaveSnapshotCapture.Capture(
                 world,
                 0,
                 new WorldPosition(0, 0),
+                CreateHealth(0),
                 CreateInventory(),
                 reverse);
 
@@ -162,6 +173,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 world,
                 0,
                 new WorldPosition(0, 0),
+                CreateHealth(0),
                 CreateInventory(),
                 chunks);
 
@@ -187,6 +199,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 world,
                 7,
                 new WorldPosition(1, 2),
+                CreateHealth(7),
                 CreateInventory(),
                 chunks);
 
@@ -224,6 +237,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 world,
                 0,
                 new WorldPosition(0, 0),
+                CreateHealth(0),
                 CreateInventory(),
                 chunks);
 
@@ -250,6 +264,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 world,
                 0,
                 new WorldPosition(0, 0),
+                CreateHealth(0),
                 CreateInventory(),
                 chunks);
 
@@ -278,6 +293,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                         world,
                         0,
                         new WorldPosition(0, 0),
+                CreateHealth(0),
                         CreateInventory(),
                         chunks));
 
@@ -304,6 +320,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 CreateIdentity(world),
                 0,
                 new WorldPosition(0, 0),
+                new PlayerHealthSnapshot(CreateHealth(0)),
                 CreateInventory().CaptureSnapshot(),
                 source);
             source.Clear();
@@ -320,6 +337,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 world,
                 0,
                 new WorldPosition(-0.0d, -0.0d),
+                CreateHealth(0),
                 CreateInventory(),
                 CreateLifecycle(world));
 
@@ -329,6 +347,45 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             Assert.That(
                 BitConverter.DoubleToInt64Bits(snapshot.PlayerPosition.Y),
                 Is.EqualTo(0L));
+        }
+
+        [Test]
+        public void HealthSnapshotRestoresIndependentState()
+        {
+            PlayerHealthState source = CreateHealth(7);
+            var snapshot = new PlayerHealthSnapshot(source);
+
+            PlayerHealthState restored = snapshot.Restore();
+            PlayerHealthOperations.Heal(source, 25, 7);
+
+            Assert.That(restored, Is.Not.SameAs(source));
+            Assert.That(restored.MaximumHealth, Is.EqualTo(100));
+            Assert.That(restored.CurrentHealth, Is.EqualTo(75));
+            Assert.That(restored.CurrentTick, Is.EqualTo(7L));
+            Assert.That(
+                restored.NextRegenerationTick,
+                Is.EqualTo(517L));
+        }
+
+        [Test]
+        public void ConstructorRejectsHealthTickMismatch()
+        {
+            WorldPopulationSettings world = CreateWorld();
+
+            GameSaveSnapshotException exception =
+                Assert.Throws<GameSaveSnapshotException>(() =>
+                    new GameSaveSnapshot(
+                        CreateIdentity(world),
+                        0,
+                        new WorldPosition(0, 0),
+                        new PlayerHealthSnapshot(CreateHealth(1)),
+                        CreateInventory().CaptureSnapshot(),
+                        Array.Empty<ChunkMutationState>()));
+
+            Assert.That(
+                exception.Violation,
+                Is.EqualTo(
+                    GameSaveSnapshotViolation.HealthTickMismatch));
         }
 
         [Test]
@@ -377,6 +434,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                         CreateIdentity(world),
                         -1,
                         new WorldPosition(0, 0),
+                new PlayerHealthSnapshot(CreateHealth(0)),
                         CreateInventory().CaptureSnapshot(),
                         Array.Empty<ChunkMutationState>()));
 
@@ -401,6 +459,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                         CreateIdentity(world),
                         0,
                         new WorldPosition(0, 0),
+                new PlayerHealthSnapshot(CreateHealth(0)),
                         CreateInventory().CaptureSnapshot(),
                         new[] { empty }));
 
@@ -424,6 +483,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                         CreateIdentity(world),
                         0,
                         new WorldPosition(0, 0),
+                new PlayerHealthSnapshot(CreateHealth(0)),
                         CreateInventory().CaptureSnapshot(),
                         new[] { mutation }));
 
@@ -453,6 +513,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                         CreateIdentity(world),
                         0,
                         new WorldPosition(0, 0),
+                new PlayerHealthSnapshot(CreateHealth(0)),
                         CreateInventory().CaptureSnapshot(),
                         new[] { first, second }));
 
@@ -474,6 +535,15 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 world.Generation,
                 world.Profile.Id,
                 world.Profile.Revision);
+        }
+
+        private static PlayerHealthState CreateHealth(long tick)
+        {
+            return new PlayerHealthState(
+                100,
+                75,
+                tick,
+                checked(tick + 510L));
         }
 
         private static PlayerInventoryState CreateInventory()

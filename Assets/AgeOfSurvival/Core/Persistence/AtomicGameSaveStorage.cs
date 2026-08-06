@@ -202,7 +202,7 @@ namespace AgeOfSurvival.Core.Persistence
                     || stream.Length > maximum)
                 {
                     throw new InvalidDataException(
-                        "The save file size is outside the V1 bounds.");
+                        "The save file size is outside the configured bounds.");
                 }
 
                 int length = checked((int)stream.Length);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Persistence;
@@ -56,6 +57,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             Assert.That(decoded.FixedTick, Is.EqualTo(42));
             Assert.That(decoded.World, Is.EqualTo(original.World));
             Assert.That(decoded.PlayerPosition, Is.EqualTo(original.PlayerPosition));
+            Assert.That(decoded.Health, Is.EqualTo(original.Health));
             Assert.That(decoded.Inventory.Definitions.Count, Is.EqualTo(2));
             Assert.That(decoded.Inventory.Containers.Count, Is.EqualTo(2));
             Assert.That(
@@ -68,6 +70,53 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             Assert.That(
                 GameSaveBinaryCodec.Encode(decoded),
                 Is.EqualTo(encoded));
+        }
+
+        [Test]
+        public void CodecReadsLegacyV1AsFullHealthAtSavedTick()
+        {
+            byte[] legacy = ConvertV2ToLegacyV1(
+                GameSaveBinaryCodec.Encode(CreateSnapshot(42)));
+
+            Assert.That(ReadUInt16(legacy, 8), Is.EqualTo(1));
+
+            GameSaveSnapshot decoded =
+                GameSaveBinaryCodec.Decode(legacy);
+
+            Assert.That(decoded.FixedTick, Is.EqualTo(42L));
+            Assert.That(
+                decoded.Health.MaximumHealth,
+                Is.EqualTo(PlayerHealthRules.DefaultMaximumHealth));
+            Assert.That(
+                decoded.Health.CurrentHealth,
+                Is.EqualTo(PlayerHealthRules.DefaultMaximumHealth));
+            Assert.That(decoded.Health.CurrentTick, Is.EqualTo(42L));
+            Assert.That(
+                decoded.Health.NextRegenerationTick,
+                Is.Null);
+            Assert.That(
+                ReadUInt16(
+                    GameSaveBinaryCodec.Encode(decoded),
+                    8),
+                Is.EqualTo(2));
+        }
+
+        [Test]
+        public void CodecRejectsInvalidV2Health()
+        {
+            byte[] encoded =
+                GameSaveBinaryCodec.Encode(CreateSnapshot(0));
+            int healthOffset = GetHealthOffset(encoded);
+            WriteInt32(encoded, healthOffset, 0);
+            RefreshPayloadHash(encoded);
+
+            GameSaveCodecException exception =
+                Assert.Throws<GameSaveCodecException>(() =>
+                    GameSaveBinaryCodec.Decode(encoded));
+
+            Assert.That(
+                exception.Violation,
+                Is.EqualTo(GameSaveCodecViolation.InvalidDomainValue));
         }
 
         [Test]
@@ -90,7 +139,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             Assert.That(encoded[1], Is.EqualTo((byte)'O'));
             Assert.That(encoded[2], Is.EqualTo((byte)'S'));
             Assert.That(encoded[7], Is.EqualTo(0));
-            Assert.That(ReadUInt16(encoded, 8), Is.EqualTo(1));
+            Assert.That(ReadUInt16(encoded, 8), Is.EqualTo(2));
             Assert.That(ReadUInt16(encoded, 10), Is.EqualTo(0));
             Assert.That(
                 ReadUInt32(encoded, 12),
@@ -140,7 +189,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
         public void CodecRejectsUnsupportedVersion()
         {
             byte[] encoded = GameSaveBinaryCodec.Encode(CreateSnapshot(0));
-            WriteUInt16(encoded, 8, 2);
+            WriteUInt16(encoded, 8, 3);
 
             GameSaveCodecException exception =
                 Assert.Throws<GameSaveCodecException>(() =>
@@ -291,6 +340,11 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 resolver);
 
             Assert.That(restored.FixedTick, Is.EqualTo(55));
+            Assert.That(restored.Health.CurrentHealth, Is.EqualTo(65));
+            Assert.That(restored.Health.CurrentTick, Is.EqualTo(55L));
+            Assert.That(
+                restored.Health.NextRegenerationTick,
+                Is.EqualTo(565L));
             Assert.That(restored.World.Generation, Is.EqualTo(world.Generation));
             Assert.That(restored.Inventory.MainContainer.Id, Is.EqualTo(snapshot.Inventory.MainContainerId));
             Assert.That(restored.Inventory.Containers.Count, Is.EqualTo(2));
@@ -415,6 +469,11 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                     world.Profile.Revision),
                 tick,
                 new WorldPosition(12.5, -3.25),
+                new PlayerHealthSnapshot(
+                    100,
+                    65,
+                    tick,
+                    checked(tick + 510L)),
                 inventory.CaptureSnapshot(),
                 new[] { mutation });
         }
@@ -461,6 +520,102 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                     new ItemInstanceId("backpack-1")));
         }
 
+        private static byte[] ConvertV2ToLegacyV1(byte[] encoded)
+        {
+            int healthOffset = GetHealthOffset(encoded);
+            int healthLength = GetHealthLength(
+                encoded,
+                healthOffset);
+            int payloadLength = checked(
+                (int)ReadUInt32(encoded, 12));
+            int legacyPayloadLength =
+                payloadLength - healthLength;
+            var legacy = new byte[
+                GameSaveCodecLimits.HeaderLength
+                + legacyPayloadLength];
+
+            Buffer.BlockCopy(
+                encoded,
+                0,
+                legacy,
+                0,
+                healthOffset);
+            Buffer.BlockCopy(
+                encoded,
+                healthOffset + healthLength,
+                legacy,
+                healthOffset,
+                encoded.Length - healthOffset - healthLength);
+
+            WriteUInt16(legacy, 8, 1);
+            WriteUInt32(
+                legacy,
+                12,
+                checked((uint)legacyPayloadLength));
+            RefreshPayloadHash(legacy);
+            return legacy;
+        }
+
+        private static int GetHealthOffset(byte[] encoded)
+        {
+            int payloadStart = GameSaveCodecLimits.HeaderLength;
+            int profileLengthOffset =
+                payloadStart + 8 + 4 + 4 + 4;
+            int profileLength = checked(
+                (int)ReadUInt32(encoded, profileLengthOffset));
+            return checked(
+                profileLengthOffset
+                + 4
+                + profileLength
+                + 4
+                + 8
+                + 8
+                + 8);
+        }
+
+        private static int GetHealthLength(
+            byte[] encoded,
+            int healthOffset)
+        {
+            int optionalTickOffset =
+                healthOffset + 4 + 4 + 8;
+            byte hasNextTick = encoded[optionalTickOffset];
+            if (hasNextTick > 1)
+            {
+                throw new InvalidDataException(
+                    "Invalid V2 health fixture boolean.");
+            }
+
+            return 4 + 4 + 8 + 1
+                + (hasNextTick == 1 ? 8 : 0);
+        }
+
+        private static void RefreshPayloadHash(byte[] encoded)
+        {
+            int payloadLength = checked(
+                (int)ReadUInt32(encoded, 12));
+            var payload = new byte[payloadLength];
+            Buffer.BlockCopy(
+                encoded,
+                GameSaveCodecLimits.HeaderLength,
+                payload,
+                0,
+                payloadLength);
+
+            byte[] hash;
+            using (SHA256 algorithm = SHA256.Create())
+            {
+                hash = algorithm.ComputeHash(payload);
+            }
+
+            Buffer.BlockCopy(
+                hash,
+                0,
+                encoded,
+                16,
+                GameSaveCodecLimits.HashLength);
+        }
+
         private static ushort ReadUInt16(byte[] bytes, int offset)
         {
             return (ushort)(bytes[offset] | (bytes[offset + 1] << 8));
@@ -481,6 +636,14 @@ namespace AgeOfSurvival.Core.Tests.Persistence
         {
             bytes[offset] = (byte)value;
             bytes[offset + 1] = (byte)(value >> 8);
+        }
+
+        private static void WriteInt32(
+            byte[] bytes,
+            int offset,
+            int value)
+        {
+            WriteUInt32(bytes, offset, unchecked((uint)value));
         }
 
         private static void WriteUInt32(

@@ -53,6 +53,7 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                 world,
                 33,
                 new WorldPosition(4, 5),
+                CreateHealth(33),
                 CreateInventory(),
                 new ChunkStateLifecycle(
                     new DeterministicWorldPopulationGenerator(world)));
@@ -60,6 +61,11 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
 
             Assert.That(loaded.Source, Is.EqualTo(GameSaveLoadSource.Primary));
             Assert.That(loaded.State.FixedTick, Is.EqualTo(33));
+            Assert.That(loaded.State.Health.CurrentHealth, Is.EqualTo(65));
+            Assert.That(loaded.State.Health.CurrentTick, Is.EqualTo(33L));
+            Assert.That(
+                loaded.State.Health.NextRegenerationTick,
+                Is.EqualTo(543L));
             Assert.That(
                 loaded.State.PlayerPosition,
                 Is.EqualTo(new WorldPosition(4, 5)));
@@ -82,6 +88,7 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                 world,
                 10,
                 new WorldPosition(0, 0),
+                CreateHealth(10),
                 CreateInventory(),
                 new ChunkStateLifecycle(
                     new DeterministicWorldPopulationGenerator(world)));
@@ -90,6 +97,7 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                 world,
                 20,
                 new WorldPosition(0, 0),
+                CreateHealth(20),
                 CreateInventory(),
                 new ChunkStateLifecycle(
                     new DeterministicWorldPopulationGenerator(world)));
@@ -117,6 +125,15 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
         {
             return WorldPopulationDefaults.CreateTemperatePrototypeV1(
                 new WorldSeed(0x0123456789ABCDEFUL));
+        }
+
+        private static PlayerHealthState CreateHealth(long tick)
+        {
+            return new PlayerHealthState(
+                100,
+                65,
+                tick,
+                checked(tick + 510L));
         }
 
         private static PlayerInventoryState CreateInventory()

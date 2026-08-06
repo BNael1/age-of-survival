@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
@@ -228,7 +229,15 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
             session.BeginSimulationTick(position);
             session.ApplyDamage(40);
             SaveSlotId slot = new SaveSlotId(1);
-            service.Save(slot, session, 0d);
+            byte[] legacy = ConvertV2ToLegacyV1(
+                GameSaveBinaryCodec.Encode(
+                    session.CaptureGameSaveSnapshot()));
+            var storage =
+                new AtomicGameSaveStorage(_temporaryDirectory);
+            Directory.CreateDirectory(_temporaryDirectory);
+            File.WriteAllBytes(
+                storage.GetPrimaryPath(slot.StorageKey),
+                legacy);
 
             CoordinatedGameLoadResult loaded = service.Load(
                 slot,
@@ -248,6 +257,41 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
                 Assert.That(
                     restored.Health.NextRegenerationTick,
                     Is.Null);
+            }
+            finally
+            {
+                InventoryPrototypeSessionProvider.ResetForNewGame();
+            }
+        }
+
+        [Test]
+        public void PrototypeService_V2RoundTripPreservesHealthSchedule()
+        {
+            var service = new PrototypeSaveService(_temporaryDirectory);
+            var session = new InventoryPrototypeSession();
+            var position = new WorldPosition(-4.5d, 11.25d);
+            session.BeginSimulationTick(position);
+            session.ApplyDamage(40);
+            SaveSlotId slot = new SaveSlotId(1);
+
+            service.Save(slot, session, 0d);
+            CoordinatedGameLoadResult loaded = service.Load(
+                slot,
+                0d,
+                out _);
+
+            try
+            {
+                InventoryPrototypeSession restored =
+                    InventoryPrototypeSessionProvider.Install(loaded.State);
+
+                Assert.That(restored.CurrentTick, Is.EqualTo(1L));
+                Assert.That(restored.Health.MaximumHealth, Is.EqualTo(100));
+                Assert.That(restored.Health.CurrentHealth, Is.EqualTo(60));
+                Assert.That(restored.Health.CurrentTick, Is.EqualTo(1L));
+                Assert.That(
+                    restored.Health.NextRegenerationTick,
+                    Is.EqualTo(511L));
             }
             finally
             {
@@ -517,6 +561,11 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
                     world.Profile.Revision),
                 0L,
                 new WorldPosition(0d, 0d),
+                new PlayerHealthSnapshot(
+                    PlayerHealthRules.DefaultMaximumHealth,
+                    PlayerHealthRules.DefaultMaximumHealth,
+                    0L,
+                    null),
                 inventory.CaptureSnapshot(),
                 Array.Empty<ChunkMutationState>());
             new AtomicGameSaveStorage(_temporaryDirectory).Save(
@@ -589,6 +638,141 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
                     session.MainContainer,
                     InventoryPrototypeCatalog.Branches.Id),
                 Is.EqualTo(carriedBefore));
+        }
+
+        private static byte[] ConvertV2ToLegacyV1(byte[] encoded)
+        {
+            int healthOffset = GetHealthOffset(encoded);
+            int healthLength = GetHealthLength(
+                encoded,
+                healthOffset);
+            int payloadLength = checked(
+                (int)ReadUInt32(encoded, 12));
+            int legacyPayloadLength =
+                payloadLength - healthLength;
+            var legacy = new byte[
+                GameSaveCodecLimits.HeaderLength
+                + legacyPayloadLength];
+
+            Buffer.BlockCopy(
+                encoded,
+                0,
+                legacy,
+                0,
+                healthOffset);
+            Buffer.BlockCopy(
+                encoded,
+                healthOffset + healthLength,
+                legacy,
+                healthOffset,
+                encoded.Length - healthOffset - healthLength);
+
+            WriteUInt16(legacy, 8, 1);
+            WriteUInt32(
+                legacy,
+                12,
+                checked((uint)legacyPayloadLength));
+            RefreshPayloadHash(legacy);
+            return legacy;
+        }
+
+        private static int GetHealthOffset(byte[] encoded)
+        {
+            int payloadStart = GameSaveCodecLimits.HeaderLength;
+            int profileLengthOffset =
+                payloadStart + 8 + 4 + 4 + 4;
+            int profileLength = checked(
+                (int)ReadUInt32(encoded, profileLengthOffset));
+            return checked(
+                profileLengthOffset
+                + 4
+                + profileLength
+                + 4
+                + 8
+                + 8
+                + 8);
+        }
+
+        private static int GetHealthLength(
+            byte[] encoded,
+            int healthOffset)
+        {
+            int optionalTickOffset =
+                healthOffset + 4 + 4 + 8;
+            byte hasNextTick = encoded[optionalTickOffset];
+            if (hasNextTick > 1)
+            {
+                throw new InvalidDataException(
+                    "Invalid V2 health fixture boolean.");
+            }
+
+            return 4 + 4 + 8 + 1
+                + (hasNextTick == 1 ? 8 : 0);
+        }
+
+        private static void RefreshPayloadHash(byte[] encoded)
+        {
+            int payloadLength = checked(
+                (int)ReadUInt32(encoded, 12));
+            var payload = new byte[payloadLength];
+            Buffer.BlockCopy(
+                encoded,
+                GameSaveCodecLimits.HeaderLength,
+                payload,
+                0,
+                payloadLength);
+
+            byte[] hash;
+            using (SHA256 algorithm = SHA256.Create())
+            {
+                hash = algorithm.ComputeHash(payload);
+            }
+
+            Buffer.BlockCopy(
+                hash,
+                0,
+                encoded,
+                16,
+                GameSaveCodecLimits.HashLength);
+        }
+
+        private static ushort ReadUInt16(
+            byte[] bytes,
+            int offset)
+        {
+            return (ushort)(
+                bytes[offset]
+                | (bytes[offset + 1] << 8));
+        }
+
+        private static uint ReadUInt32(
+            byte[] bytes,
+            int offset)
+        {
+            return (uint)bytes[offset]
+                | ((uint)bytes[offset + 1] << 8)
+                | ((uint)bytes[offset + 2] << 16)
+                | ((uint)bytes[offset + 3] << 24);
+        }
+
+        private static void WriteUInt16(
+            byte[] bytes,
+            int offset,
+            ushort value)
+        {
+            bytes[offset] = (byte)value;
+            bytes[offset + 1] = (byte)(value >> 8);
+        }
+
+        private static void WriteUInt32(
+            byte[] bytes,
+            int offset,
+            uint value)
+        {
+            bytes[offset] = (byte)value;
+            bytes[offset + 1] = (byte)(value >> 8);
+            bytes[offset + 2] = (byte)(value >> 16);
+            bytes[offset + 3] = (byte)(value >> 24);
         }
 
         private sealed class RecordingSaveMainMenuActions :

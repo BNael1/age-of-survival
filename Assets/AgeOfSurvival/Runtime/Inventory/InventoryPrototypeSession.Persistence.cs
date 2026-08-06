@@ -51,11 +51,7 @@ namespace AgeOfSurvival.Runtime.Inventory
             Bag = bag;
             Commands = new InventoryPrototypeCommands(Inventory);
             CurrentTick = restored.FixedTick;
-            Health = new PlayerHealthState(
-                PlayerHealthRules.DefaultMaximumHealth,
-                PlayerHealthRules.DefaultMaximumHealth,
-                CurrentTick,
-                null);
+            Health = restored.Health;
             CurrentPlayerPosition = restored.PlayerPosition;
             _persistenceWorld = restored.World;
             _restoredFromSave = true;
@@ -112,6 +108,7 @@ namespace AgeOfSurvival.Runtime.Inventory
                     _persistenceWorld.Profile.Revision),
                 CurrentTick,
                 CurrentPlayerPosition,
+                new PlayerHealthSnapshot(Health),
                 Inventory.CaptureSnapshot(),
                 mutations);
         }

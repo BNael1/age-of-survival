@@ -453,3 +453,20 @@ Décisions actives :
   régénération ;
 - la mort et le respawn Runtime complet restent hors du sous-lot 7H-A1 ;
 - aucune dépendance externe n'est introduite pour ce système.
+
+<!-- LOT7HA2_DECISIONS -->
+## Lot 7H-A2 — sauvegarde santé V2
+
+Décisions actives :
+
+- le format autoritaire courant est `AOSSAVE` version `2` ;
+- le lecteur conserve la compatibilité avec les versions `1` et `2` ;
+- la V2 persiste le maximum, la santé courante, le tick vital et le prochain
+  tick de régénération ;
+- le tick vital doit toujours être égal au tick fixe de la partie ;
+- une V1 est restaurée à `100/100` PV sur son tick sauvegardé, sans calendrier
+  de régénération ;
+- le chargement d'une V1 ne réécrit pas automatiquement le fichier ;
+- toute sauvegarde suivante écrit une V2 ;
+- aucun comportement de dégâts, soin, mort, respawn, HUD ou contrôle n'est
+  modifié par ce sous-lot.

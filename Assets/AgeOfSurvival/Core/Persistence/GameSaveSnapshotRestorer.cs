@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.World.Generation;
 
@@ -32,6 +33,7 @@ namespace AgeOfSurvival.Core.Persistence
             PlayerInventoryState inventory = RestoreInventory(
                 snapshot.Inventory,
                 inventoryResolver);
+            PlayerHealthState health = snapshot.Health.Restore();
 
             var store = new ChunkMutationStore();
             for (int index = 0; index < snapshot.ChunkMutations.Count; index++)
@@ -46,6 +48,7 @@ namespace AgeOfSurvival.Core.Persistence
                 world,
                 snapshot.FixedTick,
                 snapshot.PlayerPosition,
+                health,
                 inventory,
                 chunks);
         }

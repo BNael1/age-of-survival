@@ -527,3 +527,25 @@ Le sous-lot ajoute **25 tests EditMode** :
 Validation batchmode du 6 août 2026 sous Unity `6000.3.19f1` :
 **517/517 EditMode**, zéro échec, zéro ignoré ou inconclusif, code de sortie
 `0`.
+
+<!-- LOT7HA2_TESTING -->
+## Lot 7H-A2 — validation de la sauvegarde santé V2
+
+Le sous-lot ajoute **5 cas EditMode**, pour un total de **522** :
+
+- copie et restauration indépendante d'un snapshot de santé ;
+- rejet d'un tick de santé différent du tick fixe de partie ;
+- lecture d'une sauvegarde V1 comme santé pleine au tick sauvegardé ;
+- rejet d'une santé V2 invalide ;
+- conservation Runtime de la santé et du prochain tick de régénération après
+  sauvegarde et chargement.
+
+La validation batchmode du 6 août 2026 sous Unity `6000.3.19f1` donne
+**522/522 EditMode**, zéro échec, zéro ignoré ou inconclusif, code de sortie
+`0` et aucun diagnostic critique. Une première compilation a révélé un import
+`AgeOfSurvival.Core.Characters` manquant dans
+`GameSaveSnapshotRestorer.cs`; le correctif d'une ligne a été appliqué avant la
+validation complète.
+
+Le lot ne modifie ni scène, ni `MonoBehaviour`, ni rendu, ni contrôle visible.
+Aucun nouveau cas PlayMode ou contrôle graphique n'est requis pour 7H-A2.

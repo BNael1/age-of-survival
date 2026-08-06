@@ -29,6 +29,7 @@ namespace AgeOfSurvival.Core.Persistence
             WorldPopulationSettings world,
             long fixedTick,
             WorldPosition playerPosition,
+            PlayerHealthState health,
             PlayerInventoryState inventory,
             ChunkStateLifecycle chunks)
         {
@@ -49,9 +50,22 @@ namespace AgeOfSurvival.Core.Persistence
                     "The restored tick must be non-negative.");
             }
 
+            if (health == null)
+            {
+                throw new ArgumentNullException(nameof(health));
+            }
+
+            if (health.CurrentTick != fixedTick)
+            {
+                throw new ArgumentException(
+                    "The restored health tick must match the restored fixed tick.",
+                    nameof(health));
+            }
+
             World = world;
             FixedTick = fixedTick;
             PlayerPosition = playerPosition;
+            Health = health;
             Inventory = inventory
                 ?? throw new ArgumentNullException(nameof(inventory));
             Chunks = chunks
@@ -61,6 +75,7 @@ namespace AgeOfSurvival.Core.Persistence
         public WorldPopulationSettings World { get; }
         public long FixedTick { get; }
         public WorldPosition PlayerPosition { get; }
+        public PlayerHealthState Health { get; }
         public PlayerInventoryState Inventory { get; }
         public ChunkStateLifecycle Chunks { get; }
     }

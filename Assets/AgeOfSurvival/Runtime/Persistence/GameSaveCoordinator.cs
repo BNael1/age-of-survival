@@ -62,6 +62,7 @@ namespace AgeOfSurvival.Runtime.Persistence
             WorldPopulationSettings world,
             long fixedTick,
             WorldPosition playerPosition,
+            PlayerHealthState health,
             PlayerInventoryState inventory,
             ChunkStateLifecycle chunks)
         {
@@ -69,6 +70,7 @@ namespace AgeOfSurvival.Runtime.Persistence
                 world,
                 fixedTick,
                 playerPosition,
+                health,
                 inventory,
                 chunks);
             _storage.Save(slot, snapshot);

@@ -514,5 +514,31 @@ Le sous-lot ajoute vingt tests Core et cinq tests Runtime. La suite complète
 passe à **517/517 EditMode**, zéro échec, zéro ignoré ou inconclusif, avec code
 Unity `0`.
 
-Prochaine action : lot 7H-A2, ajout d'un snapshot de santé au format de
-sauvegarde V2 avec lecture rétrocompatible des sauvegardes V1.
+Le lot 7H-A2 est décrit dans la section suivante.
+
+<!-- LOT7HA2_PROJECT_STATE -->
+## Lot 7H-A2 — sauvegarde santé V2
+
+Le lot 7H-A2 est validé techniquement sur
+`feature/lot7ha-health-loop`, à partir du commit intégré
+`385267be49674dacc2159ad8e073c4a9422908ee`.
+
+Le lot ajoute :
+
+- un `PlayerHealthSnapshot` canonique dans le Core ;
+- l'écriture systématique du format `AOSSAVE` V2 ;
+- la lecture rétrocompatible des V1 et V2 ;
+- la migration en mémoire des V1 vers `100/100` PV au tick sauvegardé ;
+- la conservation du maximum, de la santé courante et du calendrier de
+  régénération en V2 ;
+- la restauration de la santé dans la session prototype ;
+- la généralisation des messages de limites partagés par V1 et V2 ;
+- la documentation du format, de l'architecture, des décisions et des tests.
+
+La suite complète passe à **522/522 EditMode**, zéro échec, zéro ignoré ou
+inconclusif, avec code Unity `0`. Le correctif de compilation a consisté
+uniquement à ajouter l'import Core manquant dans le restaurateur.
+
+La clôture Git de 7H-A2 doit conserver ce périmètre validé et ses preuves.
+Le sous-lot de gameplay suivant reste 7H-A3 : respawn Runtime, HUD et source de
+dégâts temporaire intégrée.

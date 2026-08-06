@@ -13,7 +13,8 @@ namespace AgeOfSurvival.Core.Persistence
         NegativeFixedTick = 2,
         EmptyChunkMutation = 3,
         MutationLayoutMismatch = 4,
-        DuplicateChunkCoordinate = 5
+        DuplicateChunkCoordinate = 5,
+        HealthTickMismatch = 6
     }
 
     public sealed class GameSaveSnapshotException : InvalidOperationException
@@ -120,7 +121,87 @@ namespace AgeOfSurvival.Core.Persistence
     }
 
     /// <summary>
-    /// Immutable canonical capture used as the sole input of the future binary
+    /// Immutable canonical player-health capture stored in game saves.
+    /// </summary>
+    public readonly struct PlayerHealthSnapshot :
+        IEquatable<PlayerHealthSnapshot>
+    {
+        public PlayerHealthSnapshot(PlayerHealthState state)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
+            MaximumHealth = state.MaximumHealth;
+            CurrentHealth = state.CurrentHealth;
+            CurrentTick = state.CurrentTick;
+            NextRegenerationTick = state.NextRegenerationTick;
+        }
+
+        public PlayerHealthSnapshot(
+            int maximumHealth,
+            int currentHealth,
+            long currentTick,
+            long? nextRegenerationTick)
+        {
+            var validated = new PlayerHealthState(
+                maximumHealth,
+                currentHealth,
+                currentTick,
+                nextRegenerationTick);
+
+            MaximumHealth = validated.MaximumHealth;
+            CurrentHealth = validated.CurrentHealth;
+            CurrentTick = validated.CurrentTick;
+            NextRegenerationTick =
+                validated.NextRegenerationTick;
+        }
+
+        public int MaximumHealth { get; }
+        public int CurrentHealth { get; }
+        public long CurrentTick { get; }
+        public long? NextRegenerationTick { get; }
+
+        public PlayerHealthState Restore()
+        {
+            return new PlayerHealthState(
+                MaximumHealth,
+                CurrentHealth,
+                CurrentTick,
+                NextRegenerationTick);
+        }
+
+        public bool Equals(PlayerHealthSnapshot other)
+        {
+            return MaximumHealth == other.MaximumHealth
+                && CurrentHealth == other.CurrentHealth
+                && CurrentTick == other.CurrentTick
+                && NextRegenerationTick
+                    == other.NextRegenerationTick;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is PlayerHealthSnapshot other
+                && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = MaximumHealth;
+                hash = (hash * 397) ^ CurrentHealth;
+                hash = (hash * 397) ^ CurrentTick.GetHashCode();
+                return (hash * 397)
+                    ^ NextRegenerationTick.GetHashCode();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Immutable canonical capture used as the sole input of the versioned binary
     /// codec. It contains no Runtime adapter and does not own generated chunks.
     /// </summary>
     public sealed class GameSaveSnapshot
@@ -132,6 +213,7 @@ namespace AgeOfSurvival.Core.Persistence
             WorldIdentitySnapshot world,
             long fixedTick,
             WorldPosition playerPosition,
+            PlayerHealthSnapshot health,
             PlayerInventorySnapshot inventory,
             IEnumerable<ChunkMutationState> chunkMutations)
         {
@@ -152,6 +234,15 @@ namespace AgeOfSurvival.Core.Persistence
                     "The fixed simulation tick must be non-negative.");
             }
 
+            PlayerHealthState validatedHealth = health.Restore();
+            if (validatedHealth.CurrentTick != fixedTick)
+            {
+                throw Violation(
+                    GameSaveSnapshotViolation.HealthTickMismatch,
+                    "The health tick must match the fixed simulation tick.");
+            }
+
+            Health = health;
             Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
             if (chunkMutations == null)
             {
@@ -210,6 +301,7 @@ namespace AgeOfSurvival.Core.Persistence
         public WorldIdentitySnapshot World { get; }
         public long FixedTick { get; }
         public WorldPosition PlayerPosition { get; }
+        public PlayerHealthSnapshot Health { get; }
         public PlayerInventorySnapshot Inventory { get; }
         public IReadOnlyList<ChunkMutationState> ChunkMutations =>
             _readOnlyChunkMutations;
@@ -233,6 +325,7 @@ namespace AgeOfSurvival.Core.Persistence
             WorldPopulationSettings world,
             long fixedTick,
             WorldPosition playerPosition,
+            PlayerHealthState health,
             PlayerInventoryState inventory,
             ChunkStateLifecycle chunks)
         {
@@ -243,6 +336,11 @@ namespace AgeOfSurvival.Core.Persistence
                 throw new ArgumentException(
                     "Valid world population settings are required.",
                     nameof(world));
+            }
+
+            if (health == null)
+            {
+                throw new ArgumentNullException(nameof(health));
             }
 
             if (inventory == null)
@@ -266,6 +364,7 @@ namespace AgeOfSurvival.Core.Persistence
                 identity,
                 fixedTick,
                 playerPosition,
+                new PlayerHealthSnapshot(health),
                 inventorySnapshot,
                 chunks.CaptureCanonicalMutations());
         }

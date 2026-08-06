@@ -10,11 +10,12 @@ namespace AgeOfSurvival.Core.Persistence
 {
     /// <summary>
     /// Deterministic, versioned, in-memory binary codec for canonical saves.
-    /// It performs no disk I/O and rejects non-canonical V1 payloads.
+    /// It performs no disk I/O, writes V2, and reads canonical V1/V2 payloads.
     /// </summary>
     public static class GameSaveBinaryCodec
     {
-        public const ushort CurrentVersion = 1;
+        public const ushort CurrentVersion = 2;
+        private const ushort MinimumSupportedVersion = 1;
         private const ushort CurrentFlags = 0;
 
         private static readonly byte[] Magic =
@@ -32,7 +33,7 @@ namespace AgeOfSurvival.Core.Persistence
             {
                 throw Violation(
                     GameSaveCodecViolation.PayloadTooLarge,
-                    "The save payload exceeds the V1 limit.");
+                    "The save payload exceeds the configured limit.");
             }
 
             byte[] hash = ComputeHash(payload);
@@ -48,7 +49,7 @@ namespace AgeOfSurvival.Core.Persistence
                 if (result.Length != GameSaveCodecLimits.HeaderLength + payload.Length)
                 {
                     throw new InvalidOperationException(
-                        "The V1 envelope length was constructed incorrectly.");
+                        "The save envelope length was constructed incorrectly.");
                 }
 
                 return result;
@@ -68,7 +69,7 @@ namespace AgeOfSurvival.Core.Persistence
             {
                 throw Violation(
                     GameSaveCodecViolation.InputTooSmall,
-                    "The save is smaller than the V1 header.");
+                    "The save is smaller than the required header.");
             }
 
             var envelope = new SaveBufferReader(data);
@@ -84,7 +85,8 @@ namespace AgeOfSurvival.Core.Persistence
             }
 
             ushort version = envelope.ReadUInt16();
-            if (version != CurrentVersion)
+            if (version < MinimumSupportedVersion
+                || version > CurrentVersion)
             {
                 throw Violation(
                     GameSaveCodecViolation.UnsupportedVersion,
@@ -96,7 +98,7 @@ namespace AgeOfSurvival.Core.Persistence
             {
                 throw Violation(
                     GameSaveCodecViolation.UnknownFlags,
-                    "The save uses unknown V1 flags.");
+                    "The save uses unknown flags.");
             }
 
             uint rawPayloadLength = envelope.ReadUInt32();
@@ -104,7 +106,7 @@ namespace AgeOfSurvival.Core.Persistence
             {
                 throw Violation(
                     GameSaveCodecViolation.PayloadTooLarge,
-                    "The declared payload exceeds the V1 limit.");
+                    "The declared payload exceeds the configured limit.");
             }
 
             int payloadLength = checked((int)rawPayloadLength);
@@ -128,7 +130,7 @@ namespace AgeOfSurvival.Core.Persistence
                     "The save payload hash does not match.");
             }
 
-            return DecodePayload(payload);
+            return DecodePayload(version, payload);
         }
 
         private static byte[] EncodePayload(GameSaveSnapshot snapshot)
@@ -153,13 +155,16 @@ namespace AgeOfSurvival.Core.Persistence
                 writer.WriteInt64(snapshot.FixedTick);
                 writer.WriteDouble(snapshot.PlayerPosition.X);
                 writer.WriteDouble(snapshot.PlayerPosition.Y);
+                WriteHealth(writer, snapshot.Health);
                 WriteInventory(writer, snapshot.Inventory);
                 WriteChunks(writer, snapshot.ChunkMutations);
                 return writer.ToArray();
             }
         }
 
-        private static GameSaveSnapshot DecodePayload(byte[] payload)
+        private static GameSaveSnapshot DecodePayload(
+            ushort version,
+            byte[] payload)
         {
             var reader = new SaveBufferReader(payload);
             try
@@ -169,6 +174,13 @@ namespace AgeOfSurvival.Core.Persistence
                 var playerPosition = new WorldPosition(
                     reader.ReadDouble(),
                     reader.ReadDouble());
+                PlayerHealthSnapshot health = version == 1
+                    ? new PlayerHealthSnapshot(
+                        PlayerHealthRules.DefaultMaximumHealth,
+                        PlayerHealthRules.DefaultMaximumHealth,
+                        fixedTick,
+                        null)
+                    : ReadHealth(reader);
                 PlayerInventorySnapshot inventory = ReadInventory(reader);
                 IReadOnlyList<ChunkMutationState> mutations =
                     ReadChunks(reader, world.Generation.ChunkLayout);
@@ -177,6 +189,7 @@ namespace AgeOfSurvival.Core.Persistence
                     world,
                     fixedTick,
                     playerPosition,
+                    health,
                     inventory,
                     mutations);
             }
@@ -215,6 +228,39 @@ namespace AgeOfSurvival.Core.Persistence
                 generation,
                 new WorldPopulationProfileId(reader.ReadRequiredString()),
                 reader.ReadInt32());
+        }
+
+        private static void WriteHealth(
+            SaveBufferWriter writer,
+            PlayerHealthSnapshot health)
+        {
+            writer.WriteInt32(health.MaximumHealth);
+            writer.WriteInt32(health.CurrentHealth);
+            writer.WriteInt64(health.CurrentTick);
+            writer.WriteBoolean(
+                health.NextRegenerationTick.HasValue);
+            if (health.NextRegenerationTick.HasValue)
+            {
+                writer.WriteInt64(
+                    health.NextRegenerationTick.Value);
+            }
+        }
+
+        private static PlayerHealthSnapshot ReadHealth(
+            SaveBufferReader reader)
+        {
+            int maximumHealth = reader.ReadInt32();
+            int currentHealth = reader.ReadInt32();
+            long currentTick = reader.ReadInt64();
+            long? nextRegenerationTick = reader.ReadBoolean()
+                ? reader.ReadInt64()
+                : (long?)null;
+
+            return new PlayerHealthSnapshot(
+                maximumHealth,
+                currentHealth,
+                currentTick,
+                nextRegenerationTick);
         }
 
         private static void WriteInventory(
@@ -679,7 +725,7 @@ namespace AgeOfSurvival.Core.Persistence
             {
                 throw Violation(
                     GameSaveCodecViolation.CountLimitExceeded,
-                    $"{label} exceeds the V1 limit.");
+                    $"{label} exceeds the configured limit.");
             }
         }
 

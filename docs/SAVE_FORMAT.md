@@ -2,7 +2,7 @@
 
 ## Statut
 
-Le format Unity de production n’est pas encore implémenté.
+Le format autoritaire courant est `AOSSAVE` V2. Le codec, le stockage atomique et la lecture rétrocompatible V1/V2 sont implémentés dans le Core.
 
 ## Invariants décidés
 
@@ -15,7 +15,7 @@ Le format Unity de production n’est pas encore implémenté.
 - tests aller-retour et tests de migration ;
 - aucune dépendance envers la sérialisation automatique d’une scène Unity.
 
-Le premier format sera spécifié avant l’écriture du système de sauvegarde.
+Les évolutions futures doivent conserver une migration explicite et testée depuis chaque version encore supportée.
 
 ## Contrat préparé par le lot 7B
 
@@ -161,3 +161,30 @@ corruption ne doit pas rendre `.aos` ou `.bak` illisible; l'interface affiche
 alors que les informations sont indisponibles et tente le chargement normal.
 Aucune migration du codec V1 n'est requise pour modifier ultérieurement ces
 métadonnées d'interface.
+
+<!-- LOT7HA2_SAVE_FORMAT -->
+## Format binaire V2 — santé du joueur
+
+Le codec écrit désormais exclusivement la version `2` de l'enveloppe
+`AOSSAVE\0`. La magie, les flags, la longueur, le SHA-256 et les limites
+restent identiques à la V1. Le payload V2 encode dans l'ordre :
+
+1. l'identité du monde ;
+2. le tick fixe ;
+3. la position du joueur ;
+4. le snapshot de santé ;
+5. l'inventaire ;
+6. les mutations sparse de chunks.
+
+Le snapshot de santé encode `MaximumHealth` et `CurrentHealth` en `i32`,
+`CurrentTick` en `i64`, puis un booléen indiquant la présence de
+`NextRegenerationTick` et, lorsqu'il est présent, ce tick en `i64`. Les
+invariants de `PlayerHealthState` sont réappliqués au décodage. Le tick de
+santé doit être exactement égal au tick fixe de la partie.
+
+Le lecteur accepte les versions `1` et `2`, avec les flags `0` uniquement. Une
+V1 ne contenant aucun champ de santé est migrée en mémoire vers `100/100` PV
+sur son tick sauvegardé, sans régénération planifiée. Le fichier lu n'est ni
+réécrit ni promu implicitement ; la prochaine sauvegarde normale produit une
+V2. Une V2 dont la santé est invalide ou désynchronisée du tick de partie est
+refusée avant installation de la session.
