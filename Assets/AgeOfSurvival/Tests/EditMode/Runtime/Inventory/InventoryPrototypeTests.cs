@@ -152,6 +152,34 @@ namespace AgeOfSurvival.Runtime.Tests.Inventory
         }
 
         [Test]
+        public void UiStartsClosedAndToggleChangesExplicitVisibility()
+        {
+            var root = new VisualElement();
+            var session = new InventoryPrototypeSession();
+
+            var ui = new InventoryPrototypeUiDocument(root, session);
+
+            Assert.That(ui.IsPanelOpen, Is.False);
+            Assert.That(
+                ui.Panel.style.display.value,
+                Is.EqualTo(DisplayStyle.None));
+
+            ui.TogglePanel();
+
+            Assert.That(ui.IsPanelOpen, Is.True);
+            Assert.That(
+                ui.Panel.style.display.value,
+                Is.EqualTo(DisplayStyle.Flex));
+
+            ui.TogglePanel();
+
+            Assert.That(ui.IsPanelOpen, Is.False);
+            Assert.That(
+                ui.Panel.style.display.value,
+                Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
         public void UiButtonAvailabilityIsDerivedFromCommandPolicy()
         {
             var session = new InventoryPrototypeSession();

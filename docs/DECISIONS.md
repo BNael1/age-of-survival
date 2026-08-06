@@ -415,3 +415,22 @@ chargement, tous les adaptateurs de scène utilisent la même session active. La
 reconstruction des ressources conserve une session restaurée et synchronise la
 fenêtre initiale de chunks avant toute sauvegarde. Cet invariant est couvert par
 un round-trip PlayMode complet et par l'isolation automatique des trois slots.
+
+<!-- ADR_7GB_INVENTORY_VISIBILITY -->
+## ADR-0025 — inventaire fermé à l'entrée en jeu
+
+**Statut : active, validée par Naël**
+
+**Date : 6 août 2026**
+
+Le panneau d'inventaire est fermé lors de la construction de l'interface de
+`SampleScene`. Le petit bouton visible existant reste disponible pour ouvrir ou
+fermer le panneau.
+
+La vue conserve un état explicite de visibilité et applique cet état à
+`DisplayStyle`. Elle ne déduit plus l'action suivante depuis `resolvedStyle`,
+qui dépend de la résolution de la hiérarchie UI Toolkit.
+
+Cette décision ne crée aucun raccourci clavier, ne met pas le jeu en pause et
+ne bloque pas le déplacement ou les interactions lorsque l'inventaire est
+ouvert. Ces comportements restent des décisions UX séparées.

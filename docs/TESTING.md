@@ -487,3 +487,23 @@ comme régression automatique lorsqu'il est reproductible.
 Validation manuelle résiduelle : lisibilité, libellés, disposition et absence
 d'erreur Console. L'intégrité des données et l'isolation des slots sont prouvées
 principalement par les suites automatiques.
+
+<!-- LOT7GB_TESTING -->
+## Lot 7G-B — visibilité initiale et hygiène PlayMode
+
+Une régression EditMode construit l'interface d'inventaire, vérifie que son
+panneau est initialement masqué, l'ouvre par la commande de bascule puis le
+referme. L'état logique et la valeur `DisplayStyle` doivent rester cohérents.
+
+Le script `tools/run_playmode_tests.sh` mémorise également l'existence initiale
+de `ProjectSettings/SceneTemplateSettings.json`. Lorsque Unity crée ce fichier
+pendant le test alors qu'il était absent au départ, le script retire uniquement
+ce fichier exact à sa sortie. Un fichier préexistant n'est pas supprimé.
+
+Validation locale du 6 août 2026 :
+
+- `bash -n tools/run_playmode_tests.sh` : réussi ;
+- **492/492 EditMode**, zéro échec et zéro cas ignoré ;
+- **10/10 PlayMode**, zéro échec et zéro cas ignoré ;
+- aucun `ProjectSettings/SceneTemplateSettings.json` laissé dans le dépôt ;
+- aucun changement du Core, du format de sauvegarde ou des règles de gameplay.

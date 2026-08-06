@@ -1,6 +1,6 @@
 # État du projet
 
-Dernière mise à jour : 5 août 2026
+Dernière mise à jour : 6 août 2026
 
 ## Moteur
 
@@ -11,11 +11,18 @@ Dernière mise à jour : 5 août 2026
 
 ## État actuel
 
-La base publique du lot 7F-A1 est synchronisée sur `main` et `origin/main` au
-commit `9d9d7b094b3ccd04d90ab8fb25fb97b3b810550a`, parent
-`4abf29cd899593cac494033b89ed8cd526454dba`. Le présent arbre de
-`feature/lot7fa1-inventory-snapshot` ajoute la frontière de snapshot
-d'inventaire en C# pur, sans changement de gameplay ou de Runtime.
+La base publique est synchronisée sur `main` et `origin/main` au commit
+`b9229c8fe9859ffb47718758d41fb24a38ba985e`, parent
+`6790a30689268bec2dd3bd6ea45ec2d4412e520f`.
+
+Le lot 7G-A raccorde le pipeline de sauvegarde V1 aux menus et au Runtime :
+trois chronologies, continuation de la partie la plus récente, chargement depuis
+le menu principal, confirmation d'écrasement, sauvegarde manuelle, autosave et
+sauvegarde avant sortie normale.
+
+La validation intégrée acquise sous Unity `6000.3.19f1` est de **491/491
+EditMode** et **10/10 PlayMode**, sans échec ni cas ignoré. Le dépôt local,
+`main`, `origin/main` et la branche 7G-A ont été vérifiés sur le même commit.
 
 Lots validés et commités :
 
@@ -45,7 +52,11 @@ Lots validés et commités :
 - `8d8d87e` — `feat: add chunk streaming window planner` ;
 - `9ee8676` — `feat: stream terrain and resources across chunks` ;
 - `4abf29c` — `feat: add bounded chunk mutations and authoritative multiplayer slice` ;
-- `9d9d7b0` — `docs: close lot 7eb project state`.
+- `9d9d7b0` — `docs: close lot 7eb project state` ;
+- `1a4612d` — `fix: enforce inventory snapshot invariants` ;
+- `40a2db9` — `feat: add canonical game save snapshot` ;
+- `6790a30` — `feat: add versioned game save pipeline` ;
+- `b9229c8` — `feat: add save and load UX`.
 
 État validé au commit `26a1a27` :
 
@@ -426,25 +437,59 @@ sauvegarde manuelle, autosave, écrasement, messages et chargement en partie —
 avant tout raccord aux menus existants. Les validations NTFS et Linux restent
 requises avant de revendiquer la durabilité matérielle multiplateforme.
 <!-- LOT7GA_PROJECT_STATE -->
-## Lot 7G-A validé, non commité
+## Lot 7G-A — sauvegarde et chargement visibles, intégré
 
-Le pipeline 7F est raccordé aux menus avec trois chronologies, `Continuer`,
-nouvelle partie avec confirmation d'écrasement, chargement depuis le menu
-principal, métadonnées informatives, autosave à dix minutes, sauvegarde manuelle
-et sauvegarde avant retour ou fermeture normale.
+Le lot 7G-A est intégré et poussé sur `main` au commit
+`b9229c8fe9859ffb47718758d41fb24a38ba985e`, parent
+`6790a30689268bec2dd3bd6ea45ec2d4412e520f`.
 
-Les défauts découverts pendant la validation ont été convertis en régressions :
-métadonnées non autoritaires, résolveurs éditoriaux bornés, reprise après échec,
-restauration de position et d'état récolté, synchronisation de la fenêtre
-initiale de chunks, raccord de tous les adaptateurs à la session active et
-isolation des trois slots. Une durée de sidecar hors plage est également traitée
-comme information indisponible au lieu de bloquer le menu.
+Il fournit trois chronologies persistantes, `Continuer`, la confirmation
+d'écrasement, le chargement depuis le menu principal, les métadonnées
+informatives, l'autosave à dix minutes, la sauvegarde manuelle et la sauvegarde
+avant retour ou fermeture normale.
 
-Validation finale acquise après ce dernier durcissement : **491/491 EditMode**
-et **10/10 PlayMode**, zéro échec et zéro ignoré. La validation visuelle de Naël
-est acquise sur les trois slots, leurs positions distinctes, les récoltes et les
-messages. Le périmètre reste de 26 chemins, sans commit ni push.
+La validation finale est de **491/491 EditMode** et **10/10 PlayMode**. La
+validation visuelle couvre les trois slots, leurs positions distinctes, les
+récoltes restaurées et les messages joueur. Le lot 7G-A est fermé.
 
-La revue de l'archive normalisée finale est acquise. Prochaine action :
-autorisation explicite d'un commit local unique. Le push reste une décision
-séparée.
+<!-- LOT7GB_PROJECT_STATE -->
+## Lot 7G-B — clôture, inventaire initial et hygiène PlayMode
+
+Le mini lot corrige l'état documentaire devenu obsolète après l'intégration de
+7G-A. Il ferme également le panneau d'inventaire lors de l'entrée dans
+`SampleScene`. Le bouton visible existant permet toujours de l'ouvrir et de le
+refermer ; aucun raccourci clavier supplémentaire n'est ajouté.
+
+L'état ouvert ou fermé est désormais explicite dans la vue et ne dépend plus de
+`resolvedStyle`. Une régression EditMode vérifie l'état initial fermé,
+l'ouverture puis la fermeture.
+
+Le script PlayMode mémorise si
+`ProjectSettings/SceneTemplateSettings.json` existait avant le test. Il ne
+retire ce fichier que s'il était absent au départ et a été généré pendant
+l'exécution. Un fichier préexistant reste intact et le chemin n'est pas masqué
+globalement dans `.gitignore`.
+
+Validation acquise : **492/492 EditMode**, **10/10 PlayMode**, syntaxe Bash
+valide, aucun résidu `SceneTemplateSettings.json` et validation visuelle sans
+erreur Console. Le lot est porté par la branche
+`chore/lot7gb-close-save-load`, séparée de `main`.
+
+### Priorité gameplay confirmée
+
+Naël fixe l'ordre de travail visible suivant :
+
+1. points de vie ;
+2. nourriture ;
+3. ressources ;
+4. craft ;
+5. construction.
+
+La construction n'est donc pas le prochain système de gameplay. Chaque
+périmètre devra être cadré séparément avant son implémentation.
+
+### Prochaine action
+
+Réviser le commit publié de `chore/lot7gb-close-save-load`, puis décider
+séparément de son intégration dans `main`. Après cette intégration, cadrer le
+premier petit lot consacré aux points de vie.

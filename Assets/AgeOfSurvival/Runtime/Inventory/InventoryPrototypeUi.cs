@@ -32,6 +32,7 @@ namespace AgeOfSurvival.Runtime.Inventory
         private readonly Button _transferButton;
         private readonly Button[] _equipButtons = new Button[3];
         private readonly Button[] _unequipButtons = new Button[3];
+        private bool _isPanelOpen;
         private InventorySelection _selection;
 
         public InventoryPrototypeUiDocument(VisualElement root, InventoryPrototypeSession session)
@@ -51,6 +52,7 @@ namespace AgeOfSurvival.Runtime.Inventory
             _panel = new VisualElement { name = "inventory-panel" };
             ConfigurePanel(_panel);
             _root.Add(_panel);
+            SetPanelOpen(false);
 
             var title = new Label("INVENTORY — PROTOTYPE LIST VIEW");
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
@@ -152,6 +154,7 @@ namespace AgeOfSurvival.Runtime.Inventory
         public IReadOnlyList<Button> EquipButtons => _equipButtons;
         public IReadOnlyList<Button> UnequipButtons => _unequipButtons;
         public VisualElement Panel => _panel;
+        public bool IsPanelOpen => _isPanelOpen;
 
         public void SelectForTests(InventorySelection selection)
         {
@@ -213,9 +216,15 @@ namespace AgeOfSurvival.Runtime.Inventory
             Refresh();
         }
 
-        private void TogglePanel()
+        public void TogglePanel()
         {
-            _panel.style.display = _panel.resolvedStyle.display == DisplayStyle.None
+            SetPanelOpen(!_isPanelOpen);
+        }
+
+        private void SetPanelOpen(bool isOpen)
+        {
+            _isPanelOpen = isOpen;
+            _panel.style.display = isOpen
                 ? DisplayStyle.Flex
                 : DisplayStyle.None;
         }

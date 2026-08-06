@@ -8,6 +8,22 @@ RESULTS_DIR="$PROJECT_ROOT/TestResults"
 RESULTS_FILE="$RESULTS_DIR/playmode-results.xml"
 LOG_FILE="$RESULTS_DIR/playmode.log"
 
+SCENE_TEMPLATE_SETTINGS="$PROJECT_ROOT/ProjectSettings/SceneTemplateSettings.json"
+SCENE_TEMPLATE_SETTINGS_EXISTED=false
+
+if [[ -e "$SCENE_TEMPLATE_SETTINGS" ]]; then
+  SCENE_TEMPLATE_SETTINGS_EXISTED=true
+fi
+
+cleanup_generated_scene_template_settings() {
+  if [[ "$SCENE_TEMPLATE_SETTINGS_EXISTED" == false \
+        && -e "$SCENE_TEMPLATE_SETTINGS" ]]; then
+    rm -f -- "$SCENE_TEMPLATE_SETTINGS"
+  fi
+}
+
+trap cleanup_generated_scene_template_settings EXIT
+
 if [[ ! -x "$UNITY_EDITOR" ]]; then
   printf 'Unity Editor introuvable ou non exécutable : %s\n' "$UNITY_EDITOR" >&2
   exit 2
