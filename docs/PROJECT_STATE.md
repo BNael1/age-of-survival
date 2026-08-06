@@ -11,18 +11,16 @@ Dernière mise à jour : 6 août 2026
 
 ## État actuel
 
-La base publique est synchronisée sur `main` et `origin/main` au commit
-`b9229c8fe9859ffb47718758d41fb24a38ba985e`, parent
-`6790a30689268bec2dd3bd6ea45ec2d4412e520f`.
+La base publique intègre les lots 7G-A et 7G-B. Le commit fonctionnel
+`5fbf3b16b71346f251039d9320582db6001fa259`, descendant direct de
+`b9229c8fe9859ffb47718758d41fb24a38ba985e`, ferme l'inventaire à l'entrée
+dans `SampleScene`, ajoute sa régression EditMode et sécurise le nettoyage
+PlayMode. Le présent commit documentaire clôt l'intégration.
 
-Le lot 7G-A raccorde le pipeline de sauvegarde V1 aux menus et au Runtime :
-trois chronologies, continuation de la partie la plus récente, chargement depuis
-le menu principal, confirmation d'écrasement, sauvegarde manuelle, autosave et
-sauvegarde avant sortie normale.
-
-La validation intégrée acquise sous Unity `6000.3.19f1` est de **491/491
-EditMode** et **10/10 PlayMode**, sans échec ni cas ignoré. Le dépôt local,
-`main`, `origin/main` et la branche 7G-A ont été vérifiés sur le même commit.
+La validation acquise sous Unity `6000.3.19f1` est de **492/492 EditMode** et
+**10/10 PlayMode**, sans échec ni cas ignoré. La validation visuelle confirme
+l'inventaire fermé au démarrage, son ouverture, sa fermeture, sa réouverture et
+une Console sans erreur.
 
 Lots validés et commités :
 
@@ -56,7 +54,8 @@ Lots validés et commités :
 - `1a4612d` — `fix: enforce inventory snapshot invariants` ;
 - `40a2db9` — `feat: add canonical game save snapshot` ;
 - `6790a30` — `feat: add versioned game save pipeline` ;
-- `b9229c8` — `feat: add save and load UX`.
+- `b9229c8` — `feat: add save and load UX` ;
+- `5fbf3b1` — `fix: close inventory by default and finalize lot 7g`.
 
 État validé au commit `26a1a27` :
 
@@ -472,8 +471,8 @@ globalement dans `.gitignore`.
 
 Validation acquise : **492/492 EditMode**, **10/10 PlayMode**, syntaxe Bash
 valide, aucun résidu `SceneTemplateSettings.json` et validation visuelle sans
-erreur Console. Le lot est porté par la branche
-`chore/lot7gb-close-save-load`, séparée de `main`.
+erreur Console. Le lot 7G-B est intégré dans `main` par avance rapide pure,
+sans merge commit.
 
 ### Priorité gameplay confirmée
 
@@ -490,6 +489,5 @@ périmètre devra être cadré séparément avant son implémentation.
 
 ### Prochaine action
 
-Réviser le commit publié de `chore/lot7gb-close-save-load`, puis décider
-séparément de son intégration dans `main`. Après cette intégration, cadrer le
-premier petit lot consacré aux points de vie.
+Cadrer le premier petit lot consacré aux points de vie, avant la nourriture,
+les ressources, le craft et la construction.
