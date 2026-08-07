@@ -57,6 +57,7 @@ namespace AgeOfSurvival.Runtime.Frontend
                 GameplayInputGate.SetBlocked(false);
                 EnsureHost<PrototypeSaveRuntimeBehaviour>(scene);
                 EnsureHost<PauseMenuBehaviour>(scene);
+                EnsureHost<PlayerHealthHudBehaviour>(scene);
             }
         }
 

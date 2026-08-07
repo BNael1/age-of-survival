@@ -470,3 +470,27 @@ Décisions actives :
 - toute sauvegarde suivante écrit une V2 ;
 - aucun comportement de dégâts, soin, mort, respawn, HUD ou contrôle n'est
   modifié par ce sous-lot.
+
+<!-- LOT7HA3_DECISIONS -->
+## Lot 7H-A3 — boucle jouable de santé
+
+Décisions actives conservées :
+
+- la mort déclenche un respawn, pas un écran de fin ;
+- le respawn se fait au point d'apparition généré avec tous les PV ;
+- l'inventaire et l'équipement sont conservés ;
+- le HUD affiche une barre et la valeur courante sur le maximum ;
+- aucun nouveau raccourci clavier n'est ajouté ;
+- santé, position logique et position sauvegardable changent atomiquement lors
+  du respawn.
+
+Paramètres strictement provisoires de la source de test :
+
+- anneau rouge placé à trois unités du spawn sur l'axe X ;
+- rayon logique `0,75` ;
+- `25` points de dégâts à l'entrée, puis toutes les `60` ticks tant que le
+  joueur reste dans la zone ;
+- sortie de zone : calendrier de dégâts réinitialisé.
+
+Ces quatre valeurs servent uniquement à rendre la boucle testable. Elles ne
+valident aucun équilibrage futur de combat, pièges, environnement ou blessures.

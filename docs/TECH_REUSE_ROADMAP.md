@@ -94,3 +94,24 @@ Sources officielles consultées :
 - https://docs.unity3d.com/6000.0/Documentation/Manual/2d-renderer-sorting.html.
 
 Aucun code d'exemple n'est repris et aucune dépendance n'est ajoutée.
+
+<!-- LOT7HA3_REUSE -->
+## Lot 7H-A3 — réutilisation technique
+
+Recherche retenue : réutiliser UI Toolkit déjà fourni par Unity et déjà présent
+dans le projet. `UIDocument`, `PanelSettings`, `ProgressBar` et le thème
+prototype existant couvrent le HUD sans package, asset ou licence externe.
+
+Décision :
+
+- pas de framework de statistiques ou de survie ;
+- pas de package de barre de vie ;
+- pas de dépendance Asset Store ;
+- pas de modification de `THIRD_PARTY.md`, car aucune dépendance tierce n'est
+  ajoutée ;
+- conserver le HUD programmatique cohérent avec le prototype d'inventaire ;
+- conserver la logique de dégâts et de respawn sous contrôle direct du projet.
+
+Stratégie de sortie : le HUD provisoire peut être remplacé par une présentation
+artistique sans modifier `PlayerHealthState`, la sauvegarde V2 ou
+`PlayerHealthRuntimeStep`.

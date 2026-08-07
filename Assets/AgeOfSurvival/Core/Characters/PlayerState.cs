@@ -19,5 +19,10 @@ namespace AgeOfSurvival.Core.Characters
         {
             Position = Position.Translate(deltaX, deltaY);
         }
+
+        internal void SetPosition(WorldPosition position)
+        {
+            Position = position;
+        }
     }
 }

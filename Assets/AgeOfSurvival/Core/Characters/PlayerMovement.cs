@@ -87,6 +87,18 @@ namespace AgeOfSurvival.Core.Characters
             player.Translate(inputX * distance, inputY * distance);
         }
 
+        public static void Reposition(
+            PlayerState player,
+            WorldPosition position)
+        {
+            if (player == null)
+            {
+                throw new ArgumentNullException(nameof(player));
+            }
+
+            player.SetPosition(position);
+        }
+
         private static void ValidateFinite(double value, string parameterName)
         {
             if (double.IsNaN(value) || double.IsInfinity(value))

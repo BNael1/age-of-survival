@@ -136,6 +136,18 @@ namespace AgeOfSurvival.Runtime.Inventory
                 CurrentTick);
         }
 
+        public PlayerHealthChangeResult RespawnAt(
+            WorldPosition playerPosition)
+        {
+            PlayerHealthChangeResult result = RespawnHealth();
+            if (result.Respawned)
+            {
+                CurrentPlayerPosition = playerPosition;
+            }
+
+            return result;
+        }
+
         public long BeginSimulationTick(WorldPosition playerPosition)
         {
             CurrentPlayerPosition = playerPosition;

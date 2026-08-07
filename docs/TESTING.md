@@ -549,3 +549,63 @@ validation complète.
 
 Le lot ne modifie ni scène, ni `MonoBehaviour`, ni rendu, ni contrôle visible.
 Aucun nouveau cas PlayMode ou contrôle graphique n'est requis pour 7H-A2.
+
+<!-- LOT7HA3_TESTING -->
+## Lot 7H-A3 — plan de validation
+
+Le sous-lot ajoute quinze cas EditMode :
+
+- repositionnement explicite et garde `null` du joueur ;
+- respawn de session atomique et absence de respawn d'un joueur vivant ;
+- validation de la configuration de la zone ;
+- impact immédiat, cadence fixe, sortie et réentrée ;
+- frontière inclusive de la zone et absence de dégâts juste à l'extérieur ;
+- exécution Runtime hors zone sans mutation de santé ni calendrier ;
+- rejet d'une position Runtime désynchronisée ;
+- dégâts sur le tick canonique ;
+- mort, respawn, repositionnement et inventaire conservé ;
+- affichage initial et rafraîchissement du HUD.
+
+Six cas PlayMode couvrent le chemin réel :
+
+1. bootstrap de gameplay vers HUD et zone visible ;
+2. entrée dans la zone vers santé canonique puis HUD ;
+3. mort directe vers tick fixe, respawn généré et inventaire conservé ;
+4. contrat de présentation du HUD à `1280 × 720` et configuration visuelle
+   distincte de la zone rouge et du ciblage de ressource ;
+5. séquence complète `100 → 75 → 50 → 25 → respawn`, HUD, caméra,
+   inventaire, propriétaires d'objets uniques et équipement inchangés ;
+6. pause réelle par `GameplayInputGate` : tick, santé et calendrier de dégâts
+   figés, puis reprise déterministe après fermeture de la pause.
+
+Validation finale après extension : **537/537 EditMode** et
+**16/16 PlayMode**, zéro échec, zéro ignoré ou inconclusif, code Unity `0`.
+
+Les erreurs, assertions et exceptions Unity inattendues font échouer les tests
+PlayMode ; les journaux batch restent contrôlés en complément.
+
+La validation visuelle humaine reste limitée à ce qu'un test structurel ne peut
+pas garantir durablement : lisibilité perceptive, contraste réel, absence de
+chevauchement gênant aux tailles voisines et qualité du mouvement apparent.
+Naël a validé ces points manuellement le 6 août 2026.
+
+Règle de méthode : toute observation visuelle qui correspond à un comportement
+stable et interrogeable doit recevoir une régression automatisée avant commit.
+La revue humaine complète cette couverture ; elle ne la remplace pas.
+<!-- LOT7HA3_PLAYMODE_RETRY -->
+## Lot 7H-A3 — relance PlayMode bornée
+
+Le runner PlayMode reconnaît uniquement la signature native Unity
+`Requested file descriptor exceeds maximum number of files allowed to be open
+at a time.` associée à une sortie `134`. Dans ce cas précis, il conserve le
+premier journal, retire seulement un `Temp/UnityLockfile` non détenu et effectue
+une unique seconde tentative.
+
+Toute autre sortie non nulle échoue immédiatement. Une seconde occurrence de la
+même signature échoue également. Le XML NUnit n'est lu qu'après une sortie Unity
+réussie et après vérification de son existence.
+
+Le mécanisme de relance a également été validé avec un faux exécutable Unity :
+première exécution avec la signature native et le code `134`, seconde exécution
+réussie. L'autotest confirme qu'une seule relance est effectuée et que le premier
+journal est conservé.

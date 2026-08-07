@@ -587,3 +587,27 @@ Le codec écrit la V2 et lit V1/V2. La migration V1 est purement en mémoire :
 elle crée une santé pleine au tick sauvegardé et ne modifie aucun fichier sur
 disque. Le stockage atomique, le backup et la politique d'installation de
 session restent inchangés.
+
+<!-- LOT7HA3_ARCHITECTURE -->
+## Boucle Runtime de santé et respawn
+
+Le sous-lot 7H-A3 conserve `InventoryPrototypeSession` comme propriétaire
+canonique de la santé, de l'inventaire, du tick et de la position sauvegardable.
+`PlayerHealthRuntimeStep` compose uniquement les adaptateurs nécessaires après
+le tick fixe : évaluation d'une source de dégâts déterministe, application des
+dégâts sur la session, détection de la mort, restauration des PV et
+repositionnement logique.
+
+Le repositionnement utilise une opération explicite du Core sur `PlayerState`.
+`InventoryPrototypeSession.RespawnAt` met à jour la santé et la position
+sauvegardable dans la même opération. Le rendu du joueur continue de ne faire
+que refléter `PlayerState`, ce qui évite un téléport visuel divergent de la
+simulation ou d'une sauvegarde prise dans la même frame.
+
+Le HUD est un observateur UI Toolkit programmatique. Il lit la session courante,
+affiche une barre et la valeur numérique et ne possède aucune copie mutable des
+PV. `FrontendRuntimeBootstrap` l'installe uniquement dans la scène de gameplay.
+
+La zone rouge de démonstration reste un adaptateur provisoire. Sa logique de
+cadence est déterministe et testable sans scène, mais ses valeurs ne constituent
+pas un système de combat, de blessures ou de danger définitif.

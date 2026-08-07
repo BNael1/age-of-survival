@@ -19,6 +19,8 @@ namespace AgeOfSurvival.Runtime.Player
     public sealed class DebugPlayerController : MonoBehaviour
     {
         private const string VisualName = "Debug Player Marker";
+        private const string DamageZoneVisualName =
+            "Prototype Damage Zone";
         private const int MarkerSizePixels = 24;
         private const float PixelsPerUnit = 64f;
         public const float PlayerVisualScale = 1.2f;
@@ -41,6 +43,10 @@ namespace AgeOfSurvival.Runtime.Player
         private Sprite _visualSprite;
         private bool _usesPrototypeVisual;
         private GroundAnchorSortCoordinator _sortCoordinator;
+        private WorldPosition _respawnPosition;
+        private PrototypeDamageZoneState _damageZone;
+        private GameObject _damageZoneVisual;
+        private Sprite _damageZoneSprite;
 
         private Keyboard _keyboard;
         private KeyControl _upKey;
@@ -53,6 +59,9 @@ namespace AgeOfSurvival.Runtime.Player
         public SpriteRenderer VisualRenderer { get; private set; }
         public double CurrentLoadRatio { get; private set; }
         public double CurrentMovementMultiplier { get; private set; } = 1.0;
+        public WorldPosition RespawnPosition => _respawnPosition;
+        public PrototypeDamageZoneState DamageZone => _damageZone;
+        public GameObject DamageZoneVisual => _damageZoneVisual;
 
         private void OnEnable()
         {
@@ -87,19 +96,25 @@ namespace AgeOfSurvival.Runtime.Player
             }
 
             InventoryPrototypeSession prototypeSession =
-                InventoryPrototypeSessionProvider.Current;
+                ResolvePrototypeSession();
+            WorldPosition fallbackSpawn =
+                new WorldPosition(startPosition.x, startPosition.y);
+            _respawnPosition = worldRenderer.TryGetGeneratedSpawnPosition(
+                out WorldPosition generatedSpawn)
+                ? generatedSpawn
+                : fallbackSpawn;
             WorldPosition initialPosition = prototypeSession.RestoredFromSave
                 ? prototypeSession.CurrentPlayerPosition
-                : worldRenderer.TryGetGeneratedSpawnPosition(
-                    out WorldPosition generatedSpawn)
-                    ? generatedSpawn
-                    : new WorldPosition(startPosition.x, startPosition.y);
+                : _respawnPosition;
             _player = new PlayerState(initialPosition);
+            _damageZone =
+                PrototypeDamageZoneRules.Create(_respawnPosition);
             _clock = new FixedTickClock(ticksPerSecond, maxTicksPerFrame);
             worldRenderer.SynchronizeStreaming(_player.Position);
             SynchronizeMovementState();
 
             CreateVisual();
+            CreateDamageZoneVisual();
             _sortCoordinator = resourceInteraction != null
                 ? resourceInteraction.SortCoordinator
                 : FindFirstObjectByType<GroundAnchorSortCoordinator>();
@@ -120,7 +135,10 @@ namespace AgeOfSurvival.Runtime.Player
             cameraFollow?.Track(_visual);
             if (!GameplayInputGate.IsBlocked)
             {
-                resourceInteraction?.SimulateTick(_player.Position);
+                AdvanceSessionTick(
+                    prototypeSession,
+                    false);
+                ResolveHealthStep(prototypeSession);
             }
         }
 
@@ -156,9 +174,10 @@ namespace AgeOfSurvival.Runtime.Player
                 CurrentLoadRatio = movementState.LoadRatio;
                 CurrentMovementMultiplier = movementState.SpeedMultiplier;
                 worldRenderer.SynchronizeStreaming(_player.Position);
-                resourceInteraction?.SimulateTick(
-                    _player.Position,
+                AdvanceSessionTick(
+                    session,
                     worldDirection.sqrMagnitude > 0.0001f);
+                ResolveHealthStep(session);
             });
 
             SynchronizeMovementState();
@@ -189,6 +208,41 @@ namespace AgeOfSurvival.Runtime.Player
 
         private InventoryPrototypeSession ResolvePrototypeSession() =>
             resourceInteraction?.PrototypeSession ?? InventoryPrototypeSessionProvider.Current;
+
+        private void AdvanceSessionTick(
+            InventoryPrototypeSession session,
+            bool playerMoved)
+        {
+            if (resourceInteraction != null)
+            {
+                resourceInteraction.SimulateTick(
+                    _player.Position,
+                    playerMoved);
+                return;
+            }
+
+            session.BeginSimulationTick(_player.Position);
+        }
+
+        private void ResolveHealthStep(
+            InventoryPrototypeSession session)
+        {
+            if (_damageZone == null)
+            {
+                return;
+            }
+
+            PlayerHealthRuntimeResult result =
+                PlayerHealthRuntimeStep.Step(
+                    _player,
+                    session,
+                    _respawnPosition,
+                    _damageZone);
+            if (result.Respawned)
+            {
+                worldRenderer.SynchronizeStreaming(_player.Position);
+            }
+        }
 
         private void SynchronizeMovementState()
         {
@@ -300,6 +354,43 @@ namespace AgeOfSurvival.Runtime.Player
             VisualRenderer.spriteSortPoint = SpriteSortPoint.Pivot;
         }
 
+        private void CreateDamageZoneVisual()
+        {
+            _damageZoneSprite = PrototypeVisualAssets.CreateSprite(
+                PrototypeVisualAssets.TargetRing,
+                new Vector2(0.5f, 0.5f),
+                PrototypeVisualAssets.PixelsPerUnit,
+                "Prototype Damage Zone Ring");
+            if (_damageZoneSprite == null)
+            {
+                Debug.LogError(
+                    "The prototype damage-zone sprite could not be created.",
+                    this);
+                return;
+            }
+
+            _damageZoneVisual = new GameObject(DamageZoneVisualName);
+            _damageZoneVisual.transform.SetParent(transform, false);
+            var renderer =
+                _damageZoneVisual.AddComponent<SpriteRenderer>();
+            renderer.sprite = _damageZoneSprite;
+            renderer.color = new Color32(220, 48, 44, 220);
+            renderer.sortingOrder = 70;
+
+            float spriteWidth = Mathf.Max(
+                0.001f,
+                _damageZoneSprite.bounds.size.x);
+            float diameter = (float)(_damageZone.Radius * 2.0);
+            float scale = diameter / spriteWidth;
+            _damageZoneVisual.transform.localScale =
+                new Vector3(scale, scale, 1f);
+            _damageZoneVisual.transform.position =
+                worldRenderer.LogicalToWorldPosition(
+                    _damageZone.Center,
+                    0.01f,
+                    -0.03f);
+        }
+
         private void SynchronizeVisual()
         {
             if (_visual == null || _player == null || worldRenderer == null)
@@ -388,6 +479,17 @@ namespace AgeOfSurvival.Runtime.Player
                 DestroyUnityObject(_visualSprite);
                 DestroyUnityObject(_generatedTexture);
             }
+
+            if (_damageZoneVisual != null)
+            {
+                DestroyUnityObject(_damageZoneVisual);
+                _damageZoneVisual = null;
+            }
+
+            PrototypeVisualAssets.DestroyRuntimeSprite(
+                _damageZoneSprite);
+            _damageZoneSprite = null;
+            _damageZone = null;
 
             _visualSprite = null;
             _generatedTexture = null;

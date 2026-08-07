@@ -82,6 +82,26 @@ namespace AgeOfSurvival.Core.Tests
         }
 
         [Test]
+        public void RepositionChangesPositionWithoutMovementIntegration()
+        {
+            var player = CreatePlayer();
+            var destination = new WorldPosition(-18.25, 91.5);
+
+            PlayerMovement.Reposition(player, destination);
+
+            Assert.That(player.Position, Is.EqualTo(destination));
+        }
+
+        [Test]
+        public void RepositionRejectsMissingPlayer()
+        {
+            Assert.Throws<ArgumentNullException>(
+                () => PlayerMovement.Reposition(
+                    null,
+                    new WorldPosition(1.0, 2.0)));
+        }
+
+        [Test]
         public void InvalidValuesAreRejected()
         {
             var player = CreatePlayer();

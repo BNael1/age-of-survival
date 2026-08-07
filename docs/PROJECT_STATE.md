@@ -542,3 +542,51 @@ uniquement à ajouter l'import Core manquant dans le restaurateur.
 La clôture Git de 7H-A2 doit conserver ce périmètre validé et ses preuves.
 Le sous-lot de gameplay suivant reste 7H-A3 : respawn Runtime, HUD et source de
 dégâts temporaire intégrée.
+
+<!-- LOT7HA3_PROJECT_STATE -->
+## Lot 7H-A3 — respawn Runtime, HUD et dégâts temporaires
+
+Le lot 7H-A3 est techniquement validé sur la base intégrée
+`9981c6552909be82b1813111f7e671e857b3b022` et est prêt pour sa clôture Git.
+
+Périmètre actuel :
+
+- repositionnement explicite du joueur dans le Core ;
+- respawn atomique de la santé et de la position sauvegardable ;
+- composition Runtime déterministe de la zone temporaire et du respawn ;
+- anneau rouge de dégâts près du spawn, sans raccourci ;
+- HUD UI Toolkit avec barre et valeur numérique ;
+- quinze tests EditMode et six tests PlayMode propres au lot ;
+- documentation de l'architecture, des décisions, des tests et de la
+  réutilisation technique.
+
+La première exécution a révélé une divergence entre la session locale de
+`DebugResourceInteraction` et la session globale. `DebugPlayerController.Start`
+utilise désormais `ResolvePrototypeSession()`. La validation obtenue avant
+l'extension était **535/535 EditMode** et **13/13 PlayMode**.
+
+L'extension de régression demandée après la validation visuelle porte les cibles
+à **537/537 EditMode** et **16/16 PlayMode**. Elle automatise les limites de la
+zone, la séquence complète de dégâts, le HUD, le respawn, la caméra, l'inventaire
+équipé et la pause.
+
+Validation finale pré-clôture :
+
+- **537/537 EditMode**, zéro échec, zéro ignoré ou inconclusif ;
+- **16/16 PlayMode**, zéro échec, zéro ignoré ou inconclusif ;
+- validation visuelle de Naël : PASS pour le HUD, la zone rouge, les dégâts,
+  le respawn et la caméra, la conservation de l'inventaire, la pause et la
+  Console ;
+- autotest du mécanisme de relance PlayMode : PASS ;
+- `git diff --check` : PASS ;
+- périmètre de revue : **21 chemins** ;
+- index Git vide au moment de la validation pré-clôture.
+<!-- LOT7HA3_PLAYMODE_RETRY_STATE -->
+### Incident PlayMode natif et durcissement du runner
+
+Lors de la validation 7H-A3, Unity 6000.3.19f1 a subi une fois un `SIGABRT`
+pendant `BootstrapCompilation`, avant le démarrage des tests. Une relance propre
+a ensuite validé **16/16 PlayMode**.
+
+Le runner autorise une seule relance pour la combinaison exacte code `134` et
+signature connue. Toute autre erreur ou répétition reste un échec explicite.

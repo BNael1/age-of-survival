@@ -81,6 +81,41 @@ namespace AgeOfSurvival.Runtime.Tests.Inventory
         }
 
         [Test]
+        public void RespawnAtRestoresHealthAndCanonicalPosition()
+        {
+            var session = new InventoryPrototypeSession();
+            var respawnPosition = new WorldPosition(-3.5, 17.25);
+            session.ApplyDamage(100);
+
+            PlayerHealthChangeResult result =
+                session.RespawnAt(respawnPosition);
+
+            Assert.That(result.Respawned, Is.True);
+            Assert.That(
+                session.Health.CurrentHealth,
+                Is.EqualTo(PlayerHealthRules.DefaultMaximumHealth));
+            Assert.That(
+                session.CurrentPlayerPosition,
+                Is.EqualTo(respawnPosition));
+        }
+
+        [Test]
+        public void RespawnAtDoesNotMoveLivingPlayer()
+        {
+            var session = new InventoryPrototypeSession();
+            session.BeginSimulationTick(PlayerPosition);
+            var requestedPosition = new WorldPosition(99.0, -12.0);
+
+            PlayerHealthChangeResult result =
+                session.RespawnAt(requestedPosition);
+
+            Assert.That(result.Respawned, Is.False);
+            Assert.That(
+                session.CurrentPlayerPosition,
+                Is.EqualTo(PlayerPosition));
+        }
+
+        [Test]
         public void SessionHealingCannotReviveButRespawnHealthCan()
         {
             var session = new InventoryPrototypeSession();
