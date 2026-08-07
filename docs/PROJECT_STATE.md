@@ -1,6 +1,6 @@
 # État du projet
 
-Dernière mise à jour : 6 août 2026
+Dernière mise à jour : 7 août 2026
 
 ## Moteur
 
@@ -11,16 +11,18 @@ Dernière mise à jour : 6 août 2026
 
 ## État actuel
 
-La base publique intègre les lots 7G-A et 7G-B. Le commit fonctionnel
-`5fbf3b16b71346f251039d9320582db6001fa259`, descendant direct de
-`b9229c8fe9859ffb47718758d41fb24a38ba985e`, ferme l'inventaire à l'entrée
-dans `SampleScene`, ajoute sa régression EditMode et sécurise le nettoyage
-PlayMode. Le présent commit documentaire clôt l'intégration.
+La base publique et la branche locale `main` sont synchronisées au commit
+`5cd7ca294c4d0885d1c22b8d14a8d507ae0d6609`
+(`feat: complete player health runtime loop`). Le lot 7H-A3 est fermé et
+intégré par fast-forward après 7H-A1 et 7H-A2.
 
-La validation acquise sous Unity `6000.3.19f1` est de **492/492 EditMode** et
-**10/10 PlayMode**, sans échec ni cas ignoré. La validation visuelle confirme
-l'inventaire fermé au démarrage, son ouverture, sa fermeture, sa réouverture et
-une Console sans erreur.
+La validation la plus récente sous Unity `6000.3.19f1` est de
+**537/537 EditMode** et **16/16 PlayMode**, zéro échec, zéro ignoré ou
+inconclusif. La validation visuelle couvre le HUD de santé, la zone temporaire
+de dégâts, la séquence de dégâts et de respawn, la caméra, la conservation de
+l'inventaire, la pause et une Console sans erreur. Le runner PlayMode possède
+également une relance unique et ciblée pour l'incident natif connu validée par
+autotest.
 
 Lots validés et commités :
 
@@ -55,7 +57,11 @@ Lots validés et commités :
 - `40a2db9` — `feat: add canonical game save snapshot` ;
 - `6790a30` — `feat: add versioned game save pipeline` ;
 - `b9229c8` — `feat: add save and load UX` ;
-- `5fbf3b1` — `fix: close inventory by default and finalize lot 7g`.
+- `5fbf3b1` — `fix: close inventory by default and finalize lot 7g` ;
+- `260a4e0` — `docs: close lot 7gb integration` ;
+- `385267b` — `feat: add deterministic player health foundation` ;
+- `9981c65` — `feat: persist player health in save format v2` ;
+- `5cd7ca2` — `feat: complete player health runtime loop`.
 
 État validé au commit `26a1a27` :
 
@@ -539,17 +545,18 @@ La suite complète passe à **522/522 EditMode**, zéro échec, zéro ignoré ou
 inconclusif, avec code Unity `0`. Le correctif de compilation a consisté
 uniquement à ajouter l'import Core manquant dans le restaurateur.
 
-La clôture Git de 7H-A2 doit conserver ce périmètre validé et ses preuves.
-Le sous-lot de gameplay suivant reste 7H-A3 : respawn Runtime, HUD et source de
-dégâts temporaire intégrée.
+Le lot 7H-A2 est fermé et constitue la base directe du lot 7H-A3,
+désormais lui aussi fermé et intégré.
 
 <!-- LOT7HA3_PROJECT_STATE -->
 ## Lot 7H-A3 — respawn Runtime, HUD et dégâts temporaires
 
-Le lot 7H-A3 est techniquement validé sur la base intégrée
-`9981c6552909be82b1813111f7e671e857b3b022` et est prêt pour sa clôture Git.
+Le lot 7H-A3 est fermé et intégré dans `main` au commit
+`5cd7ca294c4d0885d1c22b8d14a8d507ae0d6609`
+(`feat: complete player health runtime loop`), descendant direct de
+`9981c6552909be82b1813111f7e671e857b3b022`.
 
-Périmètre actuel :
+Périmètre du lot :
 
 - repositionnement explicite du joueur dans le Core ;
 - respawn atomique de la santé et de la position sauvegardable ;
@@ -570,7 +577,7 @@ L'extension de régression demandée après la validation visuelle porte les cib
 zone, la séquence complète de dégâts, le HUD, le respawn, la caméra, l'inventaire
 équipé et la pause.
 
-Validation finale pré-clôture :
+Validation finale acquise avant intégration :
 
 - **537/537 EditMode**, zéro échec, zéro ignoré ou inconclusif ;
 - **16/16 PlayMode**, zéro échec, zéro ignoré ou inconclusif ;
@@ -581,6 +588,18 @@ Validation finale pré-clôture :
 - `git diff --check` : PASS ;
 - périmètre de revue : **21 chemins** ;
 - index Git vide au moment de la validation pré-clôture.
+
+Clôture Git effective le 7 août 2026 :
+
+- branche fonctionnelle poussée sur
+  `5cd7ca294c4d0885d1c22b8d14a8d507ae0d6609` ;
+- `main` avancée par fast-forward non forcé vers le même commit ;
+- branche locale `main` resynchronisée avec `origin/main` ;
+- arbre de travail propre après intégration.
+
+Le lot 7H-A3 est fermé. Le prochain lot fonctionnel doit partir de cette base
+intégrée.
+
 <!-- LOT7HA3_PLAYMODE_RETRY_STATE -->
 ### Incident PlayMode natif et durcissement du runner
 
