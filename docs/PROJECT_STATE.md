@@ -11,10 +11,11 @@ Dernière mise à jour : 7 août 2026
 
 ## État actuel
 
-La base publique et la branche locale `main` sont synchronisées au commit
+Le dernier commit fonctionnel intégré de la boucle de santé est
 `5cd7ca294c4d0885d1c22b8d14a8d507ae0d6609`
 (`feat: complete player health runtime loop`). Le lot 7H-A3 est fermé et
-intégré par fast-forward après 7H-A1 et 7H-A2.
+intégré par fast-forward après 7H-A1 et 7H-A2. Sa documentation de clôture
+suit ce commit sur `main`.
 
 La validation la plus récente sous Unity `6000.3.19f1` est de
 **537/537 EditMode** et **16/16 PlayMode**, zéro échec, zéro ignoré ou
