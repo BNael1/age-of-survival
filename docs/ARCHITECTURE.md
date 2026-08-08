@@ -647,3 +647,46 @@ Côté Runtime, `InventoryPrototypeSession` adapte ce Core à l'UI. Les trois
 interfaces UI Toolkit générées utilisent des `PanelSettings` distincts ; leur
 ordre relatif est donc fixé sur `PanelSettings.sortingOrder` en plus du
 `UIDocument.sortingOrder`.
+
+<!-- LOT7J_ARCHITECTURE -->
+## Lot 7J — ressources naturelles génériques
+
+Le domaine ressource du Core distingue désormais l'identité d'une source
+environnementale de ce qu'elle produit. `ResourceState` conserve un
+`ResourceId` d'instance et un `ResourceDefinitionId` stable.
+`ResourceDefinition` contient une ou plusieurs `ResourceYieldDefinition` qui
+référencent des `ItemDefinition` d'inventaire et leurs quantités.
+
+`ResourceYieldOperations` reçoit un catalogue de définitions, sélectionne la
+source selon la règle déterministe existante et construit l'intégralité de ses
+rendements dans un unique `GroundContainerState`. La récolte multi-rendement est
+atomique : la capacité du conteneur de sol est validée pour l'ensemble avant de
+passer la source à `Harvested`. Le transfert temporisé reste une opération
+d'inventaire générique et sélectionne désormais explicitement
+l'`ItemDefinitionId` présent au sol.
+
+La génération conserve deux dimensions indépendantes :
+
+1. la décision qu'une cellule contient ou non une ressource, inchangée par 7J ;
+2. le type de cette ressource, échantillonné ensuite par le flux stable
+   `GenerationStreams.ResourceKind`.
+
+`temperate-prototype@1` garde une `ResourceKindDistribution` shrubs-only afin de
+préserver exactement les mondes existants. Le profil courant
+`temperate-prototype@2` conserve les mêmes décisions d'emplacement et applique
+une distribution provisoire différente entre zones ouvertes et boisées.
+Changer volontairement cette distribution pour des mondes persistés exige une
+nouvelle révision du profil.
+
+Le streaming transporte des `ResourceState` avec leur définition et refuse
+qu'un même identifiant généré réapparaisse à une autre position ou sous une autre
+définition. Les mutations sparse continuent à stocker seulement ce qui n'est pas
+reconstructible : ressource récoltée, position attendue et conteneurs de sol.
+Lors d'une restauration de chunk, le type de la ressource revient du baseline
+généré déterministe avant application de la mutation.
+
+`ResourcePrototypeCatalog` est l'adaptateur éditorial Runtime du prototype. Il
+associe `Shrub`, `LooseStone`, `Deadwood` et `Tree` à leurs rendements
+d'inventaire. Les sprites temporaires sont sélectionnés par définition dans
+`DebugResourceInteraction`; ils ne possèdent aucune règle métier. Le Core reste
+sans `UnityEngine` et aucune dépendance tierce n'est ajoutée.

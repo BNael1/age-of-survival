@@ -229,3 +229,30 @@ La capture autoritative V3 exige explicitement `PlayerFoodState` et
 `PerishableInventoryState` en plus de la santé et de l'inventaire. Une API de
 capture qui ne possède pas ces états ne doit pas être utilisée comme chemin de
 sauvegarde courant.
+
+<!-- LOT7J_SAVE_FORMAT -->
+## Lot 7J — révision de population 2 sans changement de format
+
+Le lot 7J ne crée pas `AOSSAVE` V4. Le format autoritaire reste V3, car
+l'identité du monde sérialisée contient déjà l'identifiant et la révision du
+profil de population.
+
+Les mondes historiques en `temperate-prototype@1` régénèrent exactement leur
+baseline shrubs-only. Les nouveaux mondes utilisent
+`temperate-prototype@2`. Pour cette révision, la présence d'une ressource reste
+déterminée par le même algorithme de placement ; son `GeneratedResourceKind`
+est ensuite dérivé d'un flux déterministe distinct. Le type généré n'est donc
+pas sérialisé cellule par cellule.
+
+Une mutation de ressource récoltée conserve toujours l'identifiant stable et la
+position attendue. Cet identifiant intègre le type et la révision du profil ; au
+chargement, la base est régénérée puis la mutation doit correspondre au baseline.
+Les conteneurs de sol, eux, persistent leurs entrées d'inventaire réelles
+(`branches`, `stones`, `wood`, etc.) et conservent donc naturellement un
+rendement multiple partiellement transféré.
+
+`PrototypeWorldResolver` reconnaît les révisions `1` et `2` du profil
+`temperate-prototype` et refuse une révision inconnue. Toute modification future
+des paramètres de génération ou de distribution susceptible de changer un monde
+déjà sauvegardé doit créer une nouvelle révision ou une migration explicite ;
+elle ne doit pas réutiliser silencieusement la révision `2`.

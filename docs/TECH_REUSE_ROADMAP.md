@@ -115,3 +115,17 @@ Décision :
 Stratégie de sortie : le HUD provisoire peut être remplacé par une présentation
 artistique sans modifier `PlayerHealthState`, la sauvegarde V2 ou
 `PlayerHealthRuntimeStep`.
+
+<!-- LOT7J_REUSE -->
+## Recherche du lot 7J — ressources naturelles
+
+Recherche réalisée le 8 août 2026.
+
+| Candidat | Provenance / statut | Analyse | Décision |
+|---|---|---|---|
+| Project Zomboid Build 42.20 | The Indie Stone, notes officielles 2026 | Référence de conception pour séparer sources environnementales, sorties de craft et objets d'inventaire. Aucun code, asset ni donnée n'est repris. | **Référence conceptuelle seulement** |
+| `Resources.Load<Texture2D>` + `Sprite.Create` | API Unity déjà utilisée par le prototype | Suffisant pour des silhouettes temporaires distinctes ; n'ajoute ni package ni nouvelle source de vérité. | **Réutilisé dans l'adaptateur Runtime** |
+| Frameworks génériques de survie/crafting et kits Asset Store | tiers, architectures/licences variables | Ils déplaceraient une partie du catalogue, de la récolte ou de la persistance hors des systèmes propriétaires et compliqueraient la stratégie de sortie. | **Rejetés pour le Core** |
+| Génération et distribution locales | code propriétaire Age of Survival | Le placement, la version de profil, le flux de type et les mutations doivent rester compatibles avec chunks, sauvegardes et futur modding. | **Développé dans le Core** |
+
+Aucune nouvelle dépendance n'est ajoutée ; `THIRD_PARTY.md` reste inchangé.

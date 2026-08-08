@@ -12,18 +12,18 @@ Dernière mise à jour : 8 août 2026
 ## État actuel
 
 Le dernier commit fonctionnel local validé est
-`d102160d45218ff599b580922d26b80b0bd77f7f`
-(`feat: add deterministic food and spoilage loop`). Le lot 7I ajoute la
-première verticale jouable de nourriture, satiété et péremption. Le commit
-documentaire de clôture suit immédiatement ce commit ; aucun push n'est
-effectué par le kit de clôture.
+`00cff544afe49c23c32918d32b9246a7705bd239`
+(`feat: add versioned natural resources`). Le lot 7J généralise les ressources
+naturelles, leurs rendements, leur génération déterministe et leur persistance.
+Le commit documentaire de clôture suit immédiatement ce commit ; aucun push
+n'est effectué pendant cette clôture locale.
 
 La validation la plus récente sous Unity `6000.3.19f1` est de
-**555/555 EditMode** et **16/16 PlayMode**, zéro échec, zéro ignoré ou
-inconclusif. La verticale nourriture a aussi été validée visuellement :
-pomme fraîche dans le sac, satiété, activation de `Eat selected`,
-consommation, variation de charge, transfert aller-retour avec fraîcheur
-conservée, ordre des panneaux UI correct et Console sans erreur.
+**569/569 EditMode** et **16/16 PlayMode**, zéro échec observé. Le Play Mode
+confirme les quatre familles de ressources, leurs sprites distincts, la récolte
+`E`, le transfert temporisé, le tri et la cohérence déplacement/charge. Les
+suites couvrent aussi rendements multiples, transfert secondaire, persistance
+de chunk et save/load du profil de population de révision `2`.
 
 Lots validés et commités :
 
@@ -62,7 +62,10 @@ Lots validés et commités :
 - `260a4e0` — `docs: close lot 7gb integration` ;
 - `385267b` — `feat: add deterministic player health foundation` ;
 - `9981c65` — `feat: persist player health in save format v2` ;
-- `5cd7ca2` — `feat: complete player health runtime loop`.
+- `5cd7ca2` — `feat: complete player health runtime loop` ;
+- `d102160` — `feat: add deterministic food and spoilage loop` ;
+- `5c5a40e` — `docs: close lot 7i food vertical slice` ;
+- `00cff54` — `feat: add versioned natural resources`.
 
 État validé au commit `26a1a27` :
 
@@ -644,3 +647,49 @@ footer de l'inventaire restent accessibles.
 
 Validation finale : **555/555 EditMode**, **16/16 PlayMode**, `git diff --check`
 propre et validation visuelle complète par Naël le 8 août 2026.
+
+<!-- LOT7J_PROJECT_STATE -->
+## Lot 7J — ressources naturelles génériques
+
+Le lot 7J est validé localement dans le commit
+`00cff544afe49c23c32918d32b9246a7705bd239` (`feat: add versioned natural resources`). Le commit documentaire
+de clôture suit immédiatement ce commit ; aucun push n'est effectué pendant
+cette clôture locale.
+
+La verticale généralise les sources naturelles sans déplacer leur propriété hors
+du Core :
+
+- quatre définitions prototypes : buisson, pierre au sol, bois mort et arbre ;
+- identité de définition stable séparée de l'identité d'instance ;
+- rendements atomiques simples ou multiples vers des objets d'inventaire ;
+- nouvel objet `Wood`, en plus de `Branches` et `Stones` ;
+- transfert de sol générique par définition sélectionnée ;
+- profil courant `temperate-prototype@2` avec choix du type par flux
+  déterministe indépendant ;
+- conservation stricte du profil historique `temperate-prototype@1`, qui reste
+  shrubs-only ;
+- persistance toujours en `AOSSAVE` V3, sans duplication du type de ressource
+  généré dans la sauvegarde ;
+- restauration et streaming qui refusent une dérive silencieuse de définition
+  ou de position ;
+- cinq sprites temporaires project-owned pour distinguer pierres, bois mort,
+  arbres et piles de pierres/bois.
+
+Rendements provisoires du prototype : buisson `6` branches, pierre `3` pierres,
+bois mort `2` bois + `2` branches, arbre `6` bois + `3` branches. Ces valeurs ne
+constituent pas un équilibrage final.
+
+Validation finale du 8 août 2026 : **569/569 EditMode**, **16/16 PlayMode**,
+`git diff --check` propre. La validation Play Mode a observé les quatre familles
+et leurs sprites distincts, un tri cohérent, la récolte `E` et le transfert
+temporisé ; les rendements multiples, le transfert secondaire, la persistance
+de chunk et le save/load du profil de révision `2` sont couverts par les suites
+réussies. Aucune erreur de jeu n'est signalée dans les journaux.
+
+Le lot ne décide pas la mécanique finale d'abattage. L'usage d'un outil, la
+coupe en plusieurs actions, la durabilité, les compétences et les animations
+restent à raccorder dans un lot de gameplay dédié avec validation de Naël.
+
+Après intégration de 7J, la prochaine priorité fonctionnelle est le craft, puis
+la construction. Avant toute intégration Git : revue finale du diff complet,
+fichiers suivis et non suivis compris.

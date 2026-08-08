@@ -534,3 +534,40 @@ versionnée explicite.
 
 Pour les panneaux UI Toolkit générés : HUD santé `210`, inventaire `220`, menu
 pause `1100`. L'ordre est appliqué aux `PanelSettings` et aux `UIDocument`.
+
+<!-- LOT7J_DECISIONS -->
+## ADR-0027 — ressources naturelles versionnées et rendements composés
+
+**Statut : active pour la verticale de ressources**
+**Date : 8 août 2026**
+
+Une source naturelle possède un `ResourceDefinitionId` stable distinct de son
+`ResourceId` d'instance. Sa définition éditoriale décrit un ou plusieurs
+rendements d'inventaire. La récolte produit tous ces rendements atomiquement
+dans un conteneur de sol avant de marquer la source `Harvested`.
+
+Le prototype courant contient quatre familles : buisson, pierre au sol, bois
+mort et arbre. Leurs rendements actuels (`6` branches ; `3` pierres ; `2` bois +
+`2` branches ; `6` bois + `3` branches) sont des paramètres provisoires, pas un
+équilibrage final. Cette décision remplace la valeur prototype universelle
+`6 branches par ressource` d'ADR-0010 ; les règles de durée et de portée du
+transfert définies dans ADR-0010 restent actives.
+
+La population historique `temperate-prototype@1` reste strictement shrubs-only.
+Les nouveaux mondes utilisent `temperate-prototype@2`. Cette révision ne change
+pas la décision d'emplacement des ressources : elle ajoute un choix de type via
+un flux déterministe indépendant après la sélection de l'emplacement. Les
+identifiants générés incluent déjà type et révision, ce qui empêche de confondre
+les baselines.
+
+Le format de sauvegarde reste `AOSSAVE` V3. Le type généré est reconstructible
+depuis l'identité monde déjà persistée ; les mutations sparse ne le dupliquent
+donc pas. Le résolveur Runtime accepte les révisions `1` et `2` connues et refuse
+les autres. La preuve réseau historique 7E-B reste volontairement figée sur le
+profil `@1` afin de conserver ses fixtures et son digest ; elle ne définit pas
+le profil du gameplay courant et sera réévaluée lors d'un futur lot réseau.
+
+La touche d'interaction reste `E`. Le fait que l'arbre soit récoltable dans cette
+verticale ne constitue pas la décision finale d'abattage : exigence d'outil,
+actions multiples, durabilité, compétences et animations restent un choix de
+gameplay séparé à valider avec Naël. Aucun package ou asset tiers n'est ajouté.

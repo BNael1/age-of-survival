@@ -637,3 +637,44 @@ La validation visuelle humaine confirme : trois pommes fraîches dans le sac,
 satiété `100 → 99`, activation de `Eat selected`, consommation vers `100` et
 `×2`, baisse cohérente de charge, transfert aller-retour sans perte de fraîcheur,
 footer de l'inventaire non masqué par le HUD et Console sans erreur.
+
+<!-- LOT7J_TESTING -->
+## Lot 7J — validation ressources naturelles
+
+Validation finale du 8 août 2026 sous Unity `6000.3.19f1` :
+**569/569 EditMode** et **16/16 PlayMode**, zéro échec observé.
+`git diff --check` ne produit aucune sortie.
+
+Les quatorze nouveaux cas EditMode couvrent notamment :
+
+- compatibilité du constructeur historique de `ResourceState` avec les buissons ;
+- identité des définitions et rejet des rendements dupliqués ;
+- récolte multi-rendement atomique et refus d'une capacité de sol insuffisante ;
+- conservation du golden `temperate-prototype@1` shrubs-only ;
+- conservation des emplacements en révision `2` et présence des quatre types ;
+- fixture exacte de types et d'identifiants V2 pour verrouiller la reconstruction
+  des mondes persistés ;
+- validation des arguments de la surcharge historique même sans cible disponible ;
+- sélection de `temperate-prototype@2` comme profil courant ;
+- propagation du type généré vers `ResourceState` Runtime ;
+- rendement bois + branches et transfert générique d'un rendement secondaire ;
+- rejet d'une dérive de définition pour un même identifiant généré ;
+- save/load du profil de révision `2` sans passage à `AOSSAVE` V4 ;
+- disponibilité de sprites prototypes distincts pour les quatre familles.
+
+La suite PlayMode existante reste à **16/16**. La validation réelle a observé
+buisson, pierre, bois mort et arbre, leurs sprites distincts, le tri, la
+récolte `E`, le transfert temporisé et la cohérence déplacement/charge.
+Rendements, transfert secondaire, éviction/restauration de chunks et save/load
+sont également couverts par les suites réussies. Les journaux ne signalent
+aucune erreur de jeu.
+
+### Note d'exécution Unity Test Framework
+
+Sur la configuration locale actuelle, une invocation directe de
+`-runTests` ne doit pas ajouter `-quit` : Unity quitterait avant la fin du
+runner. Les tests PlayMode qui exercent une capture ou un chemin de rendu doivent
+être lancés avec le rendu disponible ; `-nographics` n'est pas un mode de
+validation approprié pour ces cas. Le helper externe livré avec le kit 7J avait
+ces deux options et n'est pas une preuve de test ; les résultats ci-dessus
+proviennent des invocations directes réussies.

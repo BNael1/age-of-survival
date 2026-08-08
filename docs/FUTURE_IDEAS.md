@@ -39,8 +39,8 @@ Les règles de construction, de refuges et de familiarité déjà validées ne s
 - streaming de plusieurs chunks autour du joueur ;
 - collision, navigation et interdiction de marcher sur l'eau ;
 - biomes multiples, rivières, routes et relief physique ;
-- tables de ressources variées, arbres, rochers et animaux ;
-- sauvegarde des ressources récoltées et migrations correspondantes ;
+- animaux et familles de ressources au-delà du premier catalogue naturel ;
+- repousse, renouvellement ou épuisement à long terme des ressources ;
 - asset d'eau final et calibrage artistique, à traiter avec le lot 7D ou un lot
   d'assets dédié.
 
@@ -86,3 +86,18 @@ d'implémentation active du lot 7H-A1.
 - nutrition corporelle, poids, calories réellement consommées et carences ;
 - diversité alimentaire au-delà de la pomme prototype et équilibrage définitif ;
 - localisation des libellés alimentaires et présentation visuelle finale.
+
+<!-- LOT7J_FUTURE_IDEAS -->
+## Reporté après le lot 7J
+
+- raccorder la mécanique d'abattage finale des arbres aux outils et actions
+  multiples validés côté gameplay, sans transformer le prototype 7J en règle
+  définitive ;
+- durabilité, compétences, animations, sons et durées propres à chaque famille
+  de récolte ;
+- rendements variables ou conditionnels selon outil, compétence, saison et état
+  de la source ;
+- politique explicite de repousse, régénération ou épuisement des ressources ;
+- autres familles naturelles et animales au-delà du premier catalogue ;
+- assets finaux, variations visuelles et densités de population après calibration
+  artistique et gameplay.
