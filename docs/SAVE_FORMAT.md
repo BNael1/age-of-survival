@@ -256,3 +256,10 @@ rendement multiple partiellement transféré.
 des paramètres de génération ou de distribution susceptible de changer un monde
 déjà sauvegardé doit créer une nouvelle révision ou une migration explicite ;
 elle ne doit pas réutiliser silencieusement la révision `2`.
+
+<!-- LOT7K_SAVE -->
+## Craft 7K et AOSSAVE V3
+
+Le lot 7K n'ajoute aucune donnée autoritaire persistante : une action de craft en cours est un état Runtime transitoire et n'est jamais sérialisée. Une sauvegarde manuelle ou planifiée attend un safe point tant qu'un craft ou un transfert est actif. Les chemins « sauvegarder et revenir au menu », « sauvegarder et quitter » et la sauvegarde de fermeture annulent explicitement les actions temporisées avant capture, sans perte d'ingrédients.
+
+Les nouveaux objets craftés utilisent le registre d'`ItemDefinition` déjà capturé par le snapshot inventaire V3. Aucune révision V4 n'est requise pour ce slice.

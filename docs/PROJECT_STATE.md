@@ -693,3 +693,19 @@ restent à raccorder dans un lot de gameplay dédié avec validation de Naël.
 Après intégration de 7J, la prochaine priorité fonctionnelle est le craft, puis
 la construction. Avant toute intégration Git : revue finale du diff complet,
 fichiers suivis et non suivis compris.
+
+<!-- LOT7K_PROJECT_STATE -->
+## Lot 7K — craft manuel temporisé (validation automatique acquise)
+
+Base : `9ae5104e415ecdf39eb11d46fd3ac569a3fc0534`. Le lot ajoute un domaine Craft C# pur, trois recettes manuelles, une action temporisée sans réservation destructive et une interface Craft dédiée dans un panneau distinct de l'inventaire. Les ingrédients sont résolus de façon déterministe dans le conteneur principal puis le sac ; les sorties utilisent le même ordre. Le sol n'est pas une source de craft.
+
+Les encombrements prototype sont validés : `Kindling = 1000`, `Stone flakes = 750` par unité et `Wooden stakes = 500` par unité. Mouvement, transfert actif, save/quit et capacité insuffisante respectent la politique sans perte ni drop silencieux. AOSSAVE reste en V3.
+
+Validation locale finale du 9 août 2026 : EditMode `588/588`, PlayMode `17/17` avec Burst actif et `git diff --check` PASS. Le chemin PlayMode couvre désormais sélection de recette, activation du bouton Craft, progression par tick fixe et résultat inventaire. Un premier lancement PlayMode avait subi un SIGSEGV natif dans Burst avant production du XML ; la même suite a ensuite passé `17/17` Burst désactivé puis `17/17` Burst actif sans modification de package ni contournement conservé. Incident classé transitoire et non reproduit.
+
+Validation graphique 1280x720 acquise le 9 août 2026 ; aucun problème de lisibilité ou de chevauchement n'a été retenu. Revue finale du patch v2 : aucun défaut métier bloquant identifié. Le lot est prêt pour staging exact et commit.
+
+<!-- LOT7K_UI_SPLIT_STATE -->
+## Correctif 7K-UI — séparation Inventaire / Craft (validation complète acquise)
+
+Après validation visuelle du premier panneau combiné, l'interface sépare désormais `Inventory prototype` et `Craft prototype`. Une seule fenêtre est ouverte à la fois et fermer Craft n'annule pas une action active. Le cœur Craft, les recettes, les encombrements, les règles d'interruption et AOSSAVE V3 restent inchangés. Validation automatique : EditMode `588/588`, PlayMode `17/17` avec Burst actif et `git diff --check` PASS. Validation graphique 1280x720 approuvée par Naël ; le correctif UI est prêt pour commit.

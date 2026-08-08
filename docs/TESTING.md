@@ -678,3 +678,23 @@ runner. Les tests PlayMode qui exercent une capture ou un chemin de rendu doiven
 validation approprié pour ces cas. Le helper externe livré avec le kit 7J avait
 ces deux options et n'est pas une preuve de test ; les résultats ci-dessus
 proviennent des invocations directes réussies.
+
+<!-- LOT7K_TESTING -->
+## Lot 7K — validation
+
+Validation finale exécutée localement avec Unity `6000.3.19f1` le 9 août 2026 :
+
+- EditMode : `588/588`, zéro échec, zéro test ignoré ;
+- PlayMode : `17/17`, zéro échec, zéro test ignoré, Burst actif ;
+- `git diff --check` : PASS.
+
+La couverture 7K vérifie notamment : validation des recettes, absence de consommation au démarrage, tick exact de terminaison, interruption par mouvement, revalidation finale, capacité calculée après consommation, répartition déterministe des ingrédients principal puis sac, ordre principal/sac des sorties, refus sans mutation, catalogue prototype, exclusion craft/transfert, annulation save/quit, présence des définitions de sortie dans le snapshot V3 et UI Craft. Le test PlayMode emprunte le chemin sélection de recette -> bouton Craft -> progression par tick fixe -> résultat inventaire.
+
+Lors d'une passe précédente, Unity avait quitté avec un SIGSEGV natif `139` dans le hashing Burst avant de produire un XML PlayMode. Une passe diagnostique Burst désactivé a ensuite réussi `17/17`, puis la passe normale Burst actif a réussi `17/17`. Aucun changement de package, de runner ou de code métier n'a été retenu pour cet incident non reproduit.
+
+La validation graphique 1280x720 des panneaux Inventory et Craft séparés est acquise ; elle reste une preuve distincte des suites automatisées.
+
+<!-- LOT7K_UI_SPLIT_TESTING -->
+## Correctif 7K-UI — validation
+
+Le PlayMode Craft vérifie que les panneaux Inventory et Craft sont distincts et mutuellement exclusifs, que la fermeture du panneau Craft n'annule pas l'action active, puis conserve le chemin sélection de recette -> bouton Craft -> tick fixe -> résultat inventaire. Résultats : EditMode `588/588`, PlayMode `17/17` avec Burst actif, zéro échec et zéro test ignoré ; `git diff --check` PASS. Validation graphique 1280x720 séparée : PASS, approuvée par Naël.

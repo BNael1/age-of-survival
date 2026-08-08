@@ -129,3 +129,13 @@ Recherche réalisée le 8 août 2026.
 | Génération et distribution locales | code propriétaire Age of Survival | Le placement, la version de profil, le flux de type et les mutations doivent rester compatibles avec chunks, sauvegardes et futur modding. | **Développé dans le Core** |
 
 Aucune nouvelle dépendance n'est ajoutée ; `THIRD_PARTY.md` reste inchangé.
+
+<!-- LOT7K_REUSE -->
+## Recherche 7K — craft
+
+- API Unity : `ScriptableObject` reste pertinent pour de futures données éditoriales, mais ni l'état mutable ni les opérations de craft ne lui sont confiés.
+- Project Zomboid Build 42 : référence conceptuelle pour séparer recettes et méthodes ; aucun code ni asset repris.
+- `RaulMrSouza/Unity-Crafting-System` : licence MIT vérifiée, mais dépôt ancien (activité principale 2018), donc non intégré.
+- `BaiSunTeam/UnityCraftingSystem` : travail récent sur recettes en 2026, mais architecture directement couplée à Unity et absence de licence racine exploitable lors de l'audit ; non intégré.
+
+Décision : zéro nouvelle dépendance tierce. `THIRD_PARTY.md` reste inchangé.

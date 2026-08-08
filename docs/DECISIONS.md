@@ -571,3 +571,19 @@ La touche d'interaction reste `E`. Le fait que l'arbre soit récoltable dans cet
 verticale ne constitue pas la décision finale d'abattage : exigence d'outil,
 actions multiples, durabilité, compétences et animations restent un choix de
 gameplay séparé à valider avec Naël. Aucun package ou asset tiers n'est ajouté.
+
+<!-- ADR-0028 -->
+## ADR-0028 — craft manuel atomique et transitoire
+
+**Statut : active**
+
+Le premier craft utilise uniquement la méthode stable `hand`, sans établi, feu ni nouveau raccourci. Les ingrédients sont cherchés dans l'inventaire porté, conteneur principal puis sac ; les sorties utilisent le même ordre. Les piles au sol ne participent pas automatiquement au craft.
+
+Une action ne consomme rien au démarrage. Le mouvement l'interrompt. Craft et transfert sont mutuellement exclusifs. Au tick de réussite, ingrédients et capacité sont revalidés avant application. Aucune sortie n'est déposée silencieusement au sol.
+
+Recettes prototype : `2 Branches -> 1 Kindling` (90 ticks), `1 Stone -> 2 Stone flakes` (120 ticks) et `1 Wood -> 2 Wooden stakes` (150 ticks). Naël valide les encombrements prototype : `Kindling = 1000`, `Stone flakes = 750` par unité et `Wooden stakes = 500` par unité. Les trois transformations conservent ainsi exactement l'encombrement total de leurs ingrédients.
+
+<!-- LOT7K_UI_SPLIT_DECISION -->
+## Décision 7K-UI — Inventaire et Craft séparés
+
+Naël valide la séparation de l'interface : `Inventory prototype` et `Craft prototype` ouvrent deux panneaux distincts. Une seule de ces fenêtres peut être ouverte à la fois. Fermer la fenêtre Craft ne modifie pas l'action de craft en cours ; le mouvement, les transferts et les chemins save/quit conservent les règles métier 7K déjà validées. Aucun nouveau raccourci clavier n'est ajouté.

@@ -101,3 +101,14 @@ d'implémentation active du lot 7H-A1.
 - autres familles naturelles et animales au-delà du premier catalogue ;
 - assets finaux, variations visuelles et densités de population après calibration
   artistique et gameplay.
+
+<!-- LOT7K_FUTURE_IDEAS -->
+## Reporté après le lot 7K
+
+- déblocage des recettes par observation, expérimentation et découverte technologique ;
+- méthodes et stations supplémentaires : feu, établi, taille spécialisée, forge, etc. ;
+- outils craftés comme instances uniques avec durabilité et états ;
+- ingrédients alternatifs, substitutions, qualité et recettes conditionnelles ;
+- craft depuis le sol ou des conteneurs proches avec règles explicites ;
+- file d'actions, répétition, craft en lot, compétences, animations et sons ;
+- équilibrage final des durées, rendements, encombrements et présentation artistique.

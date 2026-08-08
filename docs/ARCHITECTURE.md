@@ -690,3 +690,17 @@ associe `Shrub`, `LooseStone`, `Deadwood` et `Tree` à leurs rendements
 d'inventaire. Les sprites temporaires sont sélectionnés par définition dans
 `DebugResourceInteraction`; ils ne possèdent aucune règle métier. Le Core reste
 sans `UnityEngine` et aucune dépendance tierce n'est ajoutée.
+
+<!-- LOT7K_CRAFT_ARCHITECTURE -->
+## Craft — fondation 7K
+
+Le craft appartient au Core C# pur. `CraftRecipeDefinition` décrit une recette par identifiant stable, méthode, durée, ingrédients et sorties.
+`CraftInventoryOperations` calcule d'abord un plan déterministe de retraits et d'insertions ; la capacité est simulée après retrait des ingrédients afin que la matière consommée libère réellement de la place. Aucune mutation n'a lieu au démarrage de l'action.
+
+`CraftActionState` est transitoire. Au tick terminal, le plan est recalculé depuis l'état courant puis prévalidé avant mutation synchrone.
+Les conteneurs portés sont ordonnés principal puis sac pour les ingrédients comme pour les sorties. Le premier slice accepte uniquement des piles ordinaires non périssables et la méthode `hand`.
+
+<!-- LOT7K_UI_SPLIT_ARCH -->
+## UI 7K — panneaux Inventory / Craft
+
+Le prototype conserve un seul `InventoryPrototypeUiDocument` UI Toolkit et une seule session Runtime, mais expose deux panneaux racine indépendants : inventaire et craft. Cette séparation reste une responsabilité de présentation ; `CraftPrototypeViewModelBuilder` lit la session et l'UI émet `StartCraft` sans dupliquer la logique métier Core. L'exclusivité d'ouverture est gérée par la vue et n'affecte pas l'état d'une action de craft.
