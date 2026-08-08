@@ -39,7 +39,10 @@ namespace AgeOfSurvival.Runtime.Inventory
 
         public bool CanTransferPerishable(InventorySelection selection, ContainerId destinationId)
         {
-            if (!IsPerishable(selection) || !destinationId.IsValid || selection.SourceContainerId.Equals(destinationId)) return false;
+            if (IsCraftActionActive
+                || !IsPerishable(selection)
+                || !destinationId.IsValid
+                || selection.SourceContainerId.Equals(destinationId)) return false;
             ContainerState source = Inventory.FindContainer(selection.SourceContainerId);
             ContainerState destination = Inventory.FindContainer(destinationId);
             ItemDefinition definition = Inventory.FindDefinition(selection.DefinitionId);

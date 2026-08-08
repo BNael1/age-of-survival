@@ -50,7 +50,7 @@ namespace AgeOfSurvival.Runtime.Inventory
 
             Tool = tool;
             Bag = bag;
-            Commands = new InventoryPrototypeCommands(Inventory);
+            Commands = new InventoryPrototypeCommands(Inventory, () => IsCraftActionActive);
             CurrentTick = restored.FixedTick;
             Health = restored.Health;
             InstallFoodState(restored.Food, restored.Perishables);
@@ -115,6 +115,13 @@ namespace AgeOfSurvival.Runtime.Inventory
                 new PerishableInventorySnapshot(PerishableItems),
                 Inventory.CaptureSnapshot(),
                 mutations);
+        }
+
+        public bool CancelActiveActionsForSaveAndQuit()
+        {
+            bool transferCancelled = CancelActiveTransferForSaveAndQuit();
+            bool craftCancelled = CancelActiveCraftForSaveAndQuit();
+            return transferCancelled || craftCancelled;
         }
 
         public bool CancelActiveTransferForSaveAndQuit()

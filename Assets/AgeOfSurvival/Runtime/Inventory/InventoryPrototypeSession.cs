@@ -67,7 +67,7 @@ namespace AgeOfSurvival.Runtime.Inventory
                 InventoryPrototypeCatalog.Definitions,
                 new[] { MainContainer, BagContainer });
             PerishableItems.ValidateAgainst(Inventory);
-            Commands = new InventoryPrototypeCommands(Inventory);
+            Commands = new InventoryPrototypeCommands(Inventory, () => IsCraftActionActive);
             Health = new PlayerHealthState(
                 PlayerHealthRules.DefaultMaximumHealth);
 

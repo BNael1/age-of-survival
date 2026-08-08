@@ -29,15 +29,20 @@ namespace AgeOfSurvival.Runtime.Inventory
     public sealed class InventoryPrototypeCommands
     {
         private readonly PlayerInventoryState _inventory;
+        private readonly Func<bool> _isTransferBlocked;
 
-        public InventoryPrototypeCommands(PlayerInventoryState inventory)
+        public InventoryPrototypeCommands(
+            PlayerInventoryState inventory,
+            Func<bool> isTransferBlocked = null)
         {
             _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+            _isTransferBlocked = isTransferBlocked ?? (() => false);
         }
 
         public bool CanTransfer(InventorySelection selection, ContainerId destinationId)
         {
-            if (!selection.IsValid || !destinationId.IsValid
+            if (_isTransferBlocked()
+                || !selection.IsValid || !destinationId.IsValid
                 || selection.SourceContainerId.Equals(destinationId))
             {
                 return false;

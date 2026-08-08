@@ -529,7 +529,7 @@ namespace AgeOfSurvival.Runtime.Persistence
             }
 
             InventoryPrototypeSessionProvider.Current
-                .CancelActiveTransferForSaveAndQuit();
+                .CancelActiveActionsForSaveAndQuit();
             Request(SaveRequestKind.ReturnToMainMenu);
         }
 
@@ -542,7 +542,7 @@ namespace AgeOfSurvival.Runtime.Persistence
             }
 
             InventoryPrototypeSessionProvider.Current
-                .CancelActiveTransferForSaveAndQuit();
+                .CancelActiveActionsForSaveAndQuit();
             Request(SaveRequestKind.Quit);
         }
 
@@ -618,9 +618,10 @@ namespace AgeOfSurvival.Runtime.Persistence
         {
             InventoryPrototypeSession session =
                 InventoryPrototypeSessionProvider.Current;
-            return session.TransferAction == null
-                || session.TransferAction.Status
-                    != TransferActionStatus.Active;
+            return !session.IsCraftActionActive
+                && (session.TransferAction == null
+                    || session.TransferAction.Status
+                        != TransferActionStatus.Active);
         }
 
         private void HandleQuitting()
@@ -636,7 +637,7 @@ namespace AgeOfSurvival.Runtime.Persistence
             try
             {
                 InventoryPrototypeSessionProvider.Current
-                    .CancelActiveTransferForSaveAndQuit();
+                    .CancelActiveActionsForSaveAndQuit();
                 PrototypeSaveRuntime.SaveCurrent();
             }
             catch (Exception exception)

@@ -10,7 +10,7 @@ namespace AgeOfSurvival.Runtime.Inventory
     /// UI Toolkit view. It consumes immutable view-models and emits commands through
     /// InventoryPrototypeCommands; it never mutates Core collections directly.
     /// </summary>
-    public sealed class InventoryPrototypeUiDocument
+    public sealed partial class InventoryPrototypeUiDocument
     {
         private readonly InventoryPrototypeSession _session;
         private readonly VisualElement _root;
@@ -154,6 +154,7 @@ namespace AgeOfSurvival.Runtime.Inventory
             footer.Add(_transferButton);
             footer.Add(CreateButton("Close", TogglePanel));
             _panel.Add(footer);
+            InitializeCraftingUi();
 
             Refresh();
         }
@@ -194,6 +195,7 @@ namespace AgeOfSurvival.Runtime.Inventory
             BindContainer(_mainList, _mainCapacity, viewModel.Main);
             BindContainer(_bagList, _bagCapacity, viewModel.Bag);
             BindContainer(_groundList, _groundCapacity, viewModel.Ground);
+            RefreshCraftingUi();
             RefreshButtons();
         }
 
@@ -249,7 +251,13 @@ namespace AgeOfSurvival.Runtime.Inventory
 
         public void TogglePanel()
         {
-            SetPanelOpen(!_isPanelOpen);
+            bool shouldOpen = !_isPanelOpen;
+            if (shouldOpen)
+            {
+                SetCraftPanelOpen(false);
+            }
+
+            SetPanelOpen(shouldOpen);
         }
 
         private void SetPanelOpen(bool isOpen)

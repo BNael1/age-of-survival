@@ -32,6 +32,11 @@ namespace AgeOfSurvival.Runtime.Inventory
             double interactionRadius,
             long currentTick)
         {
+            if (IsCraftActionActive)
+            {
+                return default;
+            }
+
             ResourceYieldResult result =
                 ResourceYieldOperations.HarvestToGround(
                     _resources,
@@ -62,6 +67,13 @@ namespace AgeOfSurvival.Runtime.Inventory
             int quantity,
             long currentTick)
         {
+            if (IsCraftActionActive)
+            {
+                return new TransferActionResult(
+                    TransferAction,
+                    TransferActionReason.AnotherActionActive);
+            }
+
             if (TransferAction != null
                 && TransferAction.Status == TransferActionStatus.Active)
             {
@@ -114,7 +126,8 @@ namespace AgeOfSurvival.Runtime.Inventory
             GroundContainerState ground,
             ItemDefinitionId definitionId)
         {
-            if (ground == null
+            if (IsCraftActionActive
+                || ground == null
                 || !_groundContainers.Contains(ground)
                 || ground.IsEmpty
                 || (TransferAction != null

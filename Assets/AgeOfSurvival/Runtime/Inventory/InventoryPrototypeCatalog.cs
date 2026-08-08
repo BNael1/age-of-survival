@@ -54,6 +54,24 @@ namespace AgeOfSurvival.Runtime.Inventory
             ItemStateKind.Stackable,
             new EncumbranceValue(1000));
 
+        public static readonly ItemDefinition Kindling = new ItemDefinition(
+            new ItemDefinitionId("kindling"),
+            "Kindling",
+            ItemStateKind.Stackable,
+            new EncumbranceValue(1000));
+
+        public static readonly ItemDefinition StoneFlakes = new ItemDefinition(
+            new ItemDefinitionId("stone-flakes"),
+            "Stone flakes",
+            ItemStateKind.Stackable,
+            new EncumbranceValue(750));
+
+        public static readonly ItemDefinition WoodenStakes = new ItemDefinition(
+            new ItemDefinitionId("wooden-stakes"),
+            "Wooden stakes",
+            ItemStateKind.Stackable,
+            new EncumbranceValue(500));
+
         public static readonly ItemDefinition Apple = new ItemDefinition(
             new ItemDefinitionId("apple"),
             "Apple",
@@ -84,6 +102,9 @@ namespace AgeOfSurvival.Runtime.Inventory
             Branches,
             Stones,
             Wood,
+            Kindling,
+            StoneFlakes,
+            WoodenStakes,
             Apple,
             Tool,
             Bag

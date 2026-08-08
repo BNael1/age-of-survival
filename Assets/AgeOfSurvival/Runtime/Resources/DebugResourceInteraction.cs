@@ -361,6 +361,11 @@ namespace AgeOfSurvival.Runtime.Resources
                 _session.AdvanceTransfer(simulationTick, playerPosition, playerMoved);
             }
 
+            if (_session.IsCraftActionActive)
+            {
+                _session.AdvanceCraft(simulationTick, playerMoved);
+            }
+
             ResourceState target = ResourceTargeting.FindNearestAvailable(
                 _session.Resources,
                 playerPosition,
