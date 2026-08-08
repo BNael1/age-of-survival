@@ -20,7 +20,7 @@ Les règles de construction, de refuges et de familiarité déjà validées ne s
 
 - conteneurs imbriqués arbitraires et prévention des cycles ;
 - filtres par catégorie et règles d'acceptation propres aux conteneurs ;
-- nourriture, nutrition et péremption ;
+- nutrition corporelle avancée, poids et besoins macro/micronutritionnels ;
 - liquides, mélanges et récipients partiellement remplis ;
 - durabilité et états complexes des objets ;
 - tri, recherche et regroupements avancés ;
@@ -75,3 +75,14 @@ mobilité, vitesse d'action, capacité de travail ou risque d'infection — sans
 remplacer brutalement le contrat de santé vital et sans casser les sauvegardes
 existantes. Cette idée est volontairement reportée et n'est pas une décision
 d'implémentation active du lot 7H-A1.
+
+<!-- LOT7I_FUTURE_IDEAS -->
+## Reporté après le lot 7I
+
+- conséquences sanitaires de la consommation d'aliments pourris ;
+- cuisson, cuisson excessive et recettes ;
+- température, congélation, réfrigérateurs et multiplicateurs de stockage ;
+- persistance spécialisée des aliments périssables déposés au sol ;
+- nutrition corporelle, poids, calories réellement consommées et carences ;
+- diversité alimentaire au-delà de la pomme prototype et équilibrage définitif ;
+- localisation des libellés alimentaires et présentation visuelle finale.

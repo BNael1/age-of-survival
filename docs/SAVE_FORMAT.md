@@ -2,7 +2,7 @@
 
 ## Statut
 
-Le format autoritaire courant est `AOSSAVE` V2. Le codec, le stockage atomique et la lecture rétrocompatible V1/V2 sont implémentés dans le Core.
+Le format autoritaire courant est `AOSSAVE` V3. Le codec, le stockage atomique et la lecture rétrocompatible V1/V2/V3 sont implémentés dans le Core.
 
 ## Invariants décidés
 
@@ -188,3 +188,44 @@ sur son tick sauvegardé, sans régénération planifiée. Le fichier lu n'est n
 réécrit ni promu implicitement ; la prochaine sauvegarde normale produit une
 V2. Une V2 dont la santé est invalide ou désynchronisée du tick de partie est
 refusée avant installation de la session.
+
+<!-- LOT7I_SAVE_FORMAT -->
+## Format binaire V3 — nourriture et lots périssables
+
+Le codec écrit désormais exclusivement `AOSSAVE` version `3`. L'enveloppe,
+les flags, le SHA-256 et les limites générales restent compatibles avec les
+versions précédentes.
+
+Le payload V3 encode, dans l'ordre :
+
+1. identité du monde ;
+2. tick fixe ;
+3. position du joueur ;
+4. santé V2 ;
+5. état de satiété ;
+6. lots périssables ;
+7. inventaire canonique ;
+8. mutations sparse des chunks.
+
+L'état de satiété conserve le maximum, la valeur courante, le tick alimentaire
+et le prochain tick de perte. Son tick courant doit être identique au tick fixe
+de la partie.
+
+Chaque lot périssable conserve un `FoodBatchId`, le `ContainerId`, la définition
+d'item, la quantité, l'âge accumulé en milli-ticks et le dernier tick évalué.
+Aucun lot ne peut être daté après le tick fixe sauvegardé. Les quantités des lots
+doivent correspondre aux piles périssables de l'inventaire restauré.
+
+Une V1 est migrée en mémoire avec santé pleine et satiété pleine au tick fixe ;
+une V2 conserve sa santé mais reçoit également la satiété pleine. V1 et V2
+reçoivent zéro lot périssable. Le fichier source n'est pas réécrit lors de la
+lecture. La prochaine sauvegarde normale produit une V3.
+
+La restauration peut ajouter au registre les définitions éditoriales courantes
+absentes d'une ancienne sauvegarde, sans ajouter d'entrée ni de quantité. Cela
+permet à une partie V1/V2 de recevoir ensuite un nouvel aliment tel que `apple`.
+
+La capture autoritative V3 exige explicitement `PlayerFoodState` et
+`PerishableInventoryState` en plus de la santé et de l'inventaire. Une API de
+capture qui ne possède pas ces états ne doit pas être utilisée comme chemin de
+sauvegarde courant.

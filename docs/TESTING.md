@@ -609,3 +609,31 @@ Le mécanisme de relance a également été validé avec un faux exécutable Uni
 première exécution avec la signature native et le code `134`, seconde exécution
 réussie. L'autotest confirme qu'une seule relance est effectuée et que le premier
 journal est conservé.
+
+<!-- LOT7I_TESTING -->
+## Lot 7I — validation nourriture, péremption et sauvegarde V3
+
+Validation finale du 8 août 2026 sous Unity `6000.3.19f1` :
+**555/555 EditMode** et **16/16 PlayMode**, zéro échec, zéro ignoré ou
+inconclusif. `git diff --check` est propre.
+
+La couverture ajoutée vérifie notamment :
+
+- bornes et rattrapage déterministe de satiété sans réinitialisation du calendrier ;
+- fraîcheur fraîche/altérée/pourrie et projection paresseuse depuis le tick fixe ;
+- lots homogènes, oldest-first, transferts complets/partiels et identifiants
+  déterministes après sauvegarde/chargement ;
+- atomicité entre pile d'inventaire et lots, y compris sur arguments invalides ;
+- rejet des mutations génériques sur définitions périssables ;
+- consommation d'aliments périssables et de consommables non périssables ;
+- codec V3, round-trip nourriture/lots, invariants de ticks et compatibilité V1/V2 ;
+- vraie fixture V2 sans définition `apple`, puis enrichissement par le catalogue
+  courant sans apparition automatique de pommes ;
+- capture V3 complète dans le coordinateur de sauvegarde ;
+- recalibrage de la charge de mouvement avec les trois pommes initiales ;
+- ordre `PanelSettings` du HUD, de l'inventaire et du menu pause.
+
+La validation visuelle humaine confirme : trois pommes fraîches dans le sac,
+satiété `100 → 99`, activation de `Eat selected`, consommation vers `100` et
+`×2`, baisse cohérente de charge, transfert aller-retour sans perte de fraîcheur,
+footer de l'inventaire non masqué par le HUD et Console sans erreur.

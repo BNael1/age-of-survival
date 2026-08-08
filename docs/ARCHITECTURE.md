@@ -611,3 +611,39 @@ PV. `FrontendRuntimeBootstrap` l'installe uniquement dans la scène de gameplay.
 La zone rouge de démonstration reste un adaptateur provisoire. Sa logique de
 cadence est déterministe et testable sans scène, mais ses valeurs ne constituent
 pas un système de combat, de blessures ou de danger définitif.
+
+<!-- LOT7I_ARCHITECTURE -->
+## Lot 7I — architecture nourriture et péremption
+
+Le système alimentaire reste dans `AgeOfSurvival.Core`, sans référence Unity.
+`ItemDefinition` porte des capacités optionnelles composées (`ConsumableDefinition`,
+`NutritionDefinition`, `PerishableDefinition`) plutôt qu'une hiérarchie de types
+d'objets alimentaires.
+
+L'inventaire conserve une pile agrégée par définition. L'état de fraîcheur est
+séparé dans `PerishableInventoryState`, sous forme de lots homogènes identifiés
+par `FoodBatchId`. Un lot conserve le conteneur, la définition, la quantité,
+l'âge de péremption accumulé et le dernier tick évalué. Les piles ne moyennent
+jamais leur fraîcheur.
+
+Les mutations génériques de piles refusent les définitions périssables. Les
+opérations spécialisées ajoutent, retirent, transfèrent ou consomment en gardant
+atomiquement synchronisés pile et lots. Un transfert complet conserve l'identité
+du lot ; un transfert partiel crée une nouvelle identité déterministe. L'ordre
+oldest-first est canonique et départagé par identifiant stable.
+
+La péremption est paresseuse : aucun `Update` par objet. L'âge projeté est
+calculé depuis le tick fixe et un taux entier en millièmes, ce qui prépare des
+multiplicateurs de stockage futurs sans introduire de temps réel ou de `float`
+dans la simulation.
+
+`PlayerFoodState` possède son propre calendrier de perte de satiété sur le tick
+canonique. La capture V3 autoritative inclut explicitement santé, nourriture,
+lots périssables, inventaire et mutations de monde. Les surcharges historiques
+qui ne portent pas tous ces états restent des chemins de compatibilité et ne
+doivent pas être utilisées pour une nouvelle sauvegarde autoritative.
+
+Côté Runtime, `InventoryPrototypeSession` adapte ce Core à l'UI. Les trois
+interfaces UI Toolkit générées utilisent des `PanelSettings` distincts ; leur
+ordre relatif est donc fixé sur `PanelSettings.sortingOrder` en plus du
+`UIDocument.sortingOrder`.

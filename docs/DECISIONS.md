@@ -494,3 +494,43 @@ Paramètres strictement provisoires de la source de test :
 
 Ces quatre valeurs servent uniquement à rendre la boucle testable. Elles ne
 valident aucun équilibrage futur de combat, pièges, environnement ou blessures.
+
+<!-- LOT7I_DECISIONS -->
+## ADR-0026 — satiété, aliments composés et péremption par lots
+
+**Statut : active**
+**Date : 8 août 2026**
+
+La satiété est distincte de la nutrition corporelle. Elle est bornée entre `0`
+et `100`, commence à `100` et perd un point tous les `2160` ticks à `60 Hz`.
+Manger ne réinitialise pas ce calendrier.
+
+La pomme est l'aliment prototype : quantité initiale `3` dans le sac, encombrement
+`0,200`, satiété fraîche `+20`, métadonnée `95 kcal`, avec états frais, altéré et
+pourri. Les valeurs de satiété altérée/pourrie et les durées de péremption sont
+des paramètres provisoires centralisés, pas une décision d'équilibrage finale.
+Un aliment pourri n'est pas supprimé automatiquement et reste consommable mais
+dangereux ; les conséquences de maladie sont reportées.
+
+Les aliments sont définis par composition de capacités. `ConsumableDefinition`
+n'implique pas `PerishableDefinition`, afin de permettre notamment des rations
+ou conserves non périssables.
+
+La fraîcheur mutable appartient à des lots séparés de la pile d'inventaire. Les
+lots ne sont jamais moyennés ; consommation et transferts suivent oldest-first
+de manière déterministe. Les opérations génériques de pile refusent un aliment
+périssable afin qu'aucune mutation ne puisse contourner l'invariant agrégat ↔ lots.
+
+Le format autoritaire courant est `AOSSAVE` V3. V1 et V2 restent lisibles et sont
+migrées en mémoire vers satiété pleine au tick sauvegardé et zéro lot périssable,
+sans réécriture automatique. Le catalogue éditorial courant peut enrichir le
+registre restauré d'une ancienne sauvegarde sans créer de nouveaux objets.
+
+Les valeurs de tuning alimentaire ne font pas partie de l'empreinte structurelle
+de compatibilité des définitions : un rééquilibrage peut modifier l'état projeté
+après chargement. En revanche, transformer structurellement une définition déjà
+persistée, par exemple retirer sa capacité périssable, exige une migration
+versionnée explicite.
+
+Pour les panneaux UI Toolkit générés : HUD santé `210`, inventaire `220`, menu
+pause `1100`. L'ordre est appliqué aux `PanelSettings` et aux `UIDocument`.

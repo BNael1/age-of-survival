@@ -1,6 +1,6 @@
 # État du projet
 
-Dernière mise à jour : 7 août 2026
+Dernière mise à jour : 8 août 2026
 
 ## Moteur
 
@@ -11,19 +11,19 @@ Dernière mise à jour : 7 août 2026
 
 ## État actuel
 
-Le dernier commit fonctionnel intégré de la boucle de santé est
-`5cd7ca294c4d0885d1c22b8d14a8d507ae0d6609`
-(`feat: complete player health runtime loop`). Le lot 7H-A3 est fermé et
-intégré par fast-forward après 7H-A1 et 7H-A2. Sa documentation de clôture
-suit ce commit sur `main`.
+Le dernier commit fonctionnel local validé est
+`d102160d45218ff599b580922d26b80b0bd77f7f`
+(`feat: add deterministic food and spoilage loop`). Le lot 7I ajoute la
+première verticale jouable de nourriture, satiété et péremption. Le commit
+documentaire de clôture suit immédiatement ce commit ; aucun push n'est
+effectué par le kit de clôture.
 
 La validation la plus récente sous Unity `6000.3.19f1` est de
-**537/537 EditMode** et **16/16 PlayMode**, zéro échec, zéro ignoré ou
-inconclusif. La validation visuelle couvre le HUD de santé, la zone temporaire
-de dégâts, la séquence de dégâts et de respawn, la caméra, la conservation de
-l'inventaire, la pause et une Console sans erreur. Le runner PlayMode possède
-également une relance unique et ciblée pour l'incident natif connu validée par
-autotest.
+**555/555 EditMode** et **16/16 PlayMode**, zéro échec, zéro ignoré ou
+inconclusif. La verticale nourriture a aussi été validée visuellement :
+pomme fraîche dans le sac, satiété, activation de `Eat selected`,
+consommation, variation de charge, transfert aller-retour avec fraîcheur
+conservée, ordre des panneaux UI correct et Console sans erreur.
 
 Lots validés et commités :
 
@@ -610,3 +610,37 @@ a ensuite validé **16/16 PlayMode**.
 
 Le runner autorise une seule relance pour la combinaison exacte code `134` et
 signature connue. Toute autre erreur ou répétition reste un échec explicite.
+
+<!-- LOT7I_PROJECT_STATE -->
+## Lot 7I — nourriture, satiété et péremption
+
+Le lot 7I est validé fonctionnellement au commit `d102160d45218ff599b580922d26b80b0bd77f7f`
+(`feat: add deterministic food and spoilage loop`). Il introduit dans le Core
+une satiété déterministe, des capacités éditoriales de consommation/nutrition/
+péremption, des lots homogènes de fraîcheur séparés des piles d'inventaire et
+une péremption évaluée paresseusement à partir du tick fixe.
+
+La pomme prototype commence par trois exemplaires dans le sac. Elle restaure
+`20` points de satiété à l'état frais ; les coefficients altéré/pourri et les
+seuils de péremption restent des valeurs de tuning provisoires centralisées. Un
+aliment pourri reste un objet consommable mais marqué dangereux ; maladie,
+cuisson, température et nutrition corporelle restent hors de ce lot.
+
+Le format autoritaire passe à `AOSSAVE` V3. Les V1/V2 sont toujours lues sans
+réécriture implicite ; elles restaurent la satiété pleine au tick sauvegardé et
+aucun lot périssable. La restauration enrichit le registre avec les définitions
+éditoriales courantes afin qu'une ancienne sauvegarde puisse recevoir les
+nouveaux aliments sans les faire apparaître artificiellement.
+
+Les actions d'inventaire ordinaires refusent les définitions périssables ; les
+opérations spécialisées maintiennent atomiquement l'agrégat et les lots. Les
+transferts et consommations choisissent le lot le plus ancien de manière
+canonique. Les identifiants de lots sont dérivés de l'état vivant et restent
+déterministes après sauvegarde/chargement.
+
+Le correctif UI final applique l'ordre `HUD santé 210 < inventaire 220 < pause
+1100` aux `PanelSettings` générés et aux `UIDocument`, afin que les actions du
+footer de l'inventaire restent accessibles.
+
+Validation finale : **555/555 EditMode**, **16/16 PlayMode**, `git diff --check`
+propre et validation visuelle complète par Naël le 8 août 2026.
