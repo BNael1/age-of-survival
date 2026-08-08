@@ -166,19 +166,10 @@ namespace AgeOfSurvival.Runtime.Inventory
             long currentTick)
         {
             CurrentPlayerPosition = playerPosition;
-            ResourceYieldResult result = ResourceYieldOperations.HarvestToGround(
-                _resources,
-                _groundContainers,
+            return HarvestNaturalResourceAndStartTransfer(
                 playerPosition,
                 interactionRadius,
-                InventoryPrototypeCatalog.Branches,
-                InventoryPrototypeCatalog.ResourceYieldQuantity,
-                new EncumbranceValue(InventoryPrototypeCatalog.GroundCapacityUnits));
-            if (result.Succeeded)
-            {
-                StartGroundTransfer(result.Ground, result.Produced, currentTick);
-            }
-            return result;
+                currentTick);
         }
 
         public TransferActionResult StartGroundTransfer(
@@ -186,37 +177,18 @@ namespace AgeOfSurvival.Runtime.Inventory
             int quantity,
             long currentTick)
         {
-            if (TransferAction != null && TransferAction.Status == TransferActionStatus.Active)
-                return new TransferActionResult(TransferAction, TransferActionReason.AnotherActionActive);
-            if (ground == null || !_groundContainers.Contains(ground))
-                return new TransferActionResult(null, TransferActionReason.InvalidRequest);
-
-            var id = new TransferActionId($"transfer-{_nextTransferAction++:0000}");
-            TransferActionResult result = TransferActionOperations.Start(
-                id,
-                ground.Container,
-                MainContainer,
-                InventoryPrototypeCatalog.Branches,
+            return StartGroundTransfer(
+                ground,
+                FirstGroundDefinitionId(ground),
                 quantity,
-                currentTick,
-                ground.Position,
-                InventoryPrototypeCatalog.GroundTransferMaximumDistance,
-                InventoryPrototypeCatalog.TransferTiming);
-            if (result.Succeeded) TransferAction = result.Action;
-            return result;
+                currentTick);
         }
 
         public bool CanStartGroundTransfer(GroundContainerState ground)
         {
-            return ground != null
-                && _groundContainers.Contains(ground)
-                && !ground.IsEmpty
-                && (TransferAction == null || TransferAction.Status != TransferActionStatus.Active)
-                && CurrentPlayerPosition.DistanceSquaredTo(ground.Position)
-                    <= InventoryPrototypeCatalog.GroundTransferMaximumDistance
-                        * InventoryPrototypeCatalog.GroundTransferMaximumDistance
-                && MainContainer.RemainingCapacity.Units
-                    >= InventoryPrototypeCatalog.Branches.UnitEncumbrance.Units;
+            return CanStartGroundTransfer(
+                ground,
+                FirstGroundDefinitionId(ground));
         }
 
         public TransferActionResult AdvanceTransfer(
@@ -305,6 +277,16 @@ namespace AgeOfSurvival.Runtime.Inventory
             IEnumerable<ResourceState> resources)
         {
             _current = new InventoryPrototypeSession(resources);
+            return _current;
+        }
+
+        public static InventoryPrototypeSession ConfigureResources(
+            IEnumerable<ResourceState> resources,
+            AgeOfSurvival.Core.World.Generation.WorldPopulationSettings world)
+        {
+            _current = new InventoryPrototypeSession(
+                resources,
+                world);
             return _current;
         }
 

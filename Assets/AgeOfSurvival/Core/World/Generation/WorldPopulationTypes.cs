@@ -22,7 +22,10 @@ namespace AgeOfSurvival.Core.World.Generation
 
     public enum GeneratedResourceKind : byte
     {
-        Shrub = 0
+        Shrub = 0,
+        LooseStone = 1,
+        Deadwood = 2,
+        Tree = 3
     }
 
     public readonly struct GeneratedCellData : IEquatable<GeneratedCellData>

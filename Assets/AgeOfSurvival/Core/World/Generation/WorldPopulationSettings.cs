@@ -80,6 +80,39 @@ namespace AgeOfSurvival.Core.World.Generation
             int resourceExclusionRadius,
             int spawnClearanceRadius,
             int spawnSearchRadius)
+            : this(
+                id,
+                revision,
+                terrainScale,
+                soilScale,
+                zoneScale,
+                waterThreshold,
+                dirtThreshold,
+                woodedThreshold,
+                openResourceChance,
+                woodedResourceChance,
+                resourceExclusionRadius,
+                spawnClearanceRadius,
+                spawnSearchRadius,
+                ResourceKindDistribution.ShrubsOnly)
+        {
+        }
+
+        public WorldPopulationProfile(
+            WorldPopulationProfileId id,
+            int revision,
+            int terrainScale,
+            int soilScale,
+            int zoneScale,
+            ushort waterThreshold,
+            ushort dirtThreshold,
+            ushort woodedThreshold,
+            uint openResourceChance,
+            uint woodedResourceChance,
+            int resourceExclusionRadius,
+            int spawnClearanceRadius,
+            int spawnSearchRadius,
+            ResourceKindDistribution resourceKinds)
         {
             if (!id.IsValid)
             {
@@ -96,6 +129,12 @@ namespace AgeOfSurvival.Core.World.Generation
             ValidateScale(zoneScale, nameof(zoneScale));
             ValidateChance(openResourceChance, nameof(openResourceChance));
             ValidateChance(woodedResourceChance, nameof(woodedResourceChance));
+            if (!resourceKinds.IsValid)
+            {
+                throw new ArgumentException(
+                    "A valid natural-resource kind distribution is required.",
+                    nameof(resourceKinds));
+            }
 
             if (resourceExclusionRadius < 1 || resourceExclusionRadius > 64)
             {
@@ -131,6 +170,7 @@ namespace AgeOfSurvival.Core.World.Generation
             WoodedThreshold = woodedThreshold;
             OpenResourceChance = openResourceChance;
             WoodedResourceChance = woodedResourceChance;
+            ResourceKinds = resourceKinds;
             ResourceExclusionRadius = resourceExclusionRadius;
             SpawnClearanceRadius = spawnClearanceRadius;
             SpawnSearchRadius = spawnSearchRadius;
@@ -146,6 +186,7 @@ namespace AgeOfSurvival.Core.World.Generation
         public ushort WoodedThreshold { get; }
         public uint OpenResourceChance { get; }
         public uint WoodedResourceChance { get; }
+        public ResourceKindDistribution ResourceKinds { get; }
         public int ResourceExclusionRadius { get; }
         public int SpawnClearanceRadius { get; }
         public int SpawnSearchRadius { get; }
@@ -160,6 +201,7 @@ namespace AgeOfSurvival.Core.World.Generation
             && ZoneScale <= 4096
             && OpenResourceChance <= ProbabilityScale
             && WoodedResourceChance <= ProbabilityScale
+            && ResourceKinds.IsValid
             && ResourceExclusionRadius >= 1
             && ResourceExclusionRadius <= 64
             && SpawnClearanceRadius >= 0
@@ -179,6 +221,7 @@ namespace AgeOfSurvival.Core.World.Generation
                 && WoodedThreshold == other.WoodedThreshold
                 && OpenResourceChance == other.OpenResourceChance
                 && WoodedResourceChance == other.WoodedResourceChance
+                && ResourceKinds.Equals(other.ResourceKinds)
                 && ResourceExclusionRadius == other.ResourceExclusionRadius
                 && SpawnClearanceRadius == other.SpawnClearanceRadius
                 && SpawnSearchRadius == other.SpawnSearchRadius;
@@ -203,6 +246,7 @@ namespace AgeOfSurvival.Core.World.Generation
                 hash = (hash * 397) ^ WoodedThreshold;
                 hash = (hash * 397) ^ (int)OpenResourceChance;
                 hash = (hash * 397) ^ (int)WoodedResourceChance;
+                hash = (hash * 397) ^ ResourceKinds.GetHashCode();
                 hash = (hash * 397) ^ ResourceExclusionRadius;
                 hash = (hash * 397) ^ SpawnClearanceRadius;
                 hash = (hash * 397) ^ SpawnSearchRadius;
@@ -337,11 +381,41 @@ namespace AgeOfSurvival.Core.World.Generation
                 spawnClearanceRadius: 1,
                 spawnSearchRadius: 48);
 
+        public static readonly WorldPopulationProfile TemperatePrototypeV2 =
+            new WorldPopulationProfile(
+                TemperatePrototypeV1Id,
+                2,
+                TemperatePrototypeV1.TerrainScale,
+                TemperatePrototypeV1.SoilScale,
+                TemperatePrototypeV1.ZoneScale,
+                TemperatePrototypeV1.WaterThreshold,
+                TemperatePrototypeV1.DirtThreshold,
+                TemperatePrototypeV1.WoodedThreshold,
+                TemperatePrototypeV1.OpenResourceChance,
+                TemperatePrototypeV1.WoodedResourceChance,
+                TemperatePrototypeV1.ResourceExclusionRadius,
+                TemperatePrototypeV1.SpawnClearanceRadius,
+                TemperatePrototypeV1.SpawnSearchRadius,
+                ResourceKindDistribution.TemperateNaturalV2);
+
         public static WorldPopulationSettings CreateTemperatePrototypeV1(WorldSeed seed)
         {
             return new WorldPopulationSettings(
                 WorldGenerationDefaults.CreatePopulationV1(seed),
                 TemperatePrototypeV1);
+        }
+
+        public static WorldPopulationSettings CreateTemperatePrototypeV2(WorldSeed seed)
+        {
+            return new WorldPopulationSettings(
+                WorldGenerationDefaults.CreatePopulationV1(seed),
+                TemperatePrototypeV2);
+        }
+
+        public static WorldPopulationSettings CreateTemperatePrototypeCurrent(
+            WorldSeed seed)
+        {
+            return CreateTemperatePrototypeV2(seed);
         }
     }
 }

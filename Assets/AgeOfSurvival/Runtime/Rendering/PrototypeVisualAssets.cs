@@ -15,7 +15,12 @@ namespace AgeOfSurvival.Runtime.Rendering
         public const string GroundWater = "ground_water";
         public const string PlayerSurvivor = "player_survivor";
         public const string ResourceShrub = "resource_shrub";
+        public const string ResourceStone = "resource_stone";
+        public const string ResourceDeadwood = "resource_deadwood";
+        public const string ResourceTree = "resource_tree";
         public const string GroundBranches = "ground_branches";
+        public const string GroundStones = "ground_stones";
+        public const string GroundWood = "ground_wood";
         public const string TargetRing = "target_ring";
         public const string InteractionRadius = "interaction_radius";
         public const string UiPixel = "ui_pixel";
@@ -59,7 +64,12 @@ namespace AgeOfSurvival.Runtime.Rendering
                 && TextureExists(GroundWater)
                 && TextureExists(PlayerSurvivor)
                 && TextureExists(ResourceShrub)
+                && TextureExists(ResourceStone)
+                && TextureExists(ResourceDeadwood)
+                && TextureExists(ResourceTree)
                 && TextureExists(GroundBranches)
+                && TextureExists(GroundStones)
+                && TextureExists(GroundWood)
                 && TextureExists(TargetRing)
                 && TextureExists(InteractionRadius)
                 && TextureExists(UiPixel);

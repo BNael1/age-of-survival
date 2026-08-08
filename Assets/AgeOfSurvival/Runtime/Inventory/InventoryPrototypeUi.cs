@@ -203,7 +203,11 @@ namespace AgeOfSurvival.Runtime.Inventory
             if (ground != null)
             {
                 int quantity = InventoryOperations.Count(ground.Container, _selection.DefinitionId);
-                _session.StartGroundTransfer(ground, quantity, _session.CurrentTick);
+                _session.StartGroundTransfer(
+                    ground,
+                    _selection.DefinitionId,
+                    quantity,
+                    _session.CurrentTick);
                 ClearSelection();
                 Refresh();
                 return;
@@ -271,7 +275,9 @@ namespace AgeOfSurvival.Runtime.Inventory
                 : InventoryPrototypeCatalog.MainContainerId;
             GroundContainerState ground = _session.FindGround(_selection.SourceContainerId);
             _transferButton.SetEnabled(ground != null
-                ? _session.CanStartGroundTransfer(ground)
+                ? _session.CanStartGroundTransfer(
+                    ground,
+                    _selection.DefinitionId)
                 : _session.IsPerishable(_selection)
                     ? _session.CanTransferPerishable(_selection, destination)
                     : _session.Commands.CanTransfer(_selection, destination));

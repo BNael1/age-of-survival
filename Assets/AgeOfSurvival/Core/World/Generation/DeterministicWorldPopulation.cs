@@ -142,12 +142,14 @@ namespace AgeOfSurvival.Core.World.Generation
 
                 if (HasGeneratedResourceAt(worldCell))
                 {
+                    GeneratedResourceKind kind =
+                        SampleGeneratedResourceKind(worldCell);
                     resources.Add(new GeneratedResourcePlacement(
                         GeneratedResourceIds.Create(
                             Settings,
-                            GeneratedResourceKind.Shrub,
+                            kind,
                             worldCell),
-                        GeneratedResourceKind.Shrub,
+                        kind,
                         worldCell));
                 }
             }
@@ -228,6 +230,26 @@ namespace AgeOfSurvival.Core.World.Generation
                 worldCell,
                 GenerationStreams.ResourceCandidate);
             return sample < chance;
+        }
+
+        public GeneratedResourceKind SampleGeneratedResourceKind(
+            WorldCellCoordinate worldCell)
+        {
+            GeneratedCellData cell = SampleCell(worldCell);
+            if (!cell.IsLand)
+            {
+                throw new ArgumentException(
+                    "A generated natural-resource kind can only be sampled on land.",
+                    nameof(worldCell));
+            }
+
+            ushort sample = DeterministicWorldFields.Sample16(
+                Settings.Generation,
+                worldCell,
+                GenerationStreams.ResourceKind);
+            return Settings.Profile.ResourceKinds.Select(
+                cell.Zone,
+                sample);
         }
 
         private ulong SampleResourcePriority(WorldCellCoordinate worldCell)

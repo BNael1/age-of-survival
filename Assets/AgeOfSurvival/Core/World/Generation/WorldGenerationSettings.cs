@@ -203,6 +203,7 @@ namespace AgeOfSurvival.Core.World.Generation
         public static readonly GenerationStream LandscapeZone = new GenerationStream(0x5A4F4E45u);
         public static readonly GenerationStream ResourceCandidate = new GenerationStream(0x5243414Eu);
         public static readonly GenerationStream ResourcePriority = new GenerationStream(0x52505249u);
+        public static readonly GenerationStream ResourceKind = new GenerationStream(0x524B494Eu);
         public static readonly GenerationStream SpawnPriority = new GenerationStream(0x53505249u);
     }
 

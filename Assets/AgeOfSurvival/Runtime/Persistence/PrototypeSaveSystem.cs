@@ -19,8 +19,30 @@ namespace AgeOfSurvival.Runtime.Persistence
             WorldIdentitySnapshot identity,
             out WorldPopulationSettings settings)
         {
-            settings = WorldPopulationDefaults.CreateTemperatePrototypeV1(
-                identity.Generation.Seed);
+            if (!identity.PopulationProfileId.Equals(
+                    WorldPopulationDefaults.TemperatePrototypeV1Id))
+            {
+                settings = default;
+                return false;
+            }
+
+            switch (identity.PopulationRevision)
+            {
+                case 1:
+                    settings =
+                        WorldPopulationDefaults.CreateTemperatePrototypeV1(
+                            identity.Generation.Seed);
+                    break;
+                case 2:
+                    settings =
+                        WorldPopulationDefaults.CreateTemperatePrototypeV2(
+                            identity.Generation.Seed);
+                    break;
+                default:
+                    settings = default;
+                    return false;
+            }
+
             return settings.Generation.Equals(identity.Generation)
                 && settings.Profile.Id.Equals(identity.PopulationProfileId)
                 && settings.Profile.Revision == identity.PopulationRevision;

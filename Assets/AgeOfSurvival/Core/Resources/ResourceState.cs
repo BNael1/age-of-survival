@@ -11,11 +11,25 @@ namespace AgeOfSurvival.Core.Resources
 
     /// <summary>
     /// Mutable simulation state for one resource instance.
+    /// The immutable definition identity is carried separately from availability.
     /// </summary>
     public sealed class ResourceState
     {
         public ResourceState(
             ResourceId id,
+            WorldPosition position,
+            ResourceAvailability availability = ResourceAvailability.Available)
+            : this(
+                id,
+                ResourceDefinitionIds.Shrub,
+                position,
+                availability)
+        {
+        }
+
+        public ResourceState(
+            ResourceId id,
+            ResourceDefinitionId definitionId,
             WorldPosition position,
             ResourceAvailability availability = ResourceAvailability.Available)
         {
@@ -26,12 +40,29 @@ namespace AgeOfSurvival.Core.Resources
                     nameof(id));
             }
 
+            if (!definitionId.IsValid)
+            {
+                throw new ArgumentException(
+                    "A resource state requires a valid definition identifier.",
+                    nameof(definitionId));
+            }
+
+            if (!Enum.IsDefined(typeof(ResourceAvailability), availability))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(availability),
+                    availability,
+                    "Unknown resource availability.");
+            }
+
             Id = id;
+            DefinitionId = definitionId;
             Position = position;
             Availability = availability;
         }
 
         public ResourceId Id { get; }
+        public ResourceDefinitionId DefinitionId { get; }
         public WorldPosition Position { get; }
         public ResourceAvailability Availability { get; private set; }
 

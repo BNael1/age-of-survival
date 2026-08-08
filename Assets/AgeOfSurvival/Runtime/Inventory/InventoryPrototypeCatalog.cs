@@ -12,7 +12,6 @@ namespace AgeOfSurvival.Runtime.Inventory
         public const long MainCapacityUnits = 12000;
         public const long BagCapacityUnits = 20000;
         public const int EquippedBagReductionPercent = 70;
-        public const int ResourceYieldQuantity = 6;
         public const long GroundCapacityUnits = 100000;
         public const double GroundTransferMaximumDistance = 1.5;
         public const int TransferBaseTicks = 15;
@@ -49,6 +48,12 @@ namespace AgeOfSurvival.Runtime.Inventory
             ItemStateKind.Stackable,
             new EncumbranceValue(1500));
 
+        public static readonly ItemDefinition Wood = new ItemDefinition(
+            new ItemDefinitionId("wood"),
+            "Wood",
+            ItemStateKind.Stackable,
+            new EncumbranceValue(1000));
+
         public static readonly ItemDefinition Apple = new ItemDefinition(
             new ItemDefinitionId("apple"),
             "Apple",
@@ -78,6 +83,7 @@ namespace AgeOfSurvival.Runtime.Inventory
         {
             Branches,
             Stones,
+            Wood,
             Apple,
             Tool,
             Bag

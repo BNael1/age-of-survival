@@ -125,7 +125,13 @@ namespace AgeOfSurvival.Runtime.Resources
                 for (int index = 0; index < _markers.Count; index++)
                 {
                     ResourceMarker marker = _markers[index];
-                    if (marker.Root.activeSelf && marker.BodyRenderer.sprite == _groundSprite)
+                    GroundContainerState ground =
+                        FindGroundFor(marker.Resource);
+                    if (marker.Root.activeSelf
+                        && marker.Resource.Availability
+                            == ResourceAvailability.Harvested
+                        && ground != null
+                        && !ground.IsEmpty)
                     {
                         count++;
                     }
@@ -262,7 +268,8 @@ namespace AgeOfSurvival.Runtime.Resources
                 if (!Application.isPlaying)
                 {
                     _session = new InventoryPrototypeSession(
-                        generatedResources);
+                        generatedResources,
+                        worldRenderer.PopulationChunk.Settings);
                 }
                 else
                 {
@@ -272,7 +279,8 @@ namespace AgeOfSurvival.Runtime.Resources
                     {
                         current =
                             InventoryPrototypeSessionProvider.ConfigureResources(
-                                System.Array.Empty<ResourceState>());
+                                System.Array.Empty<ResourceState>(),
+                                worldRenderer.PopulationChunk.Settings);
                     }
 
                     if (worldRenderer.UsesChunkStreaming)
@@ -363,16 +371,8 @@ namespace AgeOfSurvival.Runtime.Resources
 
         private void CreateVisualAssets()
         {
-            _resourceSprite = PrototypeVisualAssets.CreateSprite(
-                PrototypeVisualAssets.ResourceShrub,
-                new Vector2(ResourceGroundPivotX, ResourceGroundPivotY),
-                PrototypeVisualAssets.PixelsPerUnit,
-                "Prototype Resource Shrub");
-            _groundSprite = PrototypeVisualAssets.CreateSprite(
-                PrototypeVisualAssets.GroundBranches,
-                new Vector2(ResourceGroundPivotX, GroundPilePivotY),
-                PrototypeVisualAssets.PixelsPerUnit,
-                "Prototype Ground Branches");
+            bool naturalSpritesLoaded =
+                TryCreateNaturalResourceVisualAssets();
             _indicatorSprite = PrototypeVisualAssets.CreateSprite(
                 PrototypeVisualAssets.TargetRing,
                 new Vector2(0.5f, 0.5f),
@@ -389,8 +389,7 @@ namespace AgeOfSurvival.Runtime.Resources
                 PrototypeVisualAssets.PixelsPerUnit,
                 "Prototype UI Pixel");
 
-            UsesPrototypeVisuals = _resourceSprite != null
-                && _groundSprite != null
+            UsesPrototypeVisuals = naturalSpritesLoaded
                 && _indicatorSprite != null
                 && _radiusSprite != null
                 && _uiSprite != null;
@@ -410,6 +409,7 @@ namespace AgeOfSurvival.Runtime.Resources
                 _bodyTexture,
                 out _resourceSprite,
                 out _groundSprite);
+            BindFallbackNaturalResourceSprites();
 
             _indicatorTexture = CreateDiamondOutlineTexture(
                 IndicatorSizePixels,
@@ -444,7 +444,8 @@ namespace AgeOfSurvival.Runtime.Resources
                 markerObject.transform.SetParent(_generatedRoot, false);
 
                 var bodyRenderer = markerObject.AddComponent<SpriteRenderer>();
-                bodyRenderer.sprite = _resourceSprite;
+                bodyRenderer.sprite =
+                    ResourceSpriteFor(resource.DefinitionId);
                 bodyRenderer.spriteSortPoint = SpriteSortPoint.Pivot;
 
                 var targetObject = new GameObject("Target Indicator");
@@ -560,14 +561,20 @@ namespace AgeOfSurvival.Runtime.Resources
             for (int index = 0; index < _markers.Count; index++)
             {
                 ResourceMarker marker = _markers[index];
-                bool available = marker.Resource.Availability == ResourceAvailability.Available;
-                GroundContainerState ground = FindGroundFor(marker.Resource);
-                int groundQuantity = ground == null ? 0 : InventoryOperations.Count(
-                    ground.Container,
-                    InventoryPrototypeCatalog.Branches.Id);
+                bool available =
+                    marker.Resource.Availability
+                        == ResourceAvailability.Available;
+                GroundContainerState ground =
+                    FindGroundFor(marker.Resource);
+                int groundQuantity = GroundQuantityFor(
+                    marker.Resource,
+                    ground,
+                    out ItemDefinitionId groundDefinitionId);
                 bool visible = available || groundQuantity > 0;
                 marker.Root.SetActive(visible);
-                marker.BodyRenderer.sprite = available ? _resourceSprite : _groundSprite;
+                marker.BodyRenderer.sprite = available
+                    ? ResourceSpriteFor(marker.Resource.DefinitionId)
+                    : GroundSpriteFor(groundDefinitionId);
                 marker.TargetIndicator.SetActive(
                     available && ReferenceEquals(marker.Resource, target));
                 marker.QuantityLabel.gameObject.SetActive(groundQuantity > 0);
@@ -700,6 +707,7 @@ namespace AgeOfSurvival.Runtime.Resources
                 _resourceSprite = null;
                 _groundSprite = null;
                 _indicatorSprite = null;
+                ClearNaturalResourceSpriteMaps();
             }
 
             _radiusSprite = null;
@@ -711,13 +719,10 @@ namespace AgeOfSurvival.Runtime.Resources
 
         private void DestroyPrototypeSprites()
         {
-            PrototypeVisualAssets.DestroyRuntimeSprite(_resourceSprite);
-            PrototypeVisualAssets.DestroyRuntimeSprite(_groundSprite);
+            DestroyNaturalResourcePrototypeSprites();
             PrototypeVisualAssets.DestroyRuntimeSprite(_indicatorSprite);
             PrototypeVisualAssets.DestroyRuntimeSprite(_radiusSprite);
             PrototypeVisualAssets.DestroyRuntimeSprite(_uiSprite);
-            _resourceSprite = null;
-            _groundSprite = null;
             _indicatorSprite = null;
             _radiusSprite = null;
             _uiSprite = null;

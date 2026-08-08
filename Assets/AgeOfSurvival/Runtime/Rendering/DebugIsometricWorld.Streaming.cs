@@ -462,9 +462,8 @@ namespace AgeOfSurvival.Runtime.Rendering
                 for (int resourceIndex = 0; resourceIndex < chunk.Resources.Count; resourceIndex++)
                 {
                     GeneratedResourcePlacement placement = chunk.Resources[resourceIndex];
-                    resources.Add(new ResourceState(
-                        placement.Id,
-                        new WorldPosition(placement.Cell.X, placement.Cell.Y)));
+                    resources.Add(
+                        CreateGeneratedNaturalResourceState(placement));
                 }
             }
 
@@ -490,9 +489,8 @@ namespace AgeOfSurvival.Runtime.Rendering
                 for (int resourceIndex = 0; resourceIndex < chunk.Resources.Count; resourceIndex++)
                 {
                     GeneratedResourcePlacement placement = chunk.Resources[resourceIndex];
-                    resources.Add(new ResourceState(
-                        placement.Id,
-                        new WorldPosition(placement.Cell.X, placement.Cell.Y)));
+                    resources.Add(
+                        CreateGeneratedNaturalResourceState(placement));
                 }
             }
 
@@ -535,9 +533,8 @@ namespace AgeOfSurvival.Runtime.Rendering
                 for (int resourceIndex = 0; resourceIndex < chunk.Resources.Count; resourceIndex++)
                 {
                     GeneratedResourcePlacement placement = chunk.Resources[resourceIndex];
-                    retainedResources.Add(new ResourceState(
-                        placement.Id,
-                        new WorldPosition(placement.Cell.X, placement.Cell.Y)));
+                    retainedResources.Add(
+                        CreateGeneratedNaturalResourceState(placement));
                 }
             }
 

@@ -120,9 +120,8 @@ namespace AgeOfSurvival.Runtime.Rendering
             for (int index = 0; index < _populationChunk.Resources.Count; index++)
             {
                 GeneratedResourcePlacement placement = _populationChunk.Resources[index];
-                resources.Add(new ResourceState(
-                    placement.Id,
-                    new WorldPosition(placement.Cell.X, placement.Cell.Y)));
+                resources.Add(
+                    CreateGeneratedNaturalResourceState(placement));
             }
 
             return resources.AsReadOnly();
@@ -168,7 +167,7 @@ namespace AgeOfSurvival.Runtime.Rendering
         {
             WorldSeed seed = WorldSeed.Parse(worldSeed);
             WorldPopulationSettings settings =
-                WorldPopulationDefaults.CreateTemperatePrototypeV1(seed);
+                ResolvePopulationSettings(seed);
             var generator = new DeterministicWorldPopulationGenerator(settings);
             var coordinate = new ChunkCoordinate(chunkX, chunkY);
             _populationChunk = generator.Generate(coordinate);

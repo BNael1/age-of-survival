@@ -57,11 +57,11 @@ namespace AgeOfSurvival.Runtime.Inventory
                 ResourceState existing = FindResource(candidate.Id);
                 if (existing != null)
                 {
-                    if (!existing.Position.Equals(candidate.Position))
+                    if (!existing.Position.Equals(candidate.Position)
+                        || !existing.DefinitionId.Equals(candidate.DefinitionId))
                     {
                         throw new InvalidOperationException(
-                            $"Generated resource {candidate.Id} changed position from "
-                            + $"{existing.Position} to {candidate.Position}.");
+                            $"Generated resource {candidate.Id} changed definition or position.");
                     }
 
                     continue;
@@ -213,10 +213,13 @@ namespace AgeOfSurvival.Runtime.Inventory
                 for (int index = 0; index < pair.Value.Count; index++)
                 {
                     ResourceState existing = FindResource(pair.Value[index].Id);
-                    if (existing == null || !existing.Position.Equals(pair.Value[index].Position))
+                    if (existing == null
+                        || !existing.Position.Equals(pair.Value[index].Position)
+                        || !existing.DefinitionId.Equals(
+                            pair.Value[index].DefinitionId))
                     {
                         throw new InvalidOperationException(
-                            "A retained generated resource changed identity or position.");
+                            "A retained generated resource changed identity, definition or position.");
                     }
                 }
             }
@@ -398,6 +401,7 @@ namespace AgeOfSurvival.Runtime.Inventory
                 ResourceState baseline = generated[index];
                 restoredResources.Add(new ResourceState(
                     baseline.Id,
+                    baseline.DefinitionId,
                     baseline.Position,
                     harvestedIds.Contains(baseline.Id)
                         ? ResourceAvailability.Harvested
