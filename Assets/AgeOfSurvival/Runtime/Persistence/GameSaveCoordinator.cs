@@ -1,5 +1,6 @@
 using System;
 using AgeOfSurvival.Core.Characters;
+using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.World.Generation;
@@ -63,6 +64,8 @@ namespace AgeOfSurvival.Runtime.Persistence
             long fixedTick,
             WorldPosition playerPosition,
             PlayerHealthState health,
+            PlayerFoodState food,
+            PerishableInventoryState perishables,
             PlayerInventoryState inventory,
             ChunkStateLifecycle chunks)
         {
@@ -71,6 +74,8 @@ namespace AgeOfSurvival.Runtime.Persistence
                 fixedTick,
                 playerPosition,
                 health,
+                food,
+                perishables,
                 inventory,
                 chunks);
             _storage.Save(slot, snapshot);

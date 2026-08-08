@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using AgeOfSurvival.Core.Characters;
+using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.Resources;
@@ -29,11 +30,15 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 "resource-b");
             chunks.Store.Put(mutation);
 
+            PlayerFoodState food = CreateFood(42);
+            var perishables = new PerishableInventoryState();
             GameSaveSnapshot snapshot = GameSaveSnapshotCapture.Capture(
                 world,
                 42,
                 new WorldPosition(12.5, -3.25),
                 CreateHealth(42),
+                food,
+                perishables,
                 inventory,
                 chunks);
 
@@ -51,6 +56,9 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             Assert.That(
                 snapshot.Health.NextRegenerationTick,
                 Is.EqualTo(552L));
+            Assert.That(snapshot.Food.CurrentSatiety, Is.EqualTo(80));
+            Assert.That(snapshot.Food.CurrentTick, Is.EqualTo(42L));
+            Assert.That(snapshot.Perishables.Batches, Is.Empty);
             Assert.That(
                 snapshot.PlayerPosition,
                 Is.EqualTo(new WorldPosition(12.5, -3.25)));
@@ -522,6 +530,24 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 Is.EqualTo(GameSaveSnapshotViolation.DuplicateChunkCoordinate));
         }
 
+        [Test]
+        public void LegacyRestoredGameStateRejectsNegativeFixedTickAsFixedTick()
+        {
+            WorldPopulationSettings world = CreateWorld();
+
+            ArgumentOutOfRangeException exception =
+                Assert.Throws<ArgumentOutOfRangeException>(() =>
+                    new RestoredGameState(
+                        world,
+                        -1,
+                        new WorldPosition(0, 0),
+                        CreateHealth(0),
+                        CreateInventory(),
+                        CreateLifecycle(world)));
+
+            Assert.That(exception.ParamName, Is.EqualTo("fixedTick"));
+        }
+
         private static WorldPopulationSettings CreateWorld()
         {
             return WorldPopulationDefaults.CreateTemperatePrototypeV1(
@@ -544,6 +570,15 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 75,
                 tick,
                 checked(tick + 510L));
+        }
+
+        private static PlayerFoodState CreateFood(long tick)
+        {
+            return new PlayerFoodState(
+                100,
+                80,
+                tick,
+                PlayerFoodRules.FirstSatietyLossTickAfter(tick));
         }
 
         private static PlayerInventoryState CreateInventory()

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Resources;
 using AgeOfSurvival.Core.World.Generation;
 
@@ -10,11 +11,11 @@ namespace AgeOfSurvival.Core.Persistence
 {
     /// <summary>
     /// Deterministic, versioned, in-memory binary codec for canonical saves.
-    /// It performs no disk I/O, writes V2, and reads canonical V1/V2 payloads.
+    /// It performs no disk I/O, writes V3, and reads canonical V1/V2/V3 payloads.
     /// </summary>
     public static class GameSaveBinaryCodec
     {
-        public const ushort CurrentVersion = 2;
+        public const ushort CurrentVersion = 3;
         private const ushort MinimumSupportedVersion = 1;
         private const ushort CurrentFlags = 0;
 
@@ -144,6 +145,10 @@ namespace AgeOfSurvival.Core.Persistence
                 GameSaveCodecLimits.MaximumPlayerContainers,
                 "Player container count");
             ValidateCount(
+                snapshot.Perishables.Batches.Count,
+                GameSaveCodecLimits.MaximumPerishableBatches,
+                "Perishable batch count");
+            ValidateCount(
                 snapshot.ChunkMutations.Count,
                 GameSaveCodecLimits.MaximumChunkMutations,
                 "Chunk mutation count");
@@ -156,6 +161,8 @@ namespace AgeOfSurvival.Core.Persistence
                 writer.WriteDouble(snapshot.PlayerPosition.X);
                 writer.WriteDouble(snapshot.PlayerPosition.Y);
                 WriteHealth(writer, snapshot.Health);
+                WriteFood(writer, snapshot.Food);
+                WritePerishables(writer, snapshot.Perishables);
                 WriteInventory(writer, snapshot.Inventory);
                 WriteChunks(writer, snapshot.ChunkMutations);
                 return writer.ToArray();
@@ -181,6 +188,12 @@ namespace AgeOfSurvival.Core.Persistence
                         fixedTick,
                         null)
                     : ReadHealth(reader);
+                PlayerFoodSnapshot food = version >= 3
+                    ? ReadFood(reader)
+                    : PlayerFoodSnapshot.CreateFull(fixedTick);
+                PerishableInventorySnapshot perishables = version >= 3
+                    ? ReadPerishables(reader)
+                    : PerishableInventorySnapshot.Empty;
                 PlayerInventorySnapshot inventory = ReadInventory(reader);
                 IReadOnlyList<ChunkMutationState> mutations =
                     ReadChunks(reader, world.Generation.ChunkLayout);
@@ -190,6 +203,8 @@ namespace AgeOfSurvival.Core.Persistence
                     fixedTick,
                     playerPosition,
                     health,
+                    food,
+                    perishables,
                     inventory,
                     mutations);
             }
@@ -261,6 +276,68 @@ namespace AgeOfSurvival.Core.Persistence
                 currentHealth,
                 currentTick,
                 nextRegenerationTick);
+        }
+
+        private static void WriteFood(
+            SaveBufferWriter writer,
+            PlayerFoodSnapshot food)
+        {
+            writer.WriteInt32(food.MaximumSatiety);
+            writer.WriteInt32(food.CurrentSatiety);
+            writer.WriteInt64(food.CurrentTick);
+            writer.WriteInt64(food.NextSatietyLossTick);
+        }
+
+        private static PlayerFoodSnapshot ReadFood(SaveBufferReader reader)
+        {
+            return new PlayerFoodSnapshot(
+                reader.ReadInt32(),
+                reader.ReadInt32(),
+                reader.ReadInt64(),
+                reader.ReadInt64());
+        }
+
+        private static void WritePerishables(
+            SaveBufferWriter writer,
+            PerishableInventorySnapshot perishables)
+        {
+            writer.WriteUInt32(checked((uint)perishables.Batches.Count));
+            for (int index = 0; index < perishables.Batches.Count; index++)
+            {
+                PerishableBatchSnapshot batch = perishables.Batches[index];
+                writer.WriteRequiredString(batch.Id.Value);
+                writer.WriteRequiredString(batch.ContainerId.Value);
+                writer.WriteRequiredString(batch.DefinitionId.Value);
+                writer.WriteInt32(batch.Quantity);
+                writer.WriteInt64(batch.AccumulatedDecayMilliTicks);
+                writer.WriteInt64(batch.LastEvaluatedTick);
+            }
+        }
+
+        private static PerishableInventorySnapshot ReadPerishables(SaveBufferReader reader)
+        {
+            int count = reader.ReadCount(GameSaveCodecLimits.MaximumPerishableBatches, "Perishable batch count");
+            var batches = new List<PerishableBatchSnapshot>(count);
+            PerishableBatchSnapshot previous = default;
+            for (int index = 0; index < count; index++)
+            {
+                PerishableBatchSnapshot batch = PerishableBatchSnapshot.Restore(
+                    new FoodBatchId(reader.ReadRequiredString()),
+                    new ContainerId(reader.ReadRequiredString()),
+                    new ItemDefinitionId(reader.ReadRequiredString()),
+                    reader.ReadInt32(),
+                    reader.ReadInt64(),
+                    reader.ReadInt64());
+                if (index > 0)
+                {
+                    RequireCanonicalComparison(
+                        PerishableBatchSnapshot.Compare(previous, batch),
+                        "Perishable batches");
+                }
+                previous = batch;
+                batches.Add(batch);
+            }
+            return PerishableInventorySnapshot.Restore(batches);
         }
 
         private static void WriteInventory(

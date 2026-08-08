@@ -57,6 +57,7 @@ namespace AgeOfSurvival.Runtime.Inventory
             string reductionText,
             string movementLoadText,
             string movementMultiplierText,
+            string foodStatusText,
             string transferStatusText,
             double transferProgress)
         {
@@ -69,6 +70,7 @@ namespace AgeOfSurvival.Runtime.Inventory
             ReductionText = reductionText;
             MovementLoadText = movementLoadText;
             MovementMultiplierText = movementMultiplierText;
+            FoodStatusText = foodStatusText;
             TransferStatusText = transferStatusText;
             TransferProgress = transferProgress;
         }
@@ -82,6 +84,7 @@ namespace AgeOfSurvival.Runtime.Inventory
         public string ReductionText { get; }
         public string MovementLoadText { get; }
         public string MovementMultiplierText { get; }
+        public string FoodStatusText { get; }
         public string TransferStatusText { get; }
         public double TransferProgress { get; }
     }
@@ -97,20 +100,21 @@ namespace AgeOfSurvival.Runtime.Inventory
 
         public static InventoryPrototypeViewModel Build(PlayerInventoryState inventory)
         {
-            return Build(inventory, null, 0);
+            return Build(inventory, null, 0, null, null);
         }
 
         public static InventoryPrototypeViewModel Build(InventoryPrototypeSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            return Build(session.Inventory, session.GroundForView(), session.CurrentTick, session.TransferAction);
+            return Build(session.Inventory, session.GroundForView(), session.CurrentTick, session.TransferAction, session);
         }
 
         private static InventoryPrototypeViewModel Build(
             PlayerInventoryState inventory,
             GroundContainerState ground,
             long currentTick,
-            TransferActionState action = null)
+            TransferActionState action = null,
+            InventoryPrototypeSession session = null)
         {
             if (inventory == null) throw new ArgumentNullException(nameof(inventory));
             ContainerState bag = inventory.FindContainer(InventoryPrototypeCatalog.BagContainerId);
@@ -135,8 +139,8 @@ namespace AgeOfSurvival.Runtime.Inventory
             }
 
             return new InventoryPrototypeViewModel(
-                BuildContainer(inventory, inventory.MainContainer),
-                BuildContainer(inventory, bag),
+                BuildContainer(inventory, inventory.MainContainer, session),
+                BuildContainer(inventory, bag, session),
                 BuildGroundContainer(inventory, ground),
                 equipment.AsReadOnly(),
                 load.Gross.ToString(),
@@ -144,6 +148,7 @@ namespace AgeOfSurvival.Runtime.Inventory
                 $"{InventoryPrototypeCatalog.EquippedBagReductionPercent}% while backpack is equipped",
                 FormatLoadPercentage(movement.LoadRatio),
                 FormatMovementMultiplier(movement.SpeedMultiplier),
+                session?.FoodStatusText ?? "Satiety: n/a",
                 TransferStatus(action),
                 action?.ProgressAt(currentTick) ?? 0.0);
         }
@@ -189,7 +194,8 @@ namespace AgeOfSurvival.Runtime.Inventory
 
         private static InventoryContainerViewModel BuildContainer(
             PlayerInventoryState inventory,
-            ContainerState container)
+            ContainerState container,
+            InventoryPrototypeSession session = null)
         {
             var rows = new List<InventoryRowViewModel>();
             if (container != null)
@@ -199,13 +205,19 @@ namespace AgeOfSurvival.Runtime.Inventory
                     InventoryEntry entry = container.Entries[index];
                     ItemDefinition definition = inventory.FindDefinition(entry.DefinitionId);
                     bool unique = entry.Kind == ItemStateKind.Unique;
+                    string displayName = definition?.DisplayName ?? entry.DefinitionId.ToString();
+                    if (session != null && definition?.Perishable != null)
+                    {
+                        string freshness = session.DescribeFreshness(container.Id, definition);
+                        if (!string.IsNullOrEmpty(freshness)) displayName += " — " + freshness;
+                    }
                     rows.Add(new InventoryRowViewModel(
                         new InventorySelection(
                             container.Id,
                             entry.DefinitionId,
                             unique ? entry.UniqueItem.InstanceId : default,
                             unique),
-                        definition?.DisplayName ?? entry.DefinitionId.ToString(),
+                        displayName,
                         entry.Quantity,
                         entry.TotalEncumbrance.ToString()));
                 }

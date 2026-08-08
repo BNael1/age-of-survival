@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.Resources;
 using UnityEngine;
@@ -59,11 +60,13 @@ namespace AgeOfSurvival.Runtime.Inventory
             InventoryOperations.AddUnique(MainContainer, InventoryPrototypeCatalog.Tool, Tool);
             InventoryOperations.AddUnique(MainContainer, InventoryPrototypeCatalog.Bag, Bag);
             InventoryOperations.AddStack(BagContainer, InventoryPrototypeCatalog.Stones, 2);
+            InitializePrototypeFood();
 
             Inventory = new PlayerInventoryState(
                 MainContainer.Id,
                 InventoryPrototypeCatalog.Definitions,
                 new[] { MainContainer, BagContainer });
+            PerishableItems.ValidateAgainst(Inventory);
             Commands = new InventoryPrototypeCommands(Inventory);
             Health = new PlayerHealthState(
                 PlayerHealthRules.DefaultMaximumHealth);
@@ -153,6 +156,7 @@ namespace AgeOfSurvival.Runtime.Inventory
             CurrentPlayerPosition = playerPosition;
             CurrentTick = checked(CurrentTick + 1L);
             PlayerHealthOperations.AdvanceToTick(Health, CurrentTick);
+            PlayerFoodOperations.AdvanceToTick(Food, CurrentTick);
             return CurrentTick;
         }
 

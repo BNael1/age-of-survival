@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.World.Generation;
 
@@ -52,6 +53,7 @@ namespace AgeOfSurvival.Runtime.Inventory
             Commands = new InventoryPrototypeCommands(Inventory);
             CurrentTick = restored.FixedTick;
             Health = restored.Health;
+            InstallFoodState(restored.Food, restored.Perishables);
             CurrentPlayerPosition = restored.PlayerPosition;
             _persistenceWorld = restored.World;
             _restoredFromSave = true;
@@ -109,6 +111,8 @@ namespace AgeOfSurvival.Runtime.Inventory
                 CurrentTick,
                 CurrentPlayerPosition,
                 new PlayerHealthSnapshot(Health),
+                new PlayerFoodSnapshot(Food),
+                new PerishableInventorySnapshot(PerishableItems),
                 Inventory.CaptureSnapshot(),
                 mutations);
         }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.World.Generation;
 
 namespace AgeOfSurvival.Core.Persistence
@@ -34,6 +35,9 @@ namespace AgeOfSurvival.Core.Persistence
                 snapshot.Inventory,
                 inventoryResolver);
             PlayerHealthState health = snapshot.Health.Restore();
+            PlayerFoodState food = snapshot.Food.Restore();
+            PerishableInventoryState perishables = snapshot.Perishables.RestoreState();
+            perishables.ValidateAgainst(inventory);
 
             var store = new ChunkMutationStore();
             for (int index = 0; index < snapshot.ChunkMutations.Count; index++)
@@ -49,6 +53,8 @@ namespace AgeOfSurvival.Core.Persistence
                 snapshot.FixedTick,
                 snapshot.PlayerPosition,
                 health,
+                food,
+                perishables,
                 inventory,
                 chunks);
         }
@@ -92,6 +98,27 @@ namespace AgeOfSurvival.Core.Persistence
                 definitionsById.Add(fingerprint.Id, definition);
             }
 
+            if (resolver is IInventoryDefinitionCatalog catalog)
+            {
+                IReadOnlyList<ItemDefinition> currentDefinitions =
+                    catalog.CurrentItemDefinitions
+                    ?? throw new InvalidOperationException(
+                        "The current inventory definition catalog is unavailable.");
+                for (int index = 0; index < currentDefinitions.Count; index++)
+                {
+                    ItemDefinition definition = currentDefinitions[index]
+                        ?? throw new InvalidOperationException(
+                            "The current inventory definition catalog contains a null entry.");
+                    if (definitionsById.ContainsKey(definition.Id))
+                    {
+                        continue;
+                    }
+
+                    definitions.Add(definition);
+                    definitionsById.Add(definition.Id, definition);
+                }
+            }
+
             var containers = new List<ContainerState>(
                 saved.Containers.Count);
             for (int containerIndex = 0;
@@ -126,10 +153,15 @@ namespace AgeOfSurvival.Core.Persistence
                     AddItemResult result;
                     if (entry.Kind == ItemStateKind.Stackable)
                     {
-                        result = InventoryOperations.AddStack(
-                            container,
-                            itemDefinition,
-                            entry.Quantity);
+                        result = itemDefinition.Perishable == null
+                            ? InventoryOperations.AddStack(
+                                container,
+                                itemDefinition,
+                                entry.Quantity)
+                            : InventoryOperations.AddPerishableStack(
+                                container,
+                                itemDefinition,
+                                entry.Quantity);
                     }
                     else
                     {

@@ -18,13 +18,13 @@ namespace AgeOfSurvival.Runtime.Tests.Inventory
                 InventoryPrototypeViewModelBuilder.Build(session.Inventory);
 
             Assert.That(view.Main.Rows, Has.Count.EqualTo(4));
-            Assert.That(view.Bag.Rows, Has.Count.EqualTo(1));
+            Assert.That(view.Bag.Rows, Has.Count.EqualTo(2));
             Assert.That(view.Main.CapacityText, Is.EqualTo("10.500 / 12.000"));
-            Assert.That(view.Bag.CapacityText, Is.EqualTo("3.000 / 20.000"));
-            Assert.That(view.GrossLoadText, Is.EqualTo("13.500"));
-            Assert.That(view.PerceivedLoadText, Is.EqualTo("13.500"));
-            Assert.That(view.MovementLoadText, Is.EqualTo("112.5%"));
-            Assert.That(view.MovementMultiplierText, Is.EqualTo("×0.91"));
+            Assert.That(view.Bag.CapacityText, Is.EqualTo("3.600 / 20.000"));
+            Assert.That(view.GrossLoadText, Is.EqualTo("14.100"));
+            Assert.That(view.PerceivedLoadText, Is.EqualTo("14.100"));
+            Assert.That(view.MovementLoadText, Is.EqualTo("117.5%"));
+            Assert.That(view.MovementMultiplierText, Is.EqualTo("×0.87"));
             Assert.That(view.EquipmentLabels, Is.EqualTo(new[]
             {
                 "Left hand: Empty",
@@ -98,9 +98,9 @@ namespace AgeOfSurvival.Runtime.Tests.Inventory
 
             Assert.That(result.Succeeded, Is.True);
             Assert.That(view.EquipmentLabels[2], Is.EqualTo("Back: Prototype backpack"));
-            Assert.That(view.GrossLoadText, Is.EqualTo("13.500"));
-            Assert.That(view.PerceivedLoadText, Is.EqualTo("11.400"));
-            Assert.That(view.MovementLoadText, Is.EqualTo("95%"));
+            Assert.That(view.GrossLoadText, Is.EqualTo("14.100"));
+            Assert.That(view.PerceivedLoadText, Is.EqualTo("11.580"));
+            Assert.That(view.MovementLoadText, Is.EqualTo("96.5%"));
             Assert.That(view.MovementMultiplierText, Is.EqualTo("×1.00"));
             Assert.That(session.BagContainer.Definition.Capacity.Units, Is.EqualTo(20000));
         }
@@ -111,12 +111,12 @@ namespace AgeOfSurvival.Runtime.Tests.Inventory
             var session = new InventoryPrototypeSession();
             InventorySelection bag = FindSelection(session, "Prototype backpack");
 
-            Assert.That(session.MovementState.LoadRatio, Is.EqualTo(1.125).Within(1e-9));
-            Assert.That(session.MovementState.SpeedMultiplier, Is.EqualTo(0.905).Within(1e-9));
+            Assert.That(session.MovementState.LoadRatio, Is.EqualTo(1.175).Within(1e-9));
+            Assert.That(session.MovementState.SpeedMultiplier, Is.EqualTo(0.867).Within(1e-9));
 
             session.Commands.Equip(bag, EquipmentSlot.Back);
 
-            Assert.That(session.MovementState.LoadRatio, Is.EqualTo(0.95).Within(1e-9));
+            Assert.That(session.MovementState.LoadRatio, Is.EqualTo(0.965).Within(1e-9));
             Assert.That(session.MovementState.SpeedMultiplier, Is.EqualTo(1.0).Within(1e-9));
         }
 
@@ -142,10 +142,10 @@ namespace AgeOfSurvival.Runtime.Tests.Inventory
             var ui = new InventoryPrototypeUiDocument(root, session);
 
             Assert.That(ui.MainList.itemsSource, Has.Count.EqualTo(4));
-            Assert.That(ui.BagList.itemsSource, Has.Count.EqualTo(1));
+            Assert.That(ui.BagList.itemsSource, Has.Count.EqualTo(2));
             Assert.That(ui.MainList.virtualizationMethod, Is.EqualTo(CollectionVirtualizationMethod.FixedHeight));
-            Assert.That(root.Q<Label>("movement-load").text, Is.EqualTo("Movement load: 112.5%"));
-            Assert.That(root.Q<Label>("movement-multiplier").text, Is.EqualTo("Movement speed: ×0.91"));
+            Assert.That(root.Q<Label>("movement-load").text, Is.EqualTo("Movement load: 117.5%"));
+            Assert.That(root.Q<Label>("movement-multiplier").text, Is.EqualTo("Movement speed: ×0.87"));
             Assert.That(ui.TransferButton.enabledSelf, Is.False);
             Assert.That(ui.EquipButtons.All(button => !button.enabledSelf), Is.True);
             Assert.That(ui.UnequipButtons.All(button => !button.enabledSelf), Is.True);

@@ -9,6 +9,7 @@ namespace AgeOfSurvival.Core.Persistence
         public const int MaximumDefinitions = 4096;
         public const int MaximumPlayerContainers = 4096;
         public const int MaximumEntriesPerContainer = 65536;
+        public const int MaximumPerishableBatches = 1000000;
         public const int MaximumChunkMutations = 1000000;
         public const int MaximumHarvestedResourcesPerChunk = 65536;
         public const int MaximumGroundContainersPerChunk = 65536;

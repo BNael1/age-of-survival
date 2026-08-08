@@ -34,11 +34,11 @@ namespace AgeOfSurvival.Runtime.Tests
                 1.0,
                 1.0);
 
-            Assert.That(first.LoadRatio, Is.EqualTo(1.125).Within(0.000001));
-            Assert.That(first.SpeedMultiplier, Is.EqualTo(0.905).Within(0.000001));
-            Assert.That(second.LoadRatio, Is.EqualTo(0.95).Within(0.000001));
+            Assert.That(first.LoadRatio, Is.EqualTo(1.175).Within(0.000001));
+            Assert.That(first.SpeedMultiplier, Is.EqualTo(0.867).Within(0.000001));
+            Assert.That(second.LoadRatio, Is.EqualTo(0.965).Within(0.000001));
             Assert.That(second.SpeedMultiplier, Is.EqualTo(1.0).Within(0.000001));
-            Assert.That(player.Position.X, Is.EqualTo(1.905).Within(0.000001));
+            Assert.That(player.Position.X, Is.EqualTo(1.867).Within(0.000001));
             Assert.That(player.Position.Y, Is.EqualTo(0.0).Within(0.000001));
         }
 

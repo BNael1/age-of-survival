@@ -12,6 +12,7 @@ namespace AgeOfSurvival.Core.Inventory
             ValidateContainerAndDefinition(destination, definition);
             ValidatePositiveQuantity(quantity);
             RequireKind(definition, ItemStateKind.Stackable);
+            RequireOrdinaryStack(definition);
             RequireCompatibleDefinition(destination, definition);
 
             int accepted = QuantityThatFits(destination, definition.UnitEncumbrance, quantity);
@@ -72,6 +73,7 @@ namespace AgeOfSurvival.Core.Inventory
             ValidateContainerAndDefinition(source, definition);
             ValidatePositiveQuantity(quantity);
             RequireKind(definition, ItemStateKind.Stackable);
+            RequireOrdinaryStack(definition);
             RequireCompatibleDefinition(source, definition);
 
             int index = source.FindStackIndex(definition.Id);
@@ -125,6 +127,7 @@ namespace AgeOfSurvival.Core.Inventory
         {
             ValidateTransferArguments(source, destination, definition, quantity);
             RequireKind(definition, ItemStateKind.Stackable);
+            RequireOrdinaryStack(definition);
             RequireCompatibleDefinition(source, definition);
             RequireCompatibleDefinition(destination, definition);
 
@@ -197,6 +200,70 @@ namespace AgeOfSurvival.Core.Inventory
             }
 
             return new TransferResult(1, 1, InventoryOperationOutcome.Complete);
+        }
+
+        internal static AddItemResult AddPerishableStack(
+            ContainerState destination,
+            ItemDefinition definition,
+            int quantity)
+        {
+            ValidateContainerAndDefinition(destination, definition);
+            ValidatePositiveQuantity(quantity);
+            RequireKind(definition, ItemStateKind.Stackable);
+            if (definition.Perishable == null) throw new ArgumentException("A perishable definition is required.", nameof(definition));
+            RequireCompatibleDefinition(destination, definition);
+
+            int accepted = QuantityThatFits(destination, definition.UnitEncumbrance, quantity);
+            if (accepted == 0) return new AddItemResult(quantity, 0);
+            destination.BindDefinition(definition);
+            int existingIndex = destination.FindStackIndex(definition.Id);
+            if (existingIndex >= 0)
+            {
+                destination.ReplaceStack(existingIndex, checked(destination.EntryAt(existingIndex).Quantity + accepted));
+            }
+            else
+            {
+                destination.Append(InventoryEntry.CreateStack(definition, accepted));
+            }
+            return new AddItemResult(quantity, accepted);
+        }
+
+        internal static RemoveItemResult RemovePerishableStack(
+            ContainerState source,
+            ItemDefinition definition,
+            int quantity)
+        {
+            ValidateContainerAndDefinition(source, definition);
+            ValidatePositiveQuantity(quantity);
+            RequireKind(definition, ItemStateKind.Stackable);
+            if (definition.Perishable == null) throw new ArgumentException("A perishable definition is required.", nameof(definition));
+            RequireCompatibleDefinition(source, definition);
+            int index = source.FindStackIndex(definition.Id);
+            if (index < 0 || source.EntryAt(index).Quantity < quantity) return new RemoveItemResult(quantity, 0);
+            int remaining = source.EntryAt(index).Quantity - quantity;
+            if (remaining == 0) source.RemoveAt(index); else source.ReplaceStack(index, remaining);
+            return new RemoveItemResult(quantity, quantity);
+        }
+
+        internal static TransferResult TransferPerishableStack(
+            ContainerState source,
+            ContainerState destination,
+            ItemDefinition definition,
+            int quantity)
+        {
+            ValidateTransferArguments(source, destination, definition, quantity);
+            RequireKind(definition, ItemStateKind.Stackable);
+            if (definition.Perishable == null) throw new ArgumentException("A perishable definition is required.", nameof(definition));
+            RequireCompatibleDefinition(source, definition);
+            RequireCompatibleDefinition(destination, definition);
+            if (source.Id.Equals(destination.Id)) return new TransferResult(quantity, 0, InventoryOperationOutcome.SameContainer);
+            int sourceIndex = source.FindStackIndex(definition.Id);
+            if (sourceIndex < 0 || source.EntryAt(sourceIndex).Quantity < quantity) return new TransferResult(quantity, 0, InventoryOperationOutcome.SourceInsufficient);
+            AddItemResult added = AddPerishableStack(destination, definition, quantity);
+            if (added.Accepted == 0) return new TransferResult(quantity, 0, InventoryOperationOutcome.DestinationFull);
+            RemoveItemResult removed = RemovePerishableStack(source, definition, added.Accepted);
+            if (!removed.Succeeded) throw new InvalidOperationException("Source changed during a synchronous perishable transfer.");
+            return new TransferResult(quantity, added.Accepted, added.Accepted == quantity ? InventoryOperationOutcome.Complete : InventoryOperationOutcome.Partial);
         }
 
         public static int Count(ContainerState container, ItemDefinitionId definitionId)
@@ -275,6 +342,14 @@ namespace AgeOfSurvival.Core.Inventory
             if (quantity <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(quantity), quantity, "Quantity must be positive.");
+            }
+        }
+
+        private static void RequireOrdinaryStack(ItemDefinition definition)
+        {
+            if (definition.Perishable != null)
+            {
+                throw new InvalidOperationException("Perishable stacks must be mutated through PerishableInventoryOperations so batch state cannot desynchronize.");
             }
         }
 

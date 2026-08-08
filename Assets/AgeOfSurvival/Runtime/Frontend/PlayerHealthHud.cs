@@ -109,6 +109,7 @@ namespace AgeOfSurvival.Runtime.Frontend
     [DefaultExecutionOrder(30)]
     public sealed class PlayerHealthHudBehaviour : MonoBehaviour
     {
+        public const int SortingOrder = 210;
         private UIDocument _document;
         private PanelSettings _generatedPanelSettings;
 
@@ -134,8 +135,9 @@ namespace AgeOfSurvival.Runtime.Frontend
             _generatedPanelSettings.referenceResolution =
                 new Vector2Int(1280, 720);
             _generatedPanelSettings.match = 0.5f;
+            _generatedPanelSettings.sortingOrder = SortingOrder;
             _document.panelSettings = _generatedPanelSettings;
-            _document.sortingOrder = 210;
+            _document.sortingOrder = SortingOrder;
             _document.rootVisualElement.schedule.Execute(BuildUi);
         }
 

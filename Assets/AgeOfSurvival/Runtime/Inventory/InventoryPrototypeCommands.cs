@@ -51,6 +51,11 @@ namespace AgeOfSurvival.Runtime.Inventory
                 return false;
             }
 
+            if (definition.Perishable != null)
+            {
+                return false;
+            }
+
             bool definitionIsUnique = definition.StateKind == ItemStateKind.Unique;
             if (selection.IsUnique != definitionIsUnique)
             {

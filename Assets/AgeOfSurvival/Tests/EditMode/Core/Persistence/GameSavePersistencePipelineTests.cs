@@ -4,6 +4,7 @@ using System.IO;
 using System.Security.Cryptography;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.World.Generation;
 using NUnit.Framework;
@@ -76,7 +77,8 @@ namespace AgeOfSurvival.Core.Tests.Persistence
         public void CodecReadsLegacyV1AsFullHealthAtSavedTick()
         {
             byte[] legacy = ConvertV2ToLegacyV1(
-                GameSaveBinaryCodec.Encode(CreateSnapshot(42)));
+                ConvertV3ToLegacyV2(
+                    GameSaveBinaryCodec.Encode(CreateSnapshot(42))));
 
             Assert.That(ReadUInt16(legacy, 8), Is.EqualTo(1));
 
@@ -94,18 +96,37 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             Assert.That(
                 decoded.Health.NextRegenerationTick,
                 Is.Null);
+            Assert.That(decoded.Food.CurrentSatiety, Is.EqualTo(PlayerFoodRules.DefaultMaximumSatiety));
+            Assert.That(decoded.Food.CurrentTick, Is.EqualTo(42L));
+            Assert.That(decoded.Perishables.Batches, Is.Empty);
             Assert.That(
                 ReadUInt16(
                     GameSaveBinaryCodec.Encode(decoded),
                     8),
-                Is.EqualTo(2));
+                Is.EqualTo(3));
+        }
+
+        [Test]
+        public void CodecReadsLegacyV2AsFullFoodAtSavedTick()
+        {
+            byte[] legacy = ConvertV3ToLegacyV2(
+                GameSaveBinaryCodec.Encode(CreateSnapshot(42)));
+
+            Assert.That(ReadUInt16(legacy, 8), Is.EqualTo(2));
+            GameSaveSnapshot decoded = GameSaveBinaryCodec.Decode(legacy);
+
+            Assert.That(decoded.FixedTick, Is.EqualTo(42L));
+            Assert.That(decoded.Health.CurrentHealth, Is.EqualTo(65));
+            Assert.That(decoded.Food.CurrentSatiety, Is.EqualTo(PlayerFoodRules.DefaultMaximumSatiety));
+            Assert.That(decoded.Food.CurrentTick, Is.EqualTo(42L));
+            Assert.That(decoded.Perishables.Batches, Is.Empty);
         }
 
         [Test]
         public void CodecRejectsInvalidV2Health()
         {
-            byte[] encoded =
-                GameSaveBinaryCodec.Encode(CreateSnapshot(0));
+            byte[] encoded = ConvertV3ToLegacyV2(
+                GameSaveBinaryCodec.Encode(CreateSnapshot(0)));
             int healthOffset = GetHealthOffset(encoded);
             WriteInt32(encoded, healthOffset, 0);
             RefreshPayloadHash(encoded);
@@ -139,7 +160,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             Assert.That(encoded[1], Is.EqualTo((byte)'O'));
             Assert.That(encoded[2], Is.EqualTo((byte)'S'));
             Assert.That(encoded[7], Is.EqualTo(0));
-            Assert.That(ReadUInt16(encoded, 8), Is.EqualTo(2));
+            Assert.That(ReadUInt16(encoded, 8), Is.EqualTo(3));
             Assert.That(ReadUInt16(encoded, 10), Is.EqualTo(0));
             Assert.That(
                 ReadUInt32(encoded, 12),
@@ -189,7 +210,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
         public void CodecRejectsUnsupportedVersion()
         {
             byte[] encoded = GameSaveBinaryCodec.Encode(CreateSnapshot(0));
-            WriteUInt16(encoded, 8, 3);
+            WriteUInt16(encoded, 8, 4);
 
             GameSaveCodecException exception =
                 Assert.Throws<GameSaveCodecException>(() =>
@@ -518,6 +539,45 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                     default,
                     default,
                     new ItemInstanceId("backpack-1")));
+        }
+
+        private static byte[] ConvertV3ToLegacyV2(byte[] encoded)
+        {
+            if (ReadUInt16(encoded, 8) != 3)
+            {
+                throw new InvalidDataException("Expected a V3 fixture.");
+            }
+
+            int healthOffset = GetHealthOffset(encoded);
+            int healthLength = GetHealthLength(encoded, healthOffset);
+            int foodOffset = healthOffset + healthLength;
+            const int foodLength = 4 + 4 + 8 + 8;
+            int perishableCountOffset = foodOffset + foodLength;
+            if (ReadUInt32(encoded, perishableCountOffset) != 0u)
+            {
+                throw new InvalidDataException(
+                    "Legacy V2 fixture conversion requires no perishable batches.");
+            }
+
+            const int perishableEmptyLength = 4;
+            int extensionLength = foodLength + perishableEmptyLength;
+            int payloadLength = checked((int)ReadUInt32(encoded, 12));
+            int legacyPayloadLength = payloadLength - extensionLength;
+            var legacy = new byte[
+                GameSaveCodecLimits.HeaderLength + legacyPayloadLength];
+
+            Buffer.BlockCopy(encoded, 0, legacy, 0, foodOffset);
+            Buffer.BlockCopy(
+                encoded,
+                foodOffset + extensionLength,
+                legacy,
+                foodOffset,
+                encoded.Length - foodOffset - extensionLength);
+
+            WriteUInt16(legacy, 8, 2);
+            WriteUInt32(legacy, 12, checked((uint)legacyPayloadLength));
+            RefreshPayloadHash(legacy);
+            return legacy;
         }
 
         private static byte[] ConvertV2ToLegacyV1(byte[] encoded)

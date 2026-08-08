@@ -20,6 +20,7 @@ namespace AgeOfSurvival.Runtime.Inventory
         private readonly Label _reductionInfo;
         private readonly Label _movementLoad;
         private readonly Label _movementMultiplier;
+        private readonly Label _foodStatus;
         private readonly Label[] _equipmentLabels = new Label[3];
         private readonly ListView _mainList;
         private readonly ListView _bagList;
@@ -30,6 +31,7 @@ namespace AgeOfSurvival.Runtime.Inventory
         private readonly Label _transferStatus;
         private readonly ProgressBar _transferProgress;
         private readonly Button _transferButton;
+        private readonly Button _eatButton;
         private readonly Button[] _equipButtons = new Button[3];
         private readonly Button[] _unequipButtons = new Button[3];
         private bool _isPanelOpen;
@@ -86,6 +88,12 @@ namespace AgeOfSurvival.Runtime.Inventory
             movementRow.Add(_movementMultiplier);
             _panel.Add(movementRow);
 
+            _foodStatus = new Label();
+            _foodStatus.name = "food-status";
+            _foodStatus.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _foodStatus.style.marginBottom = 8;
+            _panel.Add(_foodStatus);
+
             _transferStatus = new Label();
             _transferStatus.style.unityFontStyleAndWeight = FontStyle.Bold;
             _panel.Add(_transferStatus);
@@ -138,8 +146,11 @@ namespace AgeOfSurvival.Runtime.Inventory
             var footer = new VisualElement();
             footer.style.flexDirection = FlexDirection.Row;
             footer.style.marginTop = 8;
+            _eatButton = CreateButton("Eat selected", EatSelected);
+            _eatButton.tooltip = "Consumes one unit from the oldest perishable batch in the selected stack.";
+            footer.Add(_eatButton);
             _transferButton = CreateButton("Transfer selected", TransferSelected);
-            _transferButton.tooltip = "Moves as much as the destination can accept; the remainder stays in the source.";
+            _transferButton.tooltip = "Moves as much as the destination can accept; perishable freshness batches are preserved.";
             footer.Add(_transferButton);
             footer.Add(CreateButton("Close", TogglePanel));
             _panel.Add(footer);
@@ -151,6 +162,7 @@ namespace AgeOfSurvival.Runtime.Inventory
         public ListView BagList => _bagList;
         public ListView GroundList => _groundList;
         public Button TransferButton => _transferButton;
+        public Button EatButton => _eatButton;
         public IReadOnlyList<Button> EquipButtons => _equipButtons;
         public IReadOnlyList<Button> UnequipButtons => _unequipButtons;
         public VisualElement Panel => _panel;
@@ -171,6 +183,7 @@ namespace AgeOfSurvival.Runtime.Inventory
             _reductionInfo.text = viewModel.ReductionText;
             _movementLoad.text = $"Movement load: {viewModel.MovementLoadText}";
             _movementMultiplier.text = $"Movement speed: {viewModel.MovementMultiplierText}";
+            _foodStatus.text = viewModel.FoodStatusText;
             _transferStatus.text = viewModel.TransferStatusText;
             _transferProgress.value = (float)(viewModel.TransferProgress * 100.0);
             for (int index = 0; index < _equipmentLabels.Length; index++)
@@ -198,7 +211,21 @@ namespace AgeOfSurvival.Runtime.Inventory
             ContainerId destination = _selection.SourceContainerId.Equals(InventoryPrototypeCatalog.MainContainerId)
                 ? InventoryPrototypeCatalog.BagContainerId
                 : InventoryPrototypeCatalog.MainContainerId;
-            _session.Commands.Transfer(_selection, destination);
+            if (_session.IsPerishable(_selection))
+            {
+                _session.TransferPerishable(_selection, destination);
+            }
+            else
+            {
+                _session.Commands.Transfer(_selection, destination);
+            }
+            ClearSelection();
+            Refresh();
+        }
+
+        private void EatSelected()
+        {
+            _session.Eat(_selection);
             ClearSelection();
             Refresh();
         }
@@ -245,7 +272,10 @@ namespace AgeOfSurvival.Runtime.Inventory
             GroundContainerState ground = _session.FindGround(_selection.SourceContainerId);
             _transferButton.SetEnabled(ground != null
                 ? _session.CanStartGroundTransfer(ground)
-                : _session.Commands.CanTransfer(_selection, destination));
+                : _session.IsPerishable(_selection)
+                    ? _session.CanTransferPerishable(_selection, destination)
+                    : _session.Commands.CanTransfer(_selection, destination));
+            _eatButton.SetEnabled(_session.CanEat(_selection));
 
             EquipmentSlot[] slots = StableSlots();
             for (int index = 0; index < slots.Length; index++)

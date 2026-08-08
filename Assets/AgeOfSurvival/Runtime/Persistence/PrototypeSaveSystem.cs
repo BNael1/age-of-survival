@@ -27,8 +27,13 @@ namespace AgeOfSurvival.Runtime.Persistence
         }
     }
 
-    internal sealed class PrototypeInventoryResolver : IInventoryDefinitionResolver
+    internal sealed class PrototypeInventoryResolver :
+        IInventoryDefinitionResolver,
+        IInventoryDefinitionCatalog
     {
+        public IReadOnlyList<ItemDefinition> CurrentItemDefinitions =>
+            InventoryPrototypeCatalog.Definitions;
+
         public bool TryResolveItemDefinition(
             InventoryDefinitionSnapshot saved,
             out ItemDefinition definition)

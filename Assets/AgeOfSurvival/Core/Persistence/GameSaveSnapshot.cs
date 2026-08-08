@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.World.Generation;
 
 namespace AgeOfSurvival.Core.Persistence
@@ -14,7 +15,9 @@ namespace AgeOfSurvival.Core.Persistence
         EmptyChunkMutation = 3,
         MutationLayoutMismatch = 4,
         DuplicateChunkCoordinate = 5,
-        HealthTickMismatch = 6
+        HealthTickMismatch = 6,
+        FoodTickMismatch = 7,
+        PerishableBatchTickInFuture = 8
     }
 
     public sealed class GameSaveSnapshotException : InvalidOperationException
@@ -216,6 +219,27 @@ namespace AgeOfSurvival.Core.Persistence
             PlayerHealthSnapshot health,
             PlayerInventorySnapshot inventory,
             IEnumerable<ChunkMutationState> chunkMutations)
+            : this(
+                world,
+                fixedTick,
+                playerPosition,
+                health,
+                CreateDefaultFoodSnapshot(fixedTick),
+                PerishableInventorySnapshot.Empty,
+                inventory,
+                chunkMutations)
+        {
+        }
+
+        public GameSaveSnapshot(
+            WorldIdentitySnapshot world,
+            long fixedTick,
+            WorldPosition playerPosition,
+            PlayerHealthSnapshot health,
+            PlayerFoodSnapshot food,
+            PerishableInventorySnapshot perishables,
+            PlayerInventorySnapshot inventory,
+            IEnumerable<ChunkMutationState> chunkMutations)
         {
             if (!world.Generation.Version.IsValid
                 || !world.Generation.ChunkLayout.IsValid
@@ -242,7 +266,28 @@ namespace AgeOfSurvival.Core.Persistence
                     "The health tick must match the fixed simulation tick.");
             }
 
+            PlayerFoodState validatedFood = food.Restore();
+            if (validatedFood.CurrentTick != fixedTick)
+            {
+                throw Violation(
+                    GameSaveSnapshotViolation.FoodTickMismatch,
+                    "The food-need tick must match the fixed simulation tick.");
+            }
+
+            if (perishables == null) throw new ArgumentNullException(nameof(perishables));
+            for (int batchIndex = 0; batchIndex < perishables.Batches.Count; batchIndex++)
+            {
+                if (perishables.Batches[batchIndex].LastEvaluatedTick > fixedTick)
+                {
+                    throw Violation(
+                        GameSaveSnapshotViolation.PerishableBatchTickInFuture,
+                        "A perishable batch cannot have been evaluated after the save tick.");
+                }
+            }
+
             Health = health;
+            Food = food;
+            Perishables = perishables;
             Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
             if (chunkMutations == null)
             {
@@ -302,9 +347,22 @@ namespace AgeOfSurvival.Core.Persistence
         public long FixedTick { get; }
         public WorldPosition PlayerPosition { get; }
         public PlayerHealthSnapshot Health { get; }
+        public PlayerFoodSnapshot Food { get; }
+        public PerishableInventorySnapshot Perishables { get; }
         public PlayerInventorySnapshot Inventory { get; }
         public IReadOnlyList<ChunkMutationState> ChunkMutations =>
             _readOnlyChunkMutations;
+
+        private static PlayerFoodSnapshot CreateDefaultFoodSnapshot(
+            long fixedTick)
+        {
+            // Preserve GameSaveSnapshot's validation order: an invalid fixed tick
+            // is rejected by the canonical constructor before this placeholder
+            // food snapshot can ever be observed.
+            return fixedTick < 0L
+                ? default
+                : PlayerFoodSnapshot.CreateFull(fixedTick);
+        }
 
         private static double NormalizeZero(double value)
         {
@@ -366,6 +424,67 @@ namespace AgeOfSurvival.Core.Persistence
                 playerPosition,
                 new PlayerHealthSnapshot(health),
                 inventorySnapshot,
+                chunks.CaptureCanonicalMutations());
+        }
+
+        public static GameSaveSnapshot Capture(
+            WorldPopulationSettings world,
+            long fixedTick,
+            WorldPosition playerPosition,
+            PlayerHealthState health,
+            PlayerFoodState food,
+            PerishableInventoryState perishables,
+            PlayerInventoryState inventory,
+            ChunkStateLifecycle chunks)
+        {
+            if (!world.Generation.Version.IsValid
+                || !world.Generation.ChunkLayout.IsValid
+                || !world.Profile.IsValid)
+            {
+                throw new ArgumentException(
+                    "Valid world population settings are required.",
+                    nameof(world));
+            }
+
+            if (health == null)
+            {
+                throw new ArgumentNullException(nameof(health));
+            }
+
+            if (food == null)
+            {
+                throw new ArgumentNullException(nameof(food));
+            }
+
+            if (perishables == null)
+            {
+                throw new ArgumentNullException(nameof(perishables));
+            }
+
+            if (inventory == null)
+            {
+                throw new ArgumentNullException(nameof(inventory));
+            }
+
+            if (chunks == null)
+            {
+                throw new ArgumentNullException(nameof(chunks));
+            }
+
+            perishables.ValidateAgainst(inventory);
+            var identity = new WorldIdentitySnapshot(
+                world.Generation,
+                world.Profile.Id,
+                world.Profile.Revision);
+
+            return new GameSaveSnapshot(
+                identity,
+                fixedTick,
+                playerPosition,
+                new PlayerHealthSnapshot(health),
+                new PlayerFoodSnapshot(food),
+                new PerishableInventorySnapshot(perishables),
+                inventory.CaptureSnapshot(),
                 chunks.CaptureCanonicalMutations());
         }
     }

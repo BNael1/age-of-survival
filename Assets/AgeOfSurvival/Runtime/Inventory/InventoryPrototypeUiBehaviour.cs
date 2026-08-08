@@ -6,6 +6,7 @@ namespace AgeOfSurvival.Runtime.Inventory
     [DisallowMultipleComponent]
     public sealed class InventoryPrototypeUiBehaviour : MonoBehaviour
     {
+        public const int SortingOrder = 220;
         private UIDocument _document;
         private PanelSettings _generatedPanelSettings;
         private InventoryPrototypeUiDocument _ui;
@@ -27,8 +28,9 @@ namespace AgeOfSurvival.Runtime.Inventory
             _generatedPanelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
             _generatedPanelSettings.referenceResolution = new Vector2Int(1280, 720);
             _generatedPanelSettings.match = 0.5f;
+            _generatedPanelSettings.sortingOrder = SortingOrder;
             _document.panelSettings = _generatedPanelSettings;
-            _document.sortingOrder = 200;
+            _document.sortingOrder = SortingOrder;
             _document.rootVisualElement.schedule.Execute(BuildUi);
         }
 

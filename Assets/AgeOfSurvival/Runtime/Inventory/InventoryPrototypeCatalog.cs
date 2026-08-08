@@ -1,5 +1,6 @@
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Characters;
+using AgeOfSurvival.Core.Food;
 
 namespace AgeOfSurvival.Runtime.Inventory
 {
@@ -16,6 +17,8 @@ namespace AgeOfSurvival.Runtime.Inventory
         public const double GroundTransferMaximumDistance = 1.5;
         public const int TransferBaseTicks = 15;
         public const int TransferTicksPerEncumbranceUnit = 30;
+        public const long PrototypeFoodDayTicks = 216000L;
+        public const int InitialAppleQuantity = 3;
 
         public static readonly TransferTimingDefinition TransferTiming =
             new TransferTimingDefinition(
@@ -46,6 +49,17 @@ namespace AgeOfSurvival.Runtime.Inventory
             ItemStateKind.Stackable,
             new EncumbranceValue(1500));
 
+        public static readonly ItemDefinition Apple = new ItemDefinition(
+            new ItemDefinitionId("apple"),
+            "Apple",
+            ItemStateKind.Stackable,
+            new EncumbranceValue(200),
+            consumable: new ConsumableDefinition(20, 60, 20),
+            nutrition: new NutritionDefinition(95),
+            perishable: new PerishableDefinition(
+                5L * PrototypeFoodDayTicks,
+                8L * PrototypeFoodDayTicks));
+
         public static readonly ItemDefinition Tool = new ItemDefinition(
             new ItemDefinitionId("prototype-tool"),
             "Prototype tool",
@@ -64,6 +78,7 @@ namespace AgeOfSurvival.Runtime.Inventory
         {
             Branches,
             Stones,
+            Apple,
             Tool,
             Bag
         };

@@ -1,4 +1,5 @@
 using System;
+using AgeOfSurvival.Core.Food;
 
 namespace AgeOfSurvival.Core.Inventory
 {
@@ -18,7 +19,10 @@ namespace AgeOfSurvival.Core.Inventory
             string displayName,
             ItemStateKind stateKind,
             EncumbranceValue unitEncumbrance,
-            EquipmentDefinition equipment = null)
+            EquipmentDefinition equipment = null,
+            ConsumableDefinition consumable = null,
+            NutritionDefinition nutrition = null,
+            PerishableDefinition perishable = null)
         {
             if (!id.IsValid)
             {
@@ -35,11 +39,29 @@ namespace AgeOfSurvival.Core.Inventory
                 throw new ArgumentOutOfRangeException(nameof(stateKind), stateKind, "Unknown item state kind.");
             }
 
+            if (consumable != null && stateKind != ItemStateKind.Stackable)
+            {
+                throw new ArgumentException("Consumable items currently require stackable inventory storage.", nameof(consumable));
+            }
+
+            if (perishable != null && stateKind != ItemStateKind.Stackable)
+            {
+                throw new ArgumentException("Perishable items currently require stackable inventory storage.", nameof(perishable));
+            }
+
+            if (nutrition != null && consumable == null)
+            {
+                throw new ArgumentException("Nutrition data requires a consumable definition.", nameof(nutrition));
+            }
+
             Id = id;
             DisplayName = displayName;
             StateKind = stateKind;
             UnitEncumbrance = unitEncumbrance;
             Equipment = equipment;
+            Consumable = consumable;
+            Nutrition = nutrition;
+            Perishable = perishable;
         }
 
         public ItemDefinitionId Id { get; }
@@ -47,5 +69,8 @@ namespace AgeOfSurvival.Core.Inventory
         public ItemStateKind StateKind { get; }
         public EncumbranceValue UnitEncumbrance { get; }
         public EquipmentDefinition Equipment { get; }
+        public ConsumableDefinition Consumable { get; }
+        public NutritionDefinition Nutrition { get; }
+        public PerishableDefinition Perishable { get; }
     }
 }

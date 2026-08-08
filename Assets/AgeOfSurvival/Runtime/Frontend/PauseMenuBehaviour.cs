@@ -12,6 +12,8 @@ namespace AgeOfSurvival.Runtime.Frontend
         IPauseMenuActions,
         ISavePauseMenuActions
     {
+        public const int SortingOrder = 1100;
+
         private UIDocument _document;
         private PanelSettings _generatedPanelSettings;
         private FrontendController _controller;
@@ -168,8 +170,9 @@ namespace AgeOfSurvival.Runtime.Frontend
             _generatedPanelSettings.referenceResolution =
                 new Vector2Int(1280, 720);
             _generatedPanelSettings.match = 0.5f;
+            _generatedPanelSettings.sortingOrder = SortingOrder;
             _document.panelSettings = _generatedPanelSettings;
-            _document.sortingOrder = 1100;
+            _document.sortingOrder = SortingOrder;
         }
 
         private void BuildUi()

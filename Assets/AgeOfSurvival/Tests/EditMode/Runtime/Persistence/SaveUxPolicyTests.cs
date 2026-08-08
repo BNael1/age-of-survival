@@ -3,6 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using AgeOfSurvival.Core.Characters;
+using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.Resources;
@@ -228,10 +229,12 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
             var position = new WorldPosition(17.25d, -9.5d);
             session.BeginSimulationTick(position);
             session.ApplyDamage(40);
+            long savedTick = session.CurrentTick;
             SaveSlotId slot = new SaveSlotId(1);
             byte[] legacy = ConvertV2ToLegacyV1(
-                GameSaveBinaryCodec.Encode(
-                    session.CaptureGameSaveSnapshot()));
+                ConvertV3ToLegacyV2(
+                    GameSaveBinaryCodec.Encode(
+                        CreateLegacyPrototypeSnapshot(session))));
             var storage =
                 new AtomicGameSaveStorage(_temporaryDirectory);
             Directory.CreateDirectory(_temporaryDirectory);
@@ -249,14 +252,23 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
                 InventoryPrototypeSession restored =
                     InventoryPrototypeSessionProvider.Install(loaded.State);
 
-                Assert.That(restored.CurrentTick, Is.EqualTo(1L));
-                Assert.That(restored.Health.CurrentTick, Is.EqualTo(1L));
+                Assert.That(restored.CurrentTick, Is.EqualTo(savedTick));
+                Assert.That(restored.Health.CurrentTick, Is.EqualTo(savedTick));
                 Assert.That(
                     restored.Health.CurrentHealth,
                     Is.EqualTo(PlayerHealthRules.DefaultMaximumHealth));
                 Assert.That(
                     restored.Health.NextRegenerationTick,
                     Is.Null);
+                Assert.That(
+                    restored.Inventory.FindDefinition(
+                        InventoryPrototypeCatalog.Apple.Id),
+                    Is.SameAs(InventoryPrototypeCatalog.Apple));
+                Assert.That(
+                    InventoryOperations.Count(
+                        restored.BagContainer,
+                        InventoryPrototypeCatalog.Apple.Id),
+                    Is.Zero);
             }
             finally
             {
@@ -265,16 +277,25 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
         }
 
         [Test]
-        public void PrototypeService_V2RoundTripPreservesHealthSchedule()
+        public void PrototypeService_V2LoadPreservesHealthAndAddsCurrentDefinitions()
         {
             var service = new PrototypeSaveService(_temporaryDirectory);
             var session = new InventoryPrototypeSession();
             var position = new WorldPosition(-4.5d, 11.25d);
             session.BeginSimulationTick(position);
             session.ApplyDamage(40);
+            long savedTick = session.CurrentTick;
             SaveSlotId slot = new SaveSlotId(1);
+            byte[] legacy = ConvertV3ToLegacyV2(
+                GameSaveBinaryCodec.Encode(
+                    CreateLegacyPrototypeSnapshot(session)));
+            var storage =
+                new AtomicGameSaveStorage(_temporaryDirectory);
+            Directory.CreateDirectory(_temporaryDirectory);
+            File.WriteAllBytes(
+                storage.GetPrimaryPath(slot.StorageKey),
+                legacy);
 
-            service.Save(slot, session, 0d);
             CoordinatedGameLoadResult loaded = service.Load(
                 slot,
                 0d,
@@ -285,13 +306,41 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
                 InventoryPrototypeSession restored =
                     InventoryPrototypeSessionProvider.Install(loaded.State);
 
-                Assert.That(restored.CurrentTick, Is.EqualTo(1L));
+                Assert.That(restored.CurrentTick, Is.EqualTo(savedTick));
                 Assert.That(restored.Health.MaximumHealth, Is.EqualTo(100));
                 Assert.That(restored.Health.CurrentHealth, Is.EqualTo(60));
-                Assert.That(restored.Health.CurrentTick, Is.EqualTo(1L));
+                Assert.That(restored.Health.CurrentTick, Is.EqualTo(savedTick));
                 Assert.That(
                     restored.Health.NextRegenerationTick,
-                    Is.EqualTo(511L));
+                    Is.EqualTo(
+                        PlayerHealthRules.FirstRegenerationTickAfter(
+                            savedTick)));
+                Assert.That(
+                    restored.Food.CurrentSatiety,
+                    Is.EqualTo(PlayerFoodRules.DefaultMaximumSatiety));
+                Assert.That(restored.Food.CurrentTick, Is.EqualTo(savedTick));
+                Assert.That(restored.PerishableItems.Batches, Is.Empty);
+                Assert.That(
+                    restored.Inventory.FindDefinition(
+                        InventoryPrototypeCatalog.Apple.Id),
+                    Is.SameAs(InventoryPrototypeCatalog.Apple));
+                Assert.That(
+                    InventoryOperations.Count(
+                        restored.BagContainer,
+                        InventoryPrototypeCatalog.Apple.Id),
+                    Is.Zero);
+
+                AddItemResult added = PerishableInventoryOperations.Add(
+                    restored.BagContainer,
+                    InventoryPrototypeCatalog.Apple,
+                    restored.PerishableItems,
+                    new FoodBatchId("legacy-v2-apple"),
+                    1,
+                    restored.CurrentTick);
+                Assert.That(added.Accepted, Is.EqualTo(1));
+                Assert.DoesNotThrow(() =>
+                    restored.PerishableItems.ValidateAgainst(
+                        restored.Inventory));
             }
             finally
             {
@@ -638,6 +687,116 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
                     session.MainContainer,
                     InventoryPrototypeCatalog.Branches.Id),
                 Is.EqualTo(carriedBefore));
+        }
+
+        private static GameSaveSnapshot CreateLegacyPrototypeSnapshot(
+            InventoryPrototypeSession session)
+        {
+            GameSaveSnapshot current = session.CaptureGameSaveSnapshot();
+            return new GameSaveSnapshot(
+                current.World,
+                current.FixedTick,
+                current.PlayerPosition,
+                current.Health,
+                CreateLegacyPrototypeInventory().CaptureSnapshot(),
+                current.ChunkMutations);
+        }
+
+        private static PlayerInventoryState CreateLegacyPrototypeInventory()
+        {
+            var main = new ContainerState(
+                InventoryPrototypeCatalog.MainContainerId,
+                new ContainerDefinition(
+                    "player-main",
+                    "Carried inventory",
+                    new EncumbranceValue(
+                        InventoryPrototypeCatalog.MainCapacityUnits)));
+            var bag = new ContainerState(
+                InventoryPrototypeCatalog.BagContainerId,
+                new ContainerDefinition(
+                    "prototype-bag",
+                    "Prototype backpack",
+                    new EncumbranceValue(
+                        InventoryPrototypeCatalog.BagCapacityUnits)));
+
+            var tool = new UniqueItemState(
+                InventoryPrototypeCatalog.Tool.Id,
+                new ItemInstanceId("prototype-tool-01"));
+            var backpack = new UniqueItemState(
+                InventoryPrototypeCatalog.Bag.Id,
+                new ItemInstanceId("prototype-bag-01"),
+                bag.Id);
+
+            InventoryOperations.AddStack(
+                main,
+                InventoryPrototypeCatalog.Branches,
+                6);
+            InventoryOperations.AddStack(
+                main,
+                InventoryPrototypeCatalog.Stones,
+                3);
+            InventoryOperations.AddUnique(
+                main,
+                InventoryPrototypeCatalog.Tool,
+                tool);
+            InventoryOperations.AddUnique(
+                main,
+                InventoryPrototypeCatalog.Bag,
+                backpack);
+            InventoryOperations.AddStack(
+                bag,
+                InventoryPrototypeCatalog.Stones,
+                2);
+
+            return new PlayerInventoryState(
+                main.Id,
+                new[]
+                {
+                    InventoryPrototypeCatalog.Branches,
+                    InventoryPrototypeCatalog.Stones,
+                    InventoryPrototypeCatalog.Tool,
+                    InventoryPrototypeCatalog.Bag
+                },
+                new[] { main, bag });
+        }
+
+        private static byte[] ConvertV3ToLegacyV2(byte[] encoded)
+        {
+            if (ReadUInt16(encoded, 8) != 3)
+            {
+                throw new InvalidDataException("Expected a V3 fixture.");
+            }
+
+            int healthOffset = GetHealthOffset(encoded);
+            int healthLength = GetHealthLength(encoded, healthOffset);
+            int foodOffset = healthOffset + healthLength;
+            const int foodLength = 4 + 4 + 8 + 8;
+            int perishableCountOffset = foodOffset + foodLength;
+            if (ReadUInt32(encoded, perishableCountOffset) != 0u)
+            {
+                throw new InvalidDataException(
+                    "Legacy V2 fixture conversion requires no perishable batches.");
+            }
+
+            const int emptyPerishableLength = 4;
+            int extensionLength = foodLength + emptyPerishableLength;
+            int payloadLength = checked((int)ReadUInt32(encoded, 12));
+            int legacyPayloadLength = payloadLength - extensionLength;
+            var legacy = new byte[
+                GameSaveCodecLimits.HeaderLength + legacyPayloadLength];
+
+            Buffer.BlockCopy(encoded, 0, legacy, 0, foodOffset);
+            Buffer.BlockCopy(
+                encoded,
+                foodOffset + extensionLength,
+                legacy,
+                foodOffset,
+                encoded.Length - foodOffset - extensionLength);
+
+            WriteUInt16(legacy, 8, 2);
+            WriteUInt32(legacy, 12, checked((uint)legacyPayloadLength));
+            RefreshPayloadHash(legacy);
+            return legacy;
         }
 
         private static byte[] ConvertV2ToLegacyV1(byte[] encoded)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using AgeOfSurvival.Core.Characters;
+using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.World.Generation;
@@ -54,6 +55,8 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                 33,
                 new WorldPosition(4, 5),
                 CreateHealth(33),
+                CreateFood(33),
+                new PerishableInventoryState(),
                 CreateInventory(),
                 new ChunkStateLifecycle(
                     new DeterministicWorldPopulationGenerator(world)));
@@ -66,6 +69,9 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
             Assert.That(
                 loaded.State.Health.NextRegenerationTick,
                 Is.EqualTo(543L));
+            Assert.That(loaded.State.Food.CurrentSatiety, Is.EqualTo(80));
+            Assert.That(loaded.State.Food.CurrentTick, Is.EqualTo(33L));
+            Assert.That(loaded.State.Perishables.Batches, Is.Empty);
             Assert.That(
                 loaded.State.PlayerPosition,
                 Is.EqualTo(new WorldPosition(4, 5)));
@@ -89,6 +95,8 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                 10,
                 new WorldPosition(0, 0),
                 CreateHealth(10),
+                CreateFood(10),
+                new PerishableInventoryState(),
                 CreateInventory(),
                 new ChunkStateLifecycle(
                     new DeterministicWorldPopulationGenerator(world)));
@@ -98,6 +106,8 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                 20,
                 new WorldPosition(0, 0),
                 CreateHealth(20),
+                CreateFood(20),
+                new PerishableInventoryState(),
                 CreateInventory(),
                 new ChunkStateLifecycle(
                     new DeterministicWorldPopulationGenerator(world)));
@@ -134,6 +144,15 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                 65,
                 tick,
                 checked(tick + 510L));
+        }
+
+        private static PlayerFoodState CreateFood(long tick)
+        {
+            return new PlayerFoodState(
+                100,
+                80,
+                tick,
+                PlayerFoodRules.FirstSatietyLossTickAfter(tick));
         }
 
         private static PlayerInventoryState CreateInventory()
