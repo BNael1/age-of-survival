@@ -698,3 +698,27 @@ La validation graphique 1280x720 des panneaux Inventory et Craft séparés est a
 ## Correctif 7K-UI — validation
 
 Le PlayMode Craft vérifie que les panneaux Inventory et Craft sont distincts et mutuellement exclusifs, que la fermeture du panneau Craft n'annule pas l'action active, puis conserve le chemin sélection de recette -> bouton Craft -> tick fixe -> résultat inventaire. Résultats : EditMode `588/588`, PlayMode `17/17` avec Burst actif, zéro échec et zéro test ignoré ; `git diff --check` PASS. Validation graphique 1280x720 séparée : PASS, approuvée par Naël.
+
+<!-- LOT7LA1_TESTING -->
+## Lot 7L-A1 — validation de la topologie de construction
+
+Le sous-lot ajoute **31 cas EditMode**, pour un total de **619/619** sous Unity
+`6000.3.19f1`, zéro échec et zéro test ignoré.
+
+La couverture vérifie notamment :
+
+- alias Est/Ouest et Nord/Sud d'une même arête ;
+- canonicalisation et ordre déterministe aux coordonnées négatives ;
+- seams de chunks et propriété dérivée de l'ancre canonique ;
+- limites représentables de `long` et refus des canonicalisations qui
+  déborderaient `Int64` ;
+- distinction des espaces `Surface`, `Interior`, `Edge` et `Roof` ;
+- réservation, collision, libération et réutilisation dans le registre
+  d'occupation ;
+- ordre canonique indépendant de l'ordre d'insertion.
+
+Le patch fonctionnel revu porte le SHA-256
+`61d40728efd9038c4c406b987c18d0aaa5aec7637df96c54f489d2774498b405`.
+`git diff --check` est propre. Aucun PlayMode supplémentaire n'est requis : A1
+ajoute uniquement du Core et ses tests, sans scène, MonoBehaviour, rendu, entrée
+ou UI.

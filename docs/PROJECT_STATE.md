@@ -1,6 +1,6 @@
 # État du projet
 
-Dernière mise à jour : 8 août 2026
+Dernière mise à jour : 9 août 2026
 
 ## Moteur
 
@@ -12,18 +12,21 @@ Dernière mise à jour : 8 août 2026
 ## État actuel
 
 Le dernier commit fonctionnel local validé est
-`00cff544afe49c23c32918d32b9246a7705bd239`
-(`feat: add versioned natural resources`). Le lot 7J généralise les ressources
-naturelles, leurs rendements, leur génération déterministe et leur persistance.
-Le commit documentaire de clôture suit immédiatement ce commit ; aucun push
-n'est effectué pendant cette clôture locale.
+`4f2485c` (`feat: add canonical construction topology`), créé au-dessus de la
+tête publiée `162110cff1dc8bff59a9dc13ed2a31e5a267a1f5` qui ferme le lot 7K.
+Le lot 7L-A1 ajoute uniquement la topologie Core de construction : adressage
+canonique des arêtes partagées, espaces d'occupation distincts et propriété de
+chunk dérivée de l'ancre canonique. Aucun Runtime, contrôle, rendu, format de
+sauvegarde ou package n'est modifié.
 
 La validation la plus récente sous Unity `6000.3.19f1` est de
-**569/569 EditMode** et **16/16 PlayMode**, zéro échec observé. Le Play Mode
-confirme les quatre familles de ressources, leurs sprites distincts, la récolte
-`E`, le transfert temporisé, le tri et la cohérence déplacement/charge. Les
-suites couvrent aussi rendements multiples, transfert secondaire, persistance
-de chunk et save/load du profil de population de révision `2`.
+**619/619 EditMode**, zéro échec et zéro test ignoré. Aucun PlayMode n'a été
+relancé pour 7L-A1 puisque le lot ne touche ni Runtime ni scène ; la dernière
+validation Runtime de référence reste celle de 7K à **17/17 PlayMode** avec
+Burst actif. Le patch A1 revu porte le SHA-256
+`61d40728efd9038c4c406b987c18d0aaa5aec7637df96c54f489d2774498b405`.
+Le worktree est propre après le commit fonctionnel. `origin/main` reste sur
+`162110c` : aucun push 7L-A1 n'a encore été effectué.
 
 Lots validés et commités :
 
@@ -65,7 +68,11 @@ Lots validés et commités :
 - `5cd7ca2` — `feat: complete player health runtime loop` ;
 - `d102160` — `feat: add deterministic food and spoilage loop` ;
 - `5c5a40e` — `docs: close lot 7i food vertical slice` ;
-- `00cff54` — `feat: add versioned natural resources`.
+- `00cff54` — `feat: add versioned natural resources` ;
+- `9ae5104` — `docs: close lot 7j natural resources` ;
+- `1e2074e` — `feat: add manual crafting foundation` ;
+- `162110c` — `docs: close lot 7k crafting foundation` ;
+- `4f2485c` — `feat: add canonical construction topology`.
 
 État validé au commit `26a1a27` :
 
@@ -695,7 +702,7 @@ la construction. Avant toute intégration Git : revue finale du diff complet,
 fichiers suivis et non suivis compris.
 
 <!-- LOT7K_PROJECT_STATE -->
-## Lot 7K — craft manuel temporisé (validation automatique acquise)
+## Lot 7K — craft manuel temporisé (fermé et publié)
 
 Base : `9ae5104e415ecdf39eb11d46fd3ac569a3fc0534`. Le lot ajoute un domaine Craft C# pur, trois recettes manuelles, une action temporisée sans réservation destructive et une interface Craft dédiée dans un panneau distinct de l'inventaire. Les ingrédients sont résolus de façon déterministe dans le conteneur principal puis le sac ; les sorties utilisent le même ordre. Le sol n'est pas une source de craft.
 
@@ -703,9 +710,36 @@ Les encombrements prototype sont validés : `Kindling = 1000`, `Stone flakes = 7
 
 Validation locale finale du 9 août 2026 : EditMode `588/588`, PlayMode `17/17` avec Burst actif et `git diff --check` PASS. Le chemin PlayMode couvre désormais sélection de recette, activation du bouton Craft, progression par tick fixe et résultat inventaire. Un premier lancement PlayMode avait subi un SIGSEGV natif dans Burst avant production du XML ; la même suite a ensuite passé `17/17` Burst désactivé puis `17/17` Burst actif sans modification de package ni contournement conservé. Incident classé transitoire et non reproduit.
 
-Validation graphique 1280x720 acquise le 9 août 2026 ; aucun problème de lisibilité ou de chevauchement n'a été retenu. Revue finale du patch v2 : aucun défaut métier bloquant identifié. Le lot est prêt pour staging exact et commit.
+Validation graphique 1280x720 acquise le 9 août 2026 ; aucun problème de lisibilité ou de chevauchement n'a été retenu. Revue finale du patch v2 : aucun défaut métier bloquant identifié. Le lot est fermé et publié : commit fonctionnel `1e2074ed6c15ad561e90508730dfc975106013f2`, puis commit documentaire `162110cff1dc8bff59a9dc13ed2a31e5a267a1f5`. Après publication, `main`, `origin/main` et `origin/HEAD` convergeaient sur `162110c` avec un worktree propre.
 
 <!-- LOT7K_UI_SPLIT_STATE -->
 ## Correctif 7K-UI — séparation Inventaire / Craft (validation complète acquise)
 
 Après validation visuelle du premier panneau combiné, l'interface sépare désormais `Inventory prototype` et `Craft prototype`. Une seule fenêtre est ouverte à la fois et fermer Craft n'annule pas une action active. Le cœur Craft, les recettes, les encombrements, les règles d'interruption et AOSSAVE V3 restent inchangés. Validation automatique : EditMode `588/588`, PlayMode `17/17` avec Burst actif et `git diff --check` PASS. Validation graphique 1280x720 approuvée par Naël ; le correctif UI est prêt pour commit.
+
+<!-- LOT7LA1_PROJECT_STATE -->
+## Lot 7L-A1 — topologie canonique de construction
+
+Le sous-lot fonctionnel est commité localement sous `4f2485c`
+(`feat: add canonical construction topology`), parent direct de la tête publiée
+`162110c`. Il ajoute exactement cinq chemins et 689 insertions.
+
+Le Core réutilise `WorldCellCoordinate` et `ChunkAddressing` au lieu de créer un
+second espace de coordonnées. Les frontières de cellules sont canonicalisées :
+les deux descriptions d'une même arête physique produisent la même identité.
+L'ancre canonique détermine également le chunk propriétaire, y compris aux
+coordonnées négatives et sur une frontière de chunk.
+
+Les occupations `Surface`, `Interior`, `Edge` et `Roof` sont des espaces
+logiques distincts. Le registre A1 gère uniquement l'identité, l'ordre et les
+collisions topologiques ; les définitions de constructions, matériaux,
+progression, démontage et supports restent réservés aux sous-lots A2/A3.
+
+Validation : **31 nouveaux cas**, soit **619/619 EditMode**. Le lot est Core-only
+et ne justifie pas une nouvelle passe PlayMode. Aucun changement de sauvegarde,
+de Runtime, d'UX ou de contrôle et aucune dépendance tierce.
+
+Prochaine action : clôturer ce sous-lot par le présent commit documentaire, puis
+ouvrir 7L-A2 pour `ConstructionSiteState`, exigences de matériaux, dépôt,
+progression bornée, finalisation atomique et récupération 100 % / 70 % selon
+les règles déjà validées.

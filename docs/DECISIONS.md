@@ -587,3 +587,24 @@ Recettes prototype : `2 Branches -> 1 Kindling` (90 ticks), `1 Stone -> 2 Stone 
 ## Décision 7K-UI — Inventaire et Craft séparés
 
 Naël valide la séparation de l'interface : `Inventory prototype` et `Craft prototype` ouvrent deux panneaux distincts. Une seule de ces fenêtres peut être ouverte à la fois. Fermer la fenêtre Craft ne modifie pas l'action de craft en cours ; le mouvement, les transferts et les chemins save/quit conservent les règles métier 7K déjà validées. Aucun nouveau raccourci clavier n'est ajouté.
+
+<!-- ADR-0029 -->
+## ADR-0029 — topologie propriétaire et canonique des constructions
+
+**Statut : active**
+**Date : 9 août 2026**
+
+Le cœur de construction reste propriétaire et en C# pur. Aucun framework de
+construction tiers n'est intégré pour 7L-A ; Unity Grid/Tilemap pourra servir
+d'adaptateur de rendu et de conversion dans un lot Runtime ultérieur.
+
+7L-A1 réutilise `WorldCellCoordinate` et `ChunkAddressing`. Une frontière entre
+deux cellules n'est stockée qu'une fois : les directions opposées sont
+canonicalisées vers une ancre unique, qui fixe aussi le chunk propriétaire.
+Cette règle s'applique aux coordonnées positives, négatives et aux seams de
+chunks.
+
+Les espaces d'occupation `Surface`, `Interior`, `Edge` et `Roof` sont distincts.
+A1 ne décide pas encore quelles définitions concrètes utilisent chaque espace et
+ne change aucune règle visible de placement. Les chantiers et matériaux restent
+7L-A2 ; les supports et la validité des toits restent 7L-A3.

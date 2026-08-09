@@ -704,3 +704,29 @@ Les conteneurs portés sont ordonnés principal puis sac pour les ingrédients c
 ## UI 7K — panneaux Inventory / Craft
 
 Le prototype conserve un seul `InventoryPrototypeUiDocument` UI Toolkit et une seule session Runtime, mais expose deux panneaux racine indépendants : inventaire et craft. Cette séparation reste une responsabilité de présentation ; `CraftPrototypeViewModelBuilder` lit la session et l'UI émet `StartCraft` sans dupliquer la logique métier Core. L'exclusivité d'ouverture est gérée par la vue et n'affecte pas l'état d'une action de craft.
+
+<!-- LOT7LA1_ARCHITECTURE -->
+## Construction — topologie Core 7L-A1
+
+La construction réutilise l'adressage mondial existant. `WorldCellCoordinate`
+reste la primitive de cellule et `ChunkAddressing` reste l'unique conversion
+vers un chunk ; aucune famille parallèle de coordonnées n'est introduite.
+
+Une arête partagée possède une identité canonique unique. Les formes opposées
+Est/Ouest et Nord/Sud sont normalisées vers la même `ConstructionEdgeAddress` :
+une arête verticale est ancrée sur sa cellule ouest et une arête horizontale sur
+sa cellule sud. Cette ancre détermine aussi le chunk propriétaire. Les
+opérations vérifient les débordements `Int64`, de sorte que la canonicalisation
+reste explicite aux bornes du domaine.
+
+`ConstructionOccupancyAddress` sépare quatre espaces logiques : `Surface`,
+`Interior`, `Edge` et `Roof`. Une occupation dans l'un ne bloque pas
+implicitement les autres ; les conflits sont définis par égalité dans le même
+espace. `ConstructionOccupancyRegistry` fournit une frontière déterministe de
+réservation/libération sans connaître encore les recettes, matériaux ou règles
+de support.
+
+Cette topologie appartient à `AgeOfSurvival.Core`, sans `UnityEngine` ni
+GameObject. Grid/Tilemap resteront des adaptateurs Runtime. Les définitions et
+états de chantier seront ajoutés au-dessus de ces clés stables en 7L-A2, puis le
+graphe de support en 7L-A3.
