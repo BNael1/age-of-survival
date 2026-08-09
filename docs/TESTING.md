@@ -722,3 +722,29 @@ Le patch fonctionnel revu porte le SHA-256
 `git diff --check` est propre. Aucun PlayMode supplémentaire n'est requis : A1
 ajoute uniquement du Core et ses tests, sans scène, MonoBehaviour, rendu, entrée
 ou UI.
+
+<!-- LOT7LA2_TESTING -->
+## Lot 7L-A2 — validation du cycle de vie des chantiers
+
+Le sous-lot ajoute **38 cas EditMode**, portant le total à **657/657** sous Unity
+`6000.3.19f1`, zéro échec et zéro test ignoré.
+
+La couverture vérifie notamment :
+
+- validité et ordre stable des identifiants de définition et d'instance ;
+- exigences de matériaux positives, sans doublon et canoniques ;
+- catalogue déterministe et rejet des identifiants dupliqués ;
+- création d'un chantier avec occupation A1 réservée ;
+- dépôts partiels, refus des matériaux étrangers et plafonnement aux exigences ;
+- progression de travail bornée et indépendante des dépôts ;
+- refus de finalisation tant que matériaux ou travail sont incomplets ;
+- transition chantier -> structure avec conservation de l'instance et de
+  l'occupation ;
+- démontage d'un chantier à 100 % des quantités déposées ;
+- récupération d'une structure à 70 % arrondie vers le bas par matériau ;
+- cas extrêmes jusqu'à `int.MaxValue` sans overflow ;
+- libération d'occupation uniquement lors du démontage final.
+
+`git diff --check` est propre avant commit. Aucun PlayMode supplémentaire n'est
+requis pour A2 : le lot ajoute uniquement du Core et ses tests, sans scène,
+MonoBehaviour, rendu, entrée, UI ou persistance.

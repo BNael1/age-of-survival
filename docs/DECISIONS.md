@@ -608,3 +608,27 @@ Les espaces d'occupation `Surface`, `Interior`, `Edge` et `Roof` sont distincts.
 A1 ne décide pas encore quelles définitions concrètes utilisent chaque espace et
 ne change aucune règle visible de placement. Les chantiers et matériaux restent
 7L-A2 ; les supports et la validité des toits restent 7L-A3.
+
+<!-- ADR-0030 -->
+## ADR-0030 — chantiers Core séparés de l'inventaire et de la politique d'interaction
+
+**Statut : active**
+**Date : 9 août 2026**
+
+7L-A2 représente un chantier par un état Core distinct d'une structure terminée.
+Les matériaux sont référencés par `ItemDefinitionId`, mais le chantier ne connaît
+aucun `ContainerId` et ne retire/ajoute lui-même aucun objet d'inventaire.
+
+Les quantités déposées et le travail progressent indépendamment et sont bornés.
+Seule la finalisation exige les deux complets. L'ordre visible « déposer puis
+travailler », « travailler au fur et à mesure » ou toute autre cadence n'est donc
+pas figé par A2 et reste une décision de gameplay/Runtime ultérieure.
+
+La même `ConstructionInstanceId` et la même occupation survivent à la
+finalisation. Un chantier démonté restitue 100 % des matériaux réellement
+déposés ; une structure terminée restitue `floor(required * 70 / 100)` par
+matériau. Le Core retourne un payload de récupération sans choisir sa
+destination.
+
+Cette décision ne change ni AOSSAVE V3 ni les contrôles. La persistance des
+constructions sera versionnée dans un lot dédié lorsqu'elle sera intégrée.

@@ -730,3 +730,31 @@ Cette topologie appartient à `AgeOfSurvival.Core`, sans `UnityEngine` ni
 GameObject. Grid/Tilemap resteront des adaptateurs Runtime. Les définitions et
 états de chantier seront ajoutés au-dessus de ces clés stables en 7L-A2, puis le
 graphe de support en 7L-A3.
+
+<!-- LOT7LA2_ARCHITECTURE -->
+## Construction — cycle de vie Core 7L-A2
+
+`ConstructionDefinitionId` identifie une définition éditoriale stable et
+`ConstructionInstanceId` identifie une occurrence persistable de construction.
+Les exigences de matériaux sont exprimées avec `ItemDefinitionId`, quantités
+strictement positives, sans doublon et dans un ordre canonique. Le Core ne
+référence aucun conteneur d'inventaire concret.
+
+`ConstructionSiteState` représente l'état incomplet : définition, instance,
+ancre d'occupation A1, quantités déposées et travail accompli. Les dépôts et le
+travail sont deux axes indépendants et bornés ; la finalisation n'est possible
+que lorsque les deux sont complets. Cette séparation laisse la politique
+d'interaction au Runtime futur.
+
+La finalisation remplace logiquement le chantier par un
+`CompletedStructureState` en conservant la même instance et la même occupation.
+Aucune libération/réservation intermédiaire n'est effectuée : une transition
+réussie ne crée donc pas de fenêtre de collision topologique.
+
+Le démontage produit un payload déterministe de matériaux. Un chantier restitue
+les quantités effectivement déposées ; une structure terminée applique la règle
+active de récupération 70 %, arrondie vers le bas par matériau. Le transfert de
+ce payload vers un inventaire ou le monde est volontairement hors du Core A2.
+
+A2 ne modifie pas la persistance. Le futur format sauvegardé devra sérialiser ces
+états sans faire dépendre leur identité des GameObjects ou de la Tilemap.

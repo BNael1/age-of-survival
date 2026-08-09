@@ -12,21 +12,21 @@ Dernière mise à jour : 9 août 2026
 ## État actuel
 
 Le dernier commit fonctionnel local validé est
-`4f2485c` (`feat: add canonical construction topology`), créé au-dessus de la
-tête publiée `162110cff1dc8bff59a9dc13ed2a31e5a267a1f5` qui ferme le lot 7K.
-Le lot 7L-A1 ajoute uniquement la topologie Core de construction : adressage
-canonique des arêtes partagées, espaces d'occupation distincts et propriété de
-chunk dérivée de l'ancre canonique. Aucun Runtime, contrôle, rendu, format de
-sauvegarde ou package n'est modifié.
+`01d15ae` (`feat: add construction site lifecycle`), créé au-dessus de la
+clôture locale 7L-A1 `6191d1a`. La tête publiée reste
+`162110cff1dc8bff59a9dc13ed2a31e5a267a1f5` qui ferme le lot 7K.
+Le lot 7L-A2 ajoute le cycle de vie Core des chantiers : définitions stables,
+matériaux déposés, travail borné, finalisation chantier vers structure et
+récupération déterministe. Aucun Runtime, contrôle, rendu, format de sauvegarde
+ou package n'est modifié.
 
 La validation la plus récente sous Unity `6000.3.19f1` est de
-**619/619 EditMode**, zéro échec et zéro test ignoré. Aucun PlayMode n'a été
-relancé pour 7L-A1 puisque le lot ne touche ni Runtime ni scène ; la dernière
-validation Runtime de référence reste celle de 7K à **17/17 PlayMode** avec
-Burst actif. Le patch A1 revu porte le SHA-256
-`61d40728efd9038c4c406b987c18d0aaa5aec7637df96c54f489d2774498b405`.
-Le worktree est propre après le commit fonctionnel. `origin/main` reste sur
-`162110c` : aucun push 7L-A1 n'a encore été effectué.
+**657/657 EditMode**, zéro échec et zéro test ignoré. Aucun PlayMode n'a été
+relancé pour 7L-A2 puisque le lot reste Core-only ; la dernière validation
+Runtime de référence reste celle de 7K à **17/17 PlayMode** avec Burst actif.
+Le worktree est propre après le commit fonctionnel. `main` est localement en
+avance de trois commits sur `origin/main`, qui reste sur `162110c` ; aucun push
+7L-A n'a encore été effectué.
 
 Lots validés et commités :
 
@@ -72,7 +72,9 @@ Lots validés et commités :
 - `9ae5104` — `docs: close lot 7j natural resources` ;
 - `1e2074e` — `feat: add manual crafting foundation` ;
 - `162110c` — `docs: close lot 7k crafting foundation` ;
-- `4f2485c` — `feat: add canonical construction topology`.
+- `4f2485c` — `feat: add canonical construction topology` ;
+- `6191d1a` — `docs: close lot 7la1 construction topology` ;
+- `01d15ae` — `feat: add construction site lifecycle`.
 
 État validé au commit `26a1a27` :
 
@@ -743,3 +745,35 @@ Prochaine action : clôturer ce sous-lot par le présent commit documentaire, pu
 ouvrir 7L-A2 pour `ConstructionSiteState`, exigences de matériaux, dépôt,
 progression bornée, finalisation atomique et récupération 100 % / 70 % selon
 les règles déjà validées.
+
+<!-- LOT7LA2_PROJECT_STATE -->
+## Lot 7L-A2 — cycle de vie Core des chantiers
+
+Le sous-lot fonctionnel est commité localement sous `01d15ae`
+(`feat: add construction site lifecycle`), parent direct de la clôture 7L-A1
+`6191d1a`. Il ajoute exactement six chemins et 1326 insertions.
+
+Le Core introduit des identifiants stables de définition et d'instance, des
+exigences de matériaux canoniques basées sur `ItemDefinitionId`, un catalogue
+déterministe et un état de chantier distinct de l'état de structure terminée.
+Une même `ConstructionInstanceId` survit à la transition chantier -> structure,
+et l'occupation A1 reste réservée pendant cette transition.
+
+Les dépôts sont partiels et bornés aux exigences. Le travail est lui aussi borné
+et reste indépendant des matériaux dans le Core ; seule la finalisation exige
+que matériaux et travail soient complets. Ce choix conserve la liberté de fixer
+plus tard la cadence et l'ordre visibles des interactions sans casser l'état de
+simulation.
+
+Le démontage d'un chantier retourne exactement 100 % des matériaux réellement
+déposés. Le démontage d'une structure terminée retourne, pour chaque matériau,
+`floor(required * 70 / 100)` avec calcul entier protégé contre les débordements.
+Le Core renvoie une charge de récupération et ne décide ni du conteneur source,
+ni de la capacité de destination, ni d'un éventuel dépôt au sol.
+
+Validation : **38 nouveaux cas**, soit **657/657 EditMode**. Aucun changement de
+sauvegarde, Runtime, UX, contrôle, support de toit ou dépendance tierce.
+
+Prochaine action : clôturer ce sous-lot par le présent commit documentaire, puis
+ouvrir 7L-A3 pour le graphe de support structurel et la validité des toits sans
+effondrement physique en chaîne.
