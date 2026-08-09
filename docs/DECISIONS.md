@@ -632,3 +632,32 @@ destination.
 
 Cette décision ne change ni AOSSAVE V3 ni les contrôles. La persistance des
 constructions sera versionnée dans un lot dédié lorsqu'elle sera intégrée.
+
+<!-- ADR-0031 -->
+## ADR-0031 — support structurel dérivé par graphe, sans effondrement automatique
+
+**Statut : active**
+**Date : 9 août 2026**
+
+7L-A3 représente le support par un graphe dirigé indépendant de la géométrie
+concrète. Les racines et les liens sont fournis explicitement ; l'évaluateur Core
+ne décide pas combien de murs, poteaux ou autres pièces sont nécessaires pour
+supporter un toit.
+
+Un nœud est supporté s'il est atteignable depuis une racine. Les cycles sans
+racine ne s'auto-supportent pas. L'état de support est dérivé et recalculable,
+non une nouvelle autorité persistante.
+
+Un toit non supporté reste présent mais ne contribue pas au refuge. Aucun
+effondrement physique en chaîne n'est déclenché en V1. La suppression d'un
+support entraîne donc une réévaluation logique, pas la destruction automatique
+des dépendants.
+
+Le helper actuel dérivé de `CompletedStructureState` est un chemin sûr pour les
+structures terminées, pas une décision définitive sur les chantiers partiels.
+Une future règle de gameplay pourra fournir d'autres nœuds au graphe générique
+sans modifier son algorithme.
+
+Cette décision ne change ni AOSSAVE V3, ni les contrôles, ni le Runtime. Les
+règles géométriques concrètes de support seront définies dans un lot ultérieur
+avec validation du gameplay.

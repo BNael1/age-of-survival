@@ -748,3 +748,37 @@ La couverture vérifie notamment :
 `git diff --check` est propre avant commit. Aucun PlayMode supplémentaire n'est
 requis pour A2 : le lot ajoute uniquement du Core et ses tests, sans scène,
 MonoBehaviour, rendu, entrée, UI ou persistance.
+
+<!-- LOT7LA3_TESTING -->
+## Lot 7L-A3 — validation du support structurel
+
+Le sous-lot ajoute **34 cas EditMode**, portant le total à **691/691** sous Unity
+`6000.3.19f1`, zéro échec et zéro test ignoré.
+
+La couverture vérifie notamment :
+
+- rejet des identifiants de support invalides et de l'auto-support direct ;
+- direction et ordre canonique des liens ;
+- rejet des collections nulles, doublons et références hors graphe ;
+- canonicalisation des nœuds, racines, toits et liens indépendamment de l'ordre
+  d'insertion ;
+- graphe vide et racines supportées sans lien entrant ;
+- propagation transitive depuis les racines ;
+- composants déconnectés non supportés ;
+- cycle sans racine non auto-supporté et cycle relié à une racine supporté ;
+- ordre canonique des identifiants supportés ;
+- toit supporté comptant pour le refuge ;
+- toit non supporté conservé mais exclu du refuge ;
+- requêtes de toit invalides ou inconnues ;
+- factory depuis les structures terminées, détection canonique des espaces Roof,
+  rejet des entrées nulles et instances dupliquées ;
+- absence de promotion silencieuse d'un chantier incomplet dans le helper des
+  structures terminées ;
+- réévaluation après retrait d'un support : le toit subsiste mais devient non
+  supporté.
+
+Le patch fonctionnel de revue porte le SHA-256
+`5d70790aa3e4c9862afb5b45db18d59078558c538f95d40226eb5d8bf92e7c2f` et
+`git diff --check` est propre. Aucun PlayMode supplémentaire n'est requis pour
+A3 : le lot ajoute uniquement du Core et ses tests, sans scène, MonoBehaviour,
+rendu, entrée, UI ou persistance.

@@ -12,20 +12,21 @@ Dernière mise à jour : 9 août 2026
 ## État actuel
 
 Le dernier commit fonctionnel local validé est
-`01d15ae` (`feat: add construction site lifecycle`), créé au-dessus de la
-clôture locale 7L-A1 `6191d1a`. La tête publiée reste
+`bc3d514` (`feat: add derived construction support graph`), créé au-dessus de la
+clôture locale 7L-A2 `3baf114`. La tête publiée reste
 `162110cff1dc8bff59a9dc13ed2a31e5a267a1f5` qui ferme le lot 7K.
-Le lot 7L-A2 ajoute le cycle de vie Core des chantiers : définitions stables,
-matériaux déposés, travail borné, finalisation chantier vers structure et
-récupération déterministe. Aucun Runtime, contrôle, rendu, format de sauvegarde
-ou package n'est modifié.
+Le lot 7L-A3 ajoute le support structurel Core dérivé : graphe dirigé,
+racines explicites, propagation déterministe et état de support des toits.
+Aucun Runtime, contrôle, rendu, format de sauvegarde ou package n'est modifié.
 
 La validation la plus récente sous Unity `6000.3.19f1` est de
-**657/657 EditMode**, zéro échec et zéro test ignoré. Aucun PlayMode n'a été
-relancé pour 7L-A2 puisque le lot reste Core-only ; la dernière validation
+**691/691 EditMode**, zéro échec et zéro test ignoré. Aucun PlayMode n'a été
+relancé pour 7L-A3 puisque le lot reste Core-only ; la dernière validation
 Runtime de référence reste celle de 7K à **17/17 PlayMode** avec Burst actif.
+Le patch A3 revu porte le SHA-256
+`5d70790aa3e4c9862afb5b45db18d59078558c538f95d40226eb5d8bf92e7c2f`.
 Le worktree est propre après le commit fonctionnel. `main` est localement en
-avance de trois commits sur `origin/main`, qui reste sur `162110c` ; aucun push
+avance de cinq commits sur `origin/main`, qui reste sur `162110c` ; aucun push
 7L-A n'a encore été effectué.
 
 Lots validés et commités :
@@ -74,7 +75,9 @@ Lots validés et commités :
 - `162110c` — `docs: close lot 7k crafting foundation` ;
 - `4f2485c` — `feat: add canonical construction topology` ;
 - `6191d1a` — `docs: close lot 7la1 construction topology` ;
-- `01d15ae` — `feat: add construction site lifecycle`.
+- `01d15ae` — `feat: add construction site lifecycle` ;
+- `3baf114` — `docs: close lot 7la2 construction lifecycle` ;
+- `bc3d514` — `feat: add derived construction support graph`.
 
 État validé au commit `26a1a27` :
 
@@ -774,6 +777,40 @@ ni de la capacité de destination, ni d'un éventuel dépôt au sol.
 Validation : **38 nouveaux cas**, soit **657/657 EditMode**. Aucun changement de
 sauvegarde, Runtime, UX, contrôle, support de toit ou dépendance tierce.
 
-Prochaine action : clôturer ce sous-lot par le présent commit documentaire, puis
-ouvrir 7L-A3 pour le graphe de support structurel et la validité des toits sans
-effondrement physique en chaîne.
+7L-A2 est fermé par le commit documentaire `3baf114`. Le sous-lot suivant,
+7L-A3, est désormais validé fonctionnellement sous `bc3d514`.
+
+<!-- LOT7LA3_PROJECT_STATE -->
+## Lot 7L-A3 — support structurel Core dérivé
+
+Le sous-lot fonctionnel est commité localement sous `bc3d514`
+(`feat: add derived construction support graph`), parent direct de la clôture
+7L-A2 `3baf114`. Il ajoute exactement quatre chemins et 927 insertions.
+
+Le Core introduit un graphe de support dirigé où chaque lien exprime
+`support -> dépendant`. Les nœuds, racines, toits et liens sont validés,
+dédupliqués et exposés dans un ordre canonique. Le support est une propriété
+dérivée par accessibilité depuis les racines explicites : un cycle sans racine
+ne peut donc pas s'auto-supporter, tandis qu'un cycle relié à une racine peut
+être supporté.
+
+La géométrie et la politique de gameplay qui déterminent les racines et les
+liens restent hors de l'évaluateur. Le helper `FromCompletedStructures` construit
+le slice sûr actuel depuis les structures terminées et détecte les toits par
+`ConstructionSpaceKind.Roof`, mais le graphe générique n'interdit pas qu'une
+future règle de gameplay fournisse d'autres nœuds, par exemple un chantier
+partiel explicitement autorisé à supporter.
+
+Un toit non supporté reste représenté dans l'état du monde ; seul son indicateur
+`CountsTowardShelter` devient faux. Aucun effondrement physique en chaîne n'est
+introduit. Le support peut être recalculé après retrait d'un support sans détruire
+la structure dépendante.
+
+Validation : **34 nouveaux cas**, soit **691/691 EditMode**. Le patch fonctionnel
+revu porte le SHA-256
+`5d70790aa3e4c9862afb5b45db18d59078558c538f95d40226eb5d8bf92e7c2f`.
+Aucun changement de sauvegarde, Runtime, UX, contrôle ou dépendance tierce.
+
+Prochaine action : clôturer 7L-A3 par le présent commit documentaire. Le noyau
+7L-A (topologie, chantiers, supports) sera alors fermé localement avant décision
+de publication et avant tout travail Runtime/UX de construction.

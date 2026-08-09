@@ -758,3 +758,34 @@ ce payload vers un inventaire ou le monde est volontairement hors du Core A2.
 
 A2 ne modifie pas la persistance. Le futur format sauvegardé devra sérialiser ces
 états sans faire dépendre leur identité des GameObjects ou de la Tilemap.
+
+<!-- LOT7LA3_ARCHITECTURE -->
+## Construction — support structurel Core 7L-A3
+
+`ConstructionSupportGraph` est un évaluateur déterministe sans état monde mutable.
+Il reçoit quatre ensembles logiques : identifiants de nœuds, racines explicites,
+liens dirigés `provider -> dependent` et identifiants de toits. Tous les
+identifiants et liens doivent être valides, appartenir au graphe et ne pas être
+dupliqués ; les collections exposées sont canoniques.
+
+L'évaluation calcule le support par accessibilité depuis les racines. Ce modèle
+évite toute dépendance à l'ordre d'insertion et donne une sémantique claire aux
+cycles : un cycle isolé reste non supporté, un cycle atteint depuis une racine
+est supporté. Le résultat est immuable et peut être recalculé après chaque
+changement structurel plutôt que sauvegardé comme vérité primaire.
+
+`ConstructionRoofSupportState` sépare présence du toit et contribution au
+refuge. Un toit non supporté reste une structure existante mais
+`CountsTowardShelter == false`. A3 n'ajoute ni destruction automatique ni
+cascade d'effondrement.
+
+`FromCompletedStructures` est un adaptateur Core pratique pour le slice monde
+actuel : il prend les `CompletedStructureState` comme nœuds et classe comme toits
+les structures occupant `ConstructionSpaceKind.Roof`. Les racines et liens
+restent fournis par l'appelant. Ce helper n'est pas une règle irréversible selon
+laquelle un chantier ne pourra jamais soutenir : le graphe générique reste
+agnostique et pourra recevoir d'autres nœuds si le gameplay le décide.
+
+Le support est dérivé et A3 ne modifie pas AOSSAVE V3. Une future persistance des
+constructions doit sauvegarder les faits structurels nécessaires à reconstruire
+le graphe, pas un cache de support considéré comme autorité.
