@@ -89,3 +89,36 @@ matchmaking ou bibliothèque de sérialisation n'est ajouté. Unity Transport ne
 possède ni la simulation autoritaire, ni le store de mutations, ni la future
 sauvegarde. Une stratégie de sortie reste possible derrière le codec et les
 adaptateurs de transport séparés.
+
+<!-- CONSTRUCTION_ASSETS_20260811 -->
+## Assets Construction du 11 août 2026
+
+Les huit PNG `construction_*.png` ont été générés spécifiquement pour Age of
+Survival avec l'outil intégré de génération d'images OpenAI, puis découpés,
+passés sur chroma key magenta et redimensionnés localement. Aucun pack, auteur,
+URL d'asset ou fichier tiers préexistant n'a été copié. Les sorties sont conservées comme assets de projet générés pour Age of
+Survival. Leur provenance OpenAI est consignée ici ; aucune mention n'est
+intégrée directement aux PNG du prototype. Les obligations de divulgation et
+conditions applicables seront revérifiées avant toute distribution publique ou
+commerciale.
+
+Le code Runtime n'a aucune dépendance envers l'outil de génération. Les PNG
+peuvent être remplacés sans toucher au Core, au catalogue logique ni aux
+sauvegardes. La planche source et les découpes de travail restent hors dépôt
+dans `~/Downloads/age-of-survival-asset-work/`.
+
+### Remise à niveau des assets historiques prioritaires
+
+`player_survivor.png`, `resource_tree.png` et `resource_shrub.png` ont été
+remplacés par des créations originales produites pour ce projet avec l'outil
+intégré de génération d'images OpenAI. Les anciens sprites locaux ont servi
+uniquement de cibles de continuité. Les sorties ont reçu une chroma key magenta,
+supprimée localement, puis ont été réduites en nearest-neighbor aux dimensions
+historiques `32×48`, `40×48` et `40×48`. Les `.meta`, PPU, point filtering et
+pivots Runtime existants sont conservés.
+
+Aucun asset, pack, auteur ou fichier tiers n'a été copié. Ces créations suivent la même politique de provenance que les sprites
+Construction ci-dessus : leur origine OpenAI est documentée dans le dépôt, sans
+mention directement intégrée aux PNG du prototype. Les conditions applicables
+seront revérifiées avant distribution publique ou commerciale ; elles
+n'ajoutent aucune dépendance Runtime.

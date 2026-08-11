@@ -12,20 +12,17 @@ Dernière mise à jour : 11 août 2026
 ## État actuel
 
 La dernière tête publiée est
-`710ba693272246495dd0617577a130eeb8007609` (`docs: close lot 7la3 construction
-supports`). Elle publie les trois sous-lots Core 7L-A1, 7L-A2 et 7L-A3. Le
-dernier commit fonctionnel local validé est
-`ca6f6a0dee2dde68d9d25051b4a02d8e3f72fa36` (`feat: add construction placement
-projection`), qui porte le sous-lot Runtime 7L-B1a. `origin/main` reste sur
-`710ba693272246495dd0617577a130eeb8007609` ; B1a demeure local et aucun push
-B1a n'a encore été effectué.
+`fd7eed6d8c57ea7f1ed0d0379a190212edda98c2` (`docs: close lot 7lb1a
+construction projection`). `HEAD`, `main` et `origin/main` sont alignés sur
+cette baseline. Le chantier Runtime jouable décrit plus bas reste volontairement
+non commité et non poussé pendant la revue.
 
-La validation la plus récente sous Unity `6000.3.19f1_7689f4515d75` est de
-**721/721 EditMode**, avec zéro échec, zéro test ignoré et zéro test
-inconclusif. Les **30 nouveaux cas** appartiennent à 7L-B1a. Aucun PlayMode
-supplémentaire n'est requis pour ce sous-lot : il n'ajoute ni UI, ni entrée,
-ni interaction joueur, ni scène, ni mutation visible du monde. Aucun package
-et aucun format de sauvegarde ne sont modifiés.
+La validation finale de l'arbre de travail sous Unity
+`6000.3.19f1_7689f4515d75` est de **757/757 EditMode** et **19/19 PlayMode**,
+avec zéro échec, zéro test ignoré et zéro test inconclusif. La passe Game View
+réelle en **1280 × 720** couvre en plus le monde, HUD, Inventory, Craft, Pause et
+le cycle Construction complet. Aucun package et aucun format de sauvegarde ne
+sont modifiés.
 
 Lots validés et commités :
 
@@ -78,6 +75,7 @@ Lots validés et commités :
 - `bc3d514` — `feat: add derived construction support graph` ;
 - `710ba69` — `docs: close lot 7la3 construction supports` ;
 - `ca6f6a0` — `feat: add construction placement projection`.
+- `fd7eed6` — `docs: close lot 7lb1a construction projection`.
 
 État validé au commit `26a1a27` :
 
@@ -848,3 +846,52 @@ Le présent commit documentaire clôt 7L-B1a localement.
 Prochaines actions : publier B1a seulement après autorisation explicite ; ouvrir
 ensuite 7L-B1b Runtime/UX. Les pièces de contenu, leurs coûts et leurs exigences
 ne sont pas décidés par B1a.
+
+<!-- CONSTRUCTION_PLAYABLE_20260811 -->
+## Construction jouable — état de chantier du 11 août 2026
+
+Le dépôt contient désormais une première tranche Runtime de construction de
+bout en bout, non commitée : catalogue prototype Sol/Mur/Cadre d'ouverture,
+session C# propriétaire du `ConstructionWorldState`, sélection persistante,
+ghost Surface/Edge exclusivement projeté par B1a, placement avec occupation
+canonique, chantiers vides et approvisionnés, travail cadencé par le tick fixe,
+achèvement, démontage et récupération transactionnelle vers les destinations
+portées puis le sol.
+
+Les décisions gameplay validées par Naël sont appliquées au Runtime sans réduire
+la généralité du Core : les matériaux sont pris de l'inventaire principal puis
+du sac exact équipé, jamais automatiquement au sol ; tous les matériaux sont
+requis avant le démarrage du travail ; le travail doit rester activement maintenu
+à portée et s'interrompt sur déplacement, éloignement, relâchement ou changement
+de contexte. Le tick fixe existant reste l'unique horloge.
+
+Le démontage prépare avant destruction un plan exact principal → sac équipé →
+`GroundContainerState` près de l'ancre. Le surplus conserve les conventions de
+rendu et transfert au sol existantes. Les chantiers et constructions verticales
+s'enregistrent dans le `GroundAnchorSortCoordinator` sous un ID stable ; rebuild,
+transition vers un sol plat et démontage nettoient leur entrée.
+
+L'UI Toolkit est un panneau séparé d'ordre `230`, mutuellement exclusif avec
+Inventory/Craft et inférieur à Pause (`1100`). Le mode ne touche jamais à
+`GameplayInputGate` : la simulation et ZQSD restent actifs. Les bindings B / clic
+gauche / clic droit, les coûts et les unités de travail sont marqués
+`PROTOTYPE / NON GAMEPLAY FINAL`.
+
+Huit PNG originaux de construction sont intégrés : sol, deux axes de mur, deux
+axes d'ouverture et trois états de chantier. La persistance Construction reste
+hors de cette tranche ; AOSSAVE V3 et `docs/SAVE_FORMAT.md` sont inchangés.
+
+La passe historique prioritaire remplace réellement les placeholders du joueur,
+de l'arbre et de l'arbuste par trois sprites originaux plus détaillés, aux mêmes
+dimensions, PPU, pivots et paramètres d'import. Les autres ressources et pickups
+restent classés séparément pour éviter une refonte artistique arbitraire.
+
+Validation finale acquise : compilation C# sans erreur ni warning, **757/757
+EditMode** et **19/19 PlayMode** exécutés par Unity, puis Game View réelle en
+**1280 × 720**. Naël valide le 11 août 2026 la direction visuelle de cette
+tranche, le refresh joueur/arbre/arbuste et l'usage de B / clic gauche / clic
+droit comme bindings prototype uniquement. Les preuves couvrent inventaire porté, action active, précondition
+matériaux, récupération/overflow atomique, rendu au sol, tri central, panneaux
+Inventory/Craft/Pause et remplacement visuel joueur/arbre/arbuste. Le client
+Unity Personal a été reconnecté sans modification de compte, de fichier de
+licence ou de trousseau.

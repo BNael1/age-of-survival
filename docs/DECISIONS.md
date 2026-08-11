@@ -535,6 +535,60 @@ versionnée explicite.
 Pour les panneaux UI Toolkit générés : HUD santé `210`, inventaire `220`, menu
 pause `1100`. L'ordre est appliqué aux `PanelSettings` et aux `UIDocument`.
 
+<!-- CONSTRUCTION_RUNTIME_DECISIONS_20260811 -->
+## Construction Runtime — décisions et prototypes
+
+### ACTIVE DECISION
+
+- le Core reste autoritaire pour identité, occupation et cycle de vie ;
+- B1a reste l'unique projection/canonicalisation Runtime ;
+- le mode Construction ne bloque ni le tick fixe ni ZQSD ;
+- la sélection est conservée après un placement valide ;
+- les matériaux Construction proviennent des contenants réellement portés,
+  dans l'ordre déterministe inventaire principal puis sac correspondant équipé
+  au dos ; les piles au sol ne sont jamais consommées automatiquement ;
+- la politique Runtime exige tous les matériaux avant le travail, tout en
+  conservant la généralité historique du Core où dépôt et travail sont deux
+  axes indépendants ;
+- le travail est une action active maintenue, à portée, alimentée uniquement par
+  le tick fixe existant ; déplacement, éloignement, relâchement, conflit ou
+  contexte incompatible l'interrompent sans progression en arrière-plan ;
+- le démontage planifie avant destruction la récupération vers l'inventaire
+  principal, puis le sac équipé, puis un conteneur au sol stable près de la
+  construction pour l'overflow ; aucune perte ou duplication n'est admise ;
+- murs, ouvertures et chantiers participent au tri central par ancrage au sol et
+  identifiant visuel stable ; le sol construit plat conserve une couche fixe ;
+- le niveau de détail des assets Construction est la cible de cohérence pour la
+  remise à niveau progressive des placeholders historiques prioritaires ;
+- les données Construction ne sont pas ajoutées à AOSSAVE V3 dans cette tranche
+  incomplète de persistance.
+
+### PROTOTYPE / NON GAMEPLAY FINAL
+
+Validation Naël — 11 août 2026 : la direction visuelle de cette tranche et le
+refresh joueur/arbre/arbuste sont acceptés. Les bindings B / clic gauche / clic
+droit sont acceptés uniquement comme contrôles prototype et ne figent pas les
+contrôles définitifs du jeu.
+
+- le catalogue visible contient Sol, Mur et Cadre d'ouverture ;
+- coûts et travail sont centralisés dans `ConstructionPrototypeCatalog` ;
+- panneau Construction `230`, exclusif avec Inventory/Craft ;
+- `PROTOTYPE_INPUT_BINDING` : bouton UI et touche B ouvrent/ferment, clic gauche
+  confirme ou maintient le travail, clic droit ferme ;
+- une unité de travail est ajoutée toutes les cinq unités du tick existant ;
+- la portée réutilise provisoirement le rayon de transfert au sol `1.5` ; cette
+  valeur centralisée n'est pas un équilibrage final ;
+- les états vert/rouge du ghost signifient uniquement techniquement plaçable ou
+  espace occupé/projection refusée, jamais validité gameplay complète.
+
+### OPEN QUESTION
+
+- contrôles physiques définitifs, hiérarchie UI finale et présentation du ghost ;
+- coûts, quantités et durées d'équilibrage ;
+- restrictions terrain, rotation et équilibrage final de portée ;
+- persistance complète des sites, structures et prochaine séquence d'ID ;
+- règles géométriques qui construisent les liens de support des toits.
+
 <!-- LOT7J_DECISIONS -->
 ## ADR-0027 — ressources naturelles versionnées et rendements composés
 

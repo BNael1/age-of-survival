@@ -167,3 +167,23 @@ Project Zomboid et les solutions d'autres moteurs restent des références
 conceptuelles seulement. Aucun code tiers n'est copié ou adapté.
 
 **7L-B1a ajoute zéro dépendance tierce. `THIRD_PARTY.md` reste inchangé.**
+
+<!-- CONSTRUCTION_RUNTIME_REUSE_20260811 -->
+## Réutilisation Construction Runtime — 11 août 2026
+
+| Élément | Provenance | Décision |
+|---|---|---|
+| `ConstructionWorldState` et occupation canonique | Core propriétaire 7L-A | Réutilisés sans seconde simulation. |
+| `ConstructionPlacementProjection` / `DebugIsometricWorld.Construction` | Runtime propriétaire 7L-B1a | Seul pipeline de snapping Surface/Edge. |
+| UI Toolkit (`UIDocument`, `PanelSettings`, `IPanel.Pick`) | Unity officiel déjà installé | Réutilisé, aucun EventSystem ajouté. |
+| Input System device polling | Unity officiel déjà installé | Binding physique prototype isolé. |
+| `GroundAnchorSortCoordinator` / `GroundAnchorSorting` | Runtime propriétaire existant | Étendu aux chantiers, murs et ouvertures par ID stable, sans seconde passe de tri. |
+| `PlayerInventoryState`, équipement dos et conteneur du sac | Core/Runtime inventaire existant | Frontière portée principal puis sac équipé ; aucun conteneur connu n'est supposé porté. |
+| `GroundContainerState` et transfert temporisé existants | Core/Runtime inventaire existant | Destination canonique de l'overflow de démontage, rendue et transférable sans second système de drop. |
+| Tick fixe de `InventoryPrototypeSession` | Runtime existant | Unique cadence du travail actif ; aucune seconde horloge. |
+| Packages de construction / Asset Store | tiers | Rejetés : aucune propriété centrale déléguée. |
+| Génération d'images intégrée OpenAI + suppression chroma locale | outil de production, sortie créée pour le projet | Utilisé pour huit sprites Construction et la remise à niveau originale du joueur, de l'arbre et de l'arbuste ; aucune dépendance Runtime. |
+
+La stratégie de sortie est immédiate : les sprites et l'UI peuvent être
+remplacés sans migration du Core ; les commandes et l'allocateur sont injectés
+et restent testables hors MonoBehaviour.

@@ -9,9 +9,10 @@
 
 ## Référence actuelle
 
-Résultat intégré validé le 11 août 2026 sous Unity
-`6000.3.19f1_7689f4515d75` : **721/721 EditMode**, dont 30 nouveaux cas Runtime
-pour 7L-B1a, zéro échec, zéro test ignoré et zéro test inconclusif.
+Résultat final validé le 11 août 2026 sous Unity
+`6000.3.19f1_7689f4515d75` : **757/757 EditMode** et **19/19 PlayMode**, zéro
+échec, zéro test ignoré et zéro test inconclusif. Les journaux ne contiennent
+aucune erreur C# ni aucun warning C#.
 
 ## Exécution graphique
 
@@ -805,3 +806,44 @@ La couverture regroupe :
 Aucun PlayMode supplémentaire n'est requis pour ce sous-lot : B1a ne branche
 encore ni pointeur réel, ni UI, ni ghost, ni mutation du monde ou de scène. Ces
 intégrations devront être validées en B1b.
+
+<!-- CONSTRUCTION_RUNTIME_TESTING_20260811 -->
+## Construction Runtime jouable — stratégie et état
+
+Les nouveaux tests EditMode couvrent catalogue, state machine, sélection,
+preview sans mutation, allocateur et collisions, placements répétés, alias Edge
+et chantier vide. La frontière portée est vérifiée pour Main seul, sac équipé
+seul, répartition Main+sac, sac non équipé, quantité globale insuffisante, sol
+exclu, matériau erroné/satisfait et rollback intégral après rejet Core.
+
+Le travail Runtime est vérifié pour refus avant matériaux complets, démarrage
+ensuite, cadence exacte sur le tick fixe, absence de progression sans action,
+relâchement, mouvement, éloignement, fermeture de contexte, disparition du site
+et finalisation unique. Le démontage couvre récupération de chantier à 100 %,
+structure à 70 % floor, Main, Main+sac, overflow partiel/total exact, identité de
+ground container et collision de destination refusée avant mutation destructive.
+
+Les tests PlayMode couvrent le bootstrap Gameplay/MainMenu, la création UI, la
+continuité du gate/tick, les ghosts Surface/Edge, le blocage de placement par UI,
+la sélection persistante et les placements. Le flux Gameplay fournit réellement
+un chantier depuis le sac équipé, travaille sur les ticks de la session, termine
+et démonte vers un overflow au sol rendu. Le même scénario vérifie inscription
+stable du chantier au tri central, joueur derrière/devant, égalité Y déterministe,
+rebuild sans multiplication et unregister au démontage.
+
+État final au 11 août 2026 : Runtime + tests EditMode + tests PlayMode compilent
+et s'exécutent dans Unity avec **0 erreur / 0 warning C#**. Les résultats de
+référence sont `TestResults/editmode-final-results.xml` (**757/757**) et
+`TestResults/playmode-final-results.xml` (**19/19**).
+
+La validation graphique réelle utilise le preset Game View
+`AOS Validation 1280x720`. Elle couvre le panneau Construction, les états de
+chantier, l'approvisionnement sac équipé, le travail actif/interrompu/repris,
+l'achèvement, le démontage, l'overflow au sol, le tri joueur/mur, Inventory,
+Craft, Pause, HUD et les nouveaux sprites historiques. Les captures sont livrées
+dans `age-of-survival-construction-validation-final-20260811`.
+
+Un lancement PlayMode avec `-nographics` a provoqué un crash natif Unity/URP dans
+un ancien test qui appelle explicitement `Camera.Render`; cette configuration
+n'est pas compatible avec ce test de capture. La relance avec le rendu Metal
+normal a produit le XML final **19/19** sans modification du produit.

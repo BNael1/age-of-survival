@@ -20,7 +20,7 @@ Définitions éditoriales et assets. Les `ScriptableObject` pourront décrire de
 
 ### Tests
 
-Les tests EditMode couvrent le Core. Les tests PlayMode seront ajoutés seulement pour les intégrations qui nécessitent réellement le moteur.
+Les tests EditMode couvrent le Core. Les tests PlayMode sont réservés aux intégrations qui nécessitent réellement le moteur.
 
 ## Invariants initiaux
 
@@ -834,3 +834,61 @@ streaming existant.
 La frontière reste : **Core = identité, topologie et règles ; Runtime B1a =
 projection géométrique Unity ↔ espace logique**. B1a ne possède aucun état
 mutable de chantier et n'ajoute aucune politique de gameplay.
+
+<!-- CONSTRUCTION_RUNTIME_ARCH_20260811 -->
+## Construction — composition Runtime jouable
+
+Le flux actif est :
+
+```text
+ConstructionUiDocument / input physique prototype
+→ ConstructionCommand / ConstructionRuntimeBehaviour
+→ ConstructionRuntimeSession (C# testable)
+→ ConstructionWorldState (Core autoritaire)
+```
+
+`ConstructionRuntimeSession` possède le monde Core, le catalogue actif, le
+`ConstructionModeState`, l'allocateur d'instances et les commandes de dépôt,
+travail et démontage. Les présentateurs Unity reconstruisent leurs vues depuis
+les captures canoniques du Core et ne deviennent jamais propriétaires des
+chantiers ou structures.
+
+`MonotonicConstructionInstanceIdAllocator` utilise un namespace textuel et une
+séquence décimale persistable. `TryPeekNext` saute les collisions sans muter la
+séquence ; `Commit` n'avance qu'après `TryStartSite` accepté. Cette abstraction
+peut être restaurée depuis un prochain snapshot ou remplacée par un allocateur
+serveur sans changer le Core.
+
+`ConstructionCarriedInventory` forme la frontière réutilisable des contenants
+éligibles : inventaire principal, puis le conteneur du sac uniquement lorsque
+cette instance exacte est équipée au dos. Un dépôt prévalide la quantité totale,
+retire transactionnellement dans cet ordre puis appelle le Core ; un rejet
+synchrone restaure chaque débit. Les ground containers sont exclus des sources.
+
+Un démontage capture l'état à restaurer et planifie toutes les destinations avant
+la mutation Core. Les capacités virtuelles sont consommées principal puis sac
+équipé ; le reliquat prépare un `GroundContainerState` d'identité stable à la
+position logique de la construction. Le payload Core doit correspondre exactement
+au plan avant application. Un échec inattendu annule les crédits et reconstruit
+le site ou la structure, évitant état supprimé avec perte et état présent avec
+duplication.
+
+Le Core conserve matériaux et travail indépendants. La politique gameplay
+Runtime refuse néanmoins `BeginWork` tant que tous les matériaux ne sont pas
+déposés. Le travail est une action maintenue sur un chantier précis et progresse
+à raison prototype d'une unité par cinq ticks existants. Aucun nouveau clock
+n'est créé : `DebugPlayerController` transmet le tick de la session inventaire.
+Mouvement, relâchement, éloignement, fermeture du contexte, action Craft/transfer
+concurrente ou disparition du chantier interrompent avant toute progression.
+
+`ConstructionWorldPresenter` enregistre sites, murs et ouvertures auprès du
+`GroundAnchorSortCoordinator` avec `construction:<ConstructionInstanceId>` et
+un pivot au sol. `Refresh` remplace la même entrée stable, tandis que disparition
+et `Dispose` l'enlèvent. Le sol fini reste plat à l'ordre fixe `92` ; le ghost
+reste une vue temporaire dédiée et ne participe jamais à l'état de simulation.
+
+Le pointeur suit `Camera.ScreenPointToRay` jusqu'au plan `z=0`, puis délègue le
+snapping à `DebugIsometricWorld.TryResolveConstructionTarget` et le mapping du
+ghost à `TryMapConstructionSpaceCenter`. Le hit-test synchrone UI Toolkit via
+`RuntimePanelUtils.ScreenToPanel` et `IPanel.Pick` bloque ghost et confirmation
+sur tout élément interactif visible.
