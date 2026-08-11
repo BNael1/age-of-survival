@@ -1,6 +1,7 @@
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Simulation;
+using AgeOfSurvival.Runtime.Construction;
 using AgeOfSurvival.Runtime.Frontend;
 using AgeOfSurvival.Runtime.Inventory;
 using AgeOfSurvival.Runtime.Rendering;
@@ -30,6 +31,7 @@ namespace AgeOfSurvival.Runtime.Player
         [SerializeField] private DebugIsometricWorld worldRenderer;
         [SerializeField] private DebugResourceInteraction resourceInteraction;
         [SerializeField] private GroundAnchorCameraFollow cameraFollow;
+        [SerializeField] private ConstructionRuntimeBehaviour constructionRuntime;
         [SerializeField] private Vector2 startPosition = new Vector2(4.5f, 4.5f);
         [SerializeField, Min(0f)] private float movementSpeed = 3f;
         [SerializeField, Min(1)] private int ticksPerSecond = 60;
@@ -84,6 +86,11 @@ namespace AgeOfSurvival.Runtime.Player
             if (cameraFollow == null)
             {
                 cameraFollow = FindFirstObjectByType<GroundAnchorCameraFollow>();
+            }
+
+            if (constructionRuntime == null)
+            {
+                constructionRuntime = FindFirstObjectByType<ConstructionRuntimeBehaviour>();
             }
 
             if (worldRenderer == null || worldRenderer.Tilemap == null)
@@ -152,6 +159,10 @@ namespace AgeOfSurvival.Runtime.Player
             if (GameplayInputGate.IsBlocked)
             {
                 resourceInteraction?.SimulateTick(_player.Position);
+                constructionRuntime?.SimulateFixedTick(
+                    ResolvePrototypeSession().CurrentTick,
+                    _player.Position,
+                    false);
                 SynchronizeMovementState();
                 SynchronizeVisual();
                 return;
@@ -218,10 +229,18 @@ namespace AgeOfSurvival.Runtime.Player
                 resourceInteraction.SimulateTick(
                     _player.Position,
                     playerMoved);
-                return;
+            }
+            else
+            {
+                session.BeginSimulationTick(_player.Position);
             }
 
-            session.BeginSimulationTick(_player.Position);
+            if (constructionRuntime == null)
+                constructionRuntime = FindFirstObjectByType<ConstructionRuntimeBehaviour>();
+            constructionRuntime?.SimulateFixedTick(
+                session.CurrentTick,
+                _player.Position,
+                playerMoved);
         }
 
         private void ResolveHealthStep(

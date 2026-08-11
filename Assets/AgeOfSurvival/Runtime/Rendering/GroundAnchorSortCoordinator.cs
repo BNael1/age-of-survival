@@ -20,6 +20,7 @@ namespace AgeOfSurvival.Runtime.Rendering
         public int LastAppliedFrame { get; private set; } = -1;
         public int ApplicationsInLastAppliedFrame { get; private set; }
         public int ActiveEntryCount { get; private set; }
+        public int RegisteredEntryCount => _entries.Count;
         public int SaturatedEntryCount => Math.Max(
             0, ActiveEntryCount - GroundAnchorSorting.MaximumDistinctRankCount);
 
@@ -78,6 +79,12 @@ namespace AgeOfSurvival.Runtime.Rendering
             {
                 _entries.Remove(stableId);
             }
+        }
+
+        public bool IsRegistered(string stableId)
+        {
+            return !string.IsNullOrWhiteSpace(stableId)
+                && _entries.ContainsKey(stableId);
         }
 
         public bool ApplySortingForFrame(int frameIndex)

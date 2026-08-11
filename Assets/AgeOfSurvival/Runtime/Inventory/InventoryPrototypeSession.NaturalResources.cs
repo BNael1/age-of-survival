@@ -162,6 +162,29 @@ namespace AgeOfSurvival.Runtime.Inventory
                     >= definition.UnitEncumbrance.Units;
         }
 
+        public TransferActionResult StartNearestGroundTransfer(
+            WorldPosition playerPosition,
+            double maximumDistance,
+            long currentTick)
+        {
+            CurrentPlayerPosition = playerPosition;
+            GroundContainerState ground = FindNearestNonEmptyGround(playerPosition);
+            if (ground == null
+                || playerPosition.DistanceSquaredTo(ground.Position)
+                    > maximumDistance * maximumDistance)
+            {
+                return new TransferActionResult(null, TransferActionReason.InvalidRequest);
+            }
+
+            ItemDefinitionId definitionId = FirstGroundDefinitionId(ground);
+            int quantity = definitionId.IsValid
+                ? InventoryOperations.Count(ground.Container, definitionId)
+                : 0;
+            return quantity > 0
+                ? StartGroundTransfer(ground, definitionId, quantity, currentTick)
+                : new TransferActionResult(null, TransferActionReason.InvalidRequest);
+        }
+
         private static ItemDefinitionId FirstGroundDefinitionId(
             GroundContainerState ground)
         {

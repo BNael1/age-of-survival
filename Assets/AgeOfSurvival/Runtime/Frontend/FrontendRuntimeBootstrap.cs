@@ -1,3 +1,4 @@
+using AgeOfSurvival.Runtime.Construction;
 using AgeOfSurvival.Runtime.Inventory;
 using AgeOfSurvival.Runtime.Persistence;
 using UnityEngine;
@@ -58,6 +59,7 @@ namespace AgeOfSurvival.Runtime.Frontend
                 EnsureHost<PrototypeSaveRuntimeBehaviour>(scene);
                 EnsureHost<PauseMenuBehaviour>(scene);
                 EnsureHost<PlayerHealthHudBehaviour>(scene);
+                EnsureHost<ConstructionRuntimeBehaviour>(scene);
             }
         }
 

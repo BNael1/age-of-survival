@@ -24,6 +24,14 @@ namespace AgeOfSurvival.Runtime.Rendering
         public const string TargetRing = "target_ring";
         public const string InteractionRadius = "interaction_radius";
         public const string UiPixel = "ui_pixel";
+        public const string ConstructionFloor = "construction_floor";
+        public const string ConstructionWallVertical = "construction_wall_vertical";
+        public const string ConstructionWallHorizontal = "construction_wall_horizontal";
+        public const string ConstructionOpeningVertical = "construction_opening_vertical";
+        public const string ConstructionOpeningHorizontal = "construction_opening_horizontal";
+        public const string ConstructionSiteEmpty = "construction_site_empty";
+        public const string ConstructionSitePartial = "construction_site_partial";
+        public const string ConstructionSiteReady = "construction_site_ready";
 
         private const string ResourceRoot = "PrototypeVisuals/";
 
@@ -72,7 +80,20 @@ namespace AgeOfSurvival.Runtime.Rendering
                 && TextureExists(GroundWood)
                 && TextureExists(TargetRing)
                 && TextureExists(InteractionRadius)
-                && TextureExists(UiPixel);
+                && TextureExists(UiPixel)
+                && AllConstructionTexturesExist();
+        }
+
+        public static bool AllConstructionTexturesExist()
+        {
+            return TextureExists(ConstructionFloor)
+                && TextureExists(ConstructionWallVertical)
+                && TextureExists(ConstructionWallHorizontal)
+                && TextureExists(ConstructionOpeningVertical)
+                && TextureExists(ConstructionOpeningHorizontal)
+                && TextureExists(ConstructionSiteEmpty)
+                && TextureExists(ConstructionSitePartial)
+                && TextureExists(ConstructionSiteReady);
         }
 
         public static void DestroyRuntimeSprite(Sprite sprite)

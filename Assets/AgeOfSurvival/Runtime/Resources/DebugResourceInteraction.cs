@@ -137,7 +137,7 @@ namespace AgeOfSurvival.Runtime.Resources
                     }
                 }
 
-                return count;
+                return count + RenderedStandaloneGroundPileCount;
             }
         }
 
@@ -348,11 +348,19 @@ namespace AgeOfSurvival.Runtime.Resources
             if (_interactionRequested)
             {
                 _interactionRequested = false;
-                ResourceYieldResult yield = _session.HarvestAndStartTransfer(
-                    playerPosition,
-                    interactionRadius,
-                    simulationTick);
-                LastInteractionResult = yield.Interaction;
+                TransferActionResult groundTransfer =
+                    _session.StartNearestGroundTransfer(
+                        playerPosition,
+                        interactionRadius,
+                        simulationTick);
+                if (!groundTransfer.Succeeded)
+                {
+                    ResourceYieldResult yield = _session.HarvestAndStartTransfer(
+                        playerPosition,
+                        interactionRadius,
+                        simulationTick);
+                    LastInteractionResult = yield.Interaction;
+                }
             }
 
             if (_session.TransferAction != null
@@ -606,6 +614,8 @@ namespace AgeOfSurvival.Runtime.Resources
                 }
             }
 
+            SynchronizeStandaloneGroundContainers(action);
+
         }
 
         private static void SetProgress(SpriteRenderer fill, float progress)
@@ -672,6 +682,7 @@ namespace AgeOfSurvival.Runtime.Resources
 
         private void DestroyGeneratedHierarchy()
         {
+            DestroyStandaloneGroundMarkers();
             if (_sortCoordinator != null)
             {
                 for (int index = 0; index < _markers.Count; index++)
