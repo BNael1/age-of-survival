@@ -9,12 +9,9 @@
 
 ## Référence actuelle
 
-Le lot de fondation contient 11 méthodes de test. Une méthode utilise quatre cas paramétrés, soit **14 cas exécutés** au total.
-
-Résultat validé le 31 juillet 2026 :
-
-- éditeur : 14/14 réussis ;
-- batchmode : 14/14 réussis, code de sortie 0.
+Résultat intégré validé le 11 août 2026 sous Unity
+`6000.3.19f1_7689f4515d75` : **721/721 EditMode**, dont 30 nouveaux cas Runtime
+pour 7L-B1a, zéro échec, zéro test ignoré et zéro test inconclusif.
 
 ## Exécution graphique
 
@@ -782,3 +779,29 @@ Le patch fonctionnel de revue porte le SHA-256
 `git diff --check` est propre. Aucun PlayMode supplémentaire n'est requis pour
 A3 : le lot ajoute uniquement du Core et ses tests, sans scène, MonoBehaviour,
 rendu, entrée, UI ou persistance.
+
+<!-- LOT7LB1A_TESTING -->
+## Lot 7L-B1a — validation de la projection de construction
+
+Le sous-lot ajoute **30 cas EditMode Runtime**, portant le total intégré à
+**721/721** sous Unity `6000.3.19f1_7689f4515d75` : zéro échec, zéro test
+ignoré, zéro test inconclusif, zéro erreur C# et zéro warning C#.
+
+La couverture regroupe :
+
+1. la validation des frames, avec rejet des valeurs non finies et des bases
+   singulières ;
+2. la projection de l'origine, des coordonnées positives et négatives, d'un
+   repère isométrique réel et des frontières de demi-cellule déterministes ;
+3. le domaine mondial, avec grandes origines `Int64` et protections aux bornes
+   `long.MinValue` / `long.MaxValue` ;
+4. les espaces, avec `Surface`, les quatre côtés `Edge`, les égalités
+   déterministes au centre et aux coins, les arêtes partagées canonicalisées via
+   A1, et le rejet de `Interior` / `Roof` ;
+5. le mapping retour des centres `Surface`, des milieux d'arêtes horizontales et
+   verticales, et des grandes origines sans perte liée à une conversion absolue
+   prématurée.
+
+Aucun PlayMode supplémentaire n'est requis pour ce sous-lot : B1a ne branche
+encore ni pointeur réel, ni UI, ni ghost, ni mutation du monde ou de scène. Ces
+intégrations devront être validées en B1b.

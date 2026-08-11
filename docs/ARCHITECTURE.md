@@ -719,7 +719,7 @@ sa cellule sud. Cette ancre détermine aussi le chunk propriétaire. Les
 opérations vérifient les débordements `Int64`, de sorte que la canonicalisation
 reste explicite aux bornes du domaine.
 
-`ConstructionOccupancyAddress` sépare quatre espaces logiques : `Surface`,
+`ConstructionSpaceKey` sépare quatre espaces logiques : `Surface`,
 `Interior`, `Edge` et `Roof`. Une occupation dans l'un ne bloque pas
 implicitement les autres ; les conflits sont définis par égalité dans le même
 espace. `ConstructionOccupancyRegistry` fournit une frontière déterministe de
@@ -789,3 +789,48 @@ agnostique et pourra recevoir d'autres nœuds si le gameplay le décide.
 Le support est dérivé et A3 ne modifie pas AOSSAVE V3. Une future persistance des
 constructions doit sauvegarder les faits structurels nécessaires à reconstruire
 le graphe, pas un cache de support considéré comme autorité.
+
+<!-- LOT7LB1A_ARCHITECTURE -->
+## Construction — projection Runtime 7L-B1a
+
+`ConstructionProjectionFrame` décrit un repère local entre la simulation et
+Unity : une origine logique `WorldCellCoordinate` conservée en `Int64`, une
+origine visuelle, une base isométrique X et une base isométrique Y. La frame
+refuse les coordonnées non finies et les bases singulières ou pratiquement
+singulières.
+
+La projection inverse suit exclusivement ce chemin local :
+
+```text
+position visuelle
+→ coordonnées relatives dans le repère isométrique
+→ cellule locale arrondie
+→ ré-ancrage sur WorldCellCoordinate Int64
+```
+
+Le système 2×2 est inversé explicitement à partir de son déterminant, avec les
+intermédiaires importants en `double`. Le Runtime ne transforme jamais d'abord
+une grande coordonnée monde absolue en `float` ou en coordonnées Unity. Le
+snapping utilise `ceil(value - 0.5)` pour affecter une égalité exacte à la
+cellule de coordonnée inférieure.
+
+`ConstructionPlacementSample` conserve le résultat géométrique local : cellule
+retenue et offsets résiduels X/Y. `ConstructionPlacementTarget` porte ce sample,
+la `ConstructionSpaceKey` canonique et, pour une arête, le côté cardinal choisi
+avant canonicalisation. Une cible `Surface` produit la clé de sa cellule. Une
+cible `Edge` choisit le côté le plus proche, avec une priorité d'égalité stable,
+puis appelle `ConstructionSpaceKey.Edge(...)` dans le Core. Le Runtime ne
+réimplémente donc ni l'identité canonique des frontières ni leurs règles
+d'adjacence. `Interior` et `Roof` sont explicitement refusés dans B1a.
+
+`TryMapSpaceCenter` assure le chemin inverse requis par un futur ghost : centre
+visuel d'une cellule `Surface` ou milieu d'une frontière `Edge`. Les différences
+entre la cible et l'origine logique sont calculées sans soustraction `long`
+susceptible de déborder, avant conversion vers l'espace visuel. La partial
+`DebugIsometricWorld.Construction.cs` choisit soit le repère reconstruit depuis
+la Tilemap lorsque le streaming n'est pas initialisé, soit le repère flottant du
+streaming existant.
+
+La frontière reste : **Core = identité, topologie et règles ; Runtime B1a =
+projection géométrique Unity ↔ espace logique**. B1a ne possède aucun état
+mutable de chantier et n'ajoute aucune politique de gameplay.

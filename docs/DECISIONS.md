@@ -661,3 +661,37 @@ sans modifier son algorithme.
 Cette décision ne change ni AOSSAVE V3, ni les contrôles, ni le Runtime. Les
 règles géométriques concrètes de support seront définies dans un lot ultérieur
 avec validation du gameplay.
+
+<!-- ADR-0032 -->
+## ADR-0032 — projection de placement Runtime indépendante de la simulation
+
+**Statut : active**
+**Date : 11 août 2026**
+
+La conversion d'une position visuelle vers une adresse de construction reste un
+adaptateur Runtime. La topologie, l'identité et la canonicalisation des espaces
+de construction restent exclusivement dans le Core ; le Runtime appelle les
+factories `ConstructionSpaceKey` au lieu de recopier leurs invariants.
+
+Le repère de projection est local afin de rester sûr avec les coordonnées monde
+`Int64` et le recentrage du streaming. Les valeurs flottantes représentent le
+voisinage rendu, jamais une grande adresse monde absolue.
+
+B1a supporte seulement `Surface` et `Edge`. `Interior` et `Roof` attendent un
+besoin Runtime ultérieur. Aucune dépendance tierce de construction n'est
+introduite.
+
+<!-- ADR-0033 -->
+## ADR-0033 — Construction — mode non bloquant et sélection répétée
+
+**Statut : active, validée par Naël**
+**Date : 11 août 2026**
+
+Pour le futur lot B1b, activer le mode construction ne met pas le monde en
+pause. Le joueur conserve son déplacement ZQSD pendant ce mode. Après un
+placement valide, la pièce sélectionnée reste sélectionnée afin de permettre
+plusieurs placements successifs.
+
+Ces décisions UX sont actives pour B1b ; B1a ne les implémente pas. Elles ne
+valident aucun bouton, raccourci clavier, clic ou autre contrôle, et ne fixent
+aucun coût de construction.

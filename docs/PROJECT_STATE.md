@@ -1,33 +1,31 @@
 # État du projet
 
-Dernière mise à jour : 9 août 2026
+Dernière mise à jour : 11 août 2026
 
 ## Moteur
 
 - Unity 6.3 LTS
-- Éditeur 6000.3.19f1 ARM64
+- Éditeur 6000.3.19f1_7689f4515d75
 - Universal 2D / URP
 - C#
 
 ## État actuel
 
-Le dernier commit fonctionnel local validé est
-`bc3d514` (`feat: add derived construction support graph`), créé au-dessus de la
-clôture locale 7L-A2 `3baf114`. La tête publiée reste
-`162110cff1dc8bff59a9dc13ed2a31e5a267a1f5` qui ferme le lot 7K.
-Le lot 7L-A3 ajoute le support structurel Core dérivé : graphe dirigé,
-racines explicites, propagation déterministe et état de support des toits.
-Aucun Runtime, contrôle, rendu, format de sauvegarde ou package n'est modifié.
+La dernière tête publiée est
+`710ba693272246495dd0617577a130eeb8007609` (`docs: close lot 7la3 construction
+supports`). Elle publie les trois sous-lots Core 7L-A1, 7L-A2 et 7L-A3. Le
+dernier commit fonctionnel local validé est
+`ca6f6a0dee2dde68d9d25051b4a02d8e3f72fa36` (`feat: add construction placement
+projection`), qui porte le sous-lot Runtime 7L-B1a. `origin/main` reste sur
+`710ba693272246495dd0617577a130eeb8007609` ; B1a demeure local et aucun push
+B1a n'a encore été effectué.
 
-La validation la plus récente sous Unity `6000.3.19f1` est de
-**691/691 EditMode**, zéro échec et zéro test ignoré. Aucun PlayMode n'a été
-relancé pour 7L-A3 puisque le lot reste Core-only ; la dernière validation
-Runtime de référence reste celle de 7K à **17/17 PlayMode** avec Burst actif.
-Le patch A3 revu porte le SHA-256
-`5d70790aa3e4c9862afb5b45db18d59078558c538f95d40226eb5d8bf92e7c2f`.
-Le worktree est propre après le commit fonctionnel. `main` est localement en
-avance de cinq commits sur `origin/main`, qui reste sur `162110c` ; aucun push
-7L-A n'a encore été effectué.
+La validation la plus récente sous Unity `6000.3.19f1_7689f4515d75` est de
+**721/721 EditMode**, avec zéro échec, zéro test ignoré et zéro test
+inconclusif. Les **30 nouveaux cas** appartiennent à 7L-B1a. Aucun PlayMode
+supplémentaire n'est requis pour ce sous-lot : il n'ajoute ni UI, ni entrée,
+ni interaction joueur, ni scène, ni mutation visible du monde. Aucun package
+et aucun format de sauvegarde ne sont modifiés.
 
 Lots validés et commités :
 
@@ -77,7 +75,9 @@ Lots validés et commités :
 - `6191d1a` — `docs: close lot 7la1 construction topology` ;
 - `01d15ae` — `feat: add construction site lifecycle` ;
 - `3baf114` — `docs: close lot 7la2 construction lifecycle` ;
-- `bc3d514` — `feat: add derived construction support graph`.
+- `bc3d514` — `feat: add derived construction support graph` ;
+- `710ba69` — `docs: close lot 7la3 construction supports` ;
+- `ca6f6a0` — `feat: add construction placement projection`.
 
 État validé au commit `26a1a27` :
 
@@ -744,10 +744,8 @@ Validation : **31 nouveaux cas**, soit **619/619 EditMode**. Le lot est Core-onl
 et ne justifie pas une nouvelle passe PlayMode. Aucun changement de sauvegarde,
 de Runtime, d'UX ou de contrôle et aucune dépendance tierce.
 
-Prochaine action : clôturer ce sous-lot par le présent commit documentaire, puis
-ouvrir 7L-A2 pour `ConstructionSiteState`, exigences de matériaux, dépôt,
-progression bornée, finalisation atomique et récupération 100 % / 70 % selon
-les règles déjà validées.
+Le sous-lot est fermé par le commit documentaire `6191d1a` et publié dans la
+séquence 7L-A qui aboutit à `710ba69`.
 
 <!-- LOT7LA2_PROJECT_STATE -->
 ## Lot 7L-A2 — cycle de vie Core des chantiers
@@ -777,8 +775,8 @@ ni de la capacité de destination, ni d'un éventuel dépôt au sol.
 Validation : **38 nouveaux cas**, soit **657/657 EditMode**. Aucun changement de
 sauvegarde, Runtime, UX, contrôle, support de toit ou dépendance tierce.
 
-7L-A2 est fermé par le commit documentaire `3baf114`. Le sous-lot suivant,
-7L-A3, est désormais validé fonctionnellement sous `bc3d514`.
+7L-A2 est fermé par le commit documentaire `3baf114` et publié dans la séquence
+7L-A qui aboutit à `710ba69`.
 
 <!-- LOT7LA3_PROJECT_STATE -->
 ## Lot 7L-A3 — support structurel Core dérivé
@@ -811,6 +809,42 @@ revu porte le SHA-256
 `5d70790aa3e4c9862afb5b45db18d59078558c538f95d40226eb5d8bf92e7c2f`.
 Aucun changement de sauvegarde, Runtime, UX, contrôle ou dépendance tierce.
 
-Prochaine action : clôturer 7L-A3 par le présent commit documentaire. Le noyau
-7L-A (topologie, chantiers, supports) sera alors fermé localement avant décision
-de publication et avant tout travail Runtime/UX de construction.
+7L-A3 est fermé par le commit documentaire `710ba69`. Le noyau 7L-A (topologie,
+chantiers et supports) est publié.
+
+<!-- LOT7LB1A_PROJECT_STATE -->
+## Lot 7L-B1a — projection de placement construction Runtime
+
+Le commit fonctionnel local `ca6f6a0` (`feat: add construction placement
+projection`) convertit une position visuelle locale en adresse logique de
+construction. Il ajoute exactement sept chemins, 959 insertions et aucune
+suppression. L'adaptateur inverse le repère isométrique 2×2 en `double`, puis
+applique le snapping déterministe `ceil(value - 0.5)` afin que les frontières
+exactes de demi-cellule choisissent toujours la coordonnée inférieure.
+
+B1a résout uniquement `Surface` et `Edge`. Pour une arête, le côté le plus
+proche est choisi avec la priorité stable North, East, South, West en cas
+d'égalité, puis la canonicalisation est déléguée à
+`ConstructionSpaceKey.Edge(...)` du Core A1. `Interior` et `Roof` sont
+volontairement refusés dans B1a. Les débordements aux limites `Int64` produisent
+un échec propre.
+
+Le mapping retour place une `Surface` au centre de sa cellule et une `Edge` au
+milieu de sa frontière. Les petits écarts logiques sont calculés avant leur
+conversion vers l'espace visuel : aucune immense coordonnée monde absolue n'est
+convertie en `float`. L'intégration avec le repère flottant du streaming et le
+repère Tilemap non initialisé est isolée dans la partial
+`DebugIsometricWorld.Construction.cs`, sans seconde origine logique.
+
+Le sous-lot n'ajoute aucune règle de coût, matériau, travail, chantier, support,
+inventaire, sauvegarde, UI ou contrôle. Il ne crée ni mutation de monde ni état
+mutable de chantier. Validation : **30 nouveaux cas**, soit **721/721 EditMode**,
+sous Unity `6000.3.19f1_7689f4515d75`. Le patch fonctionnel indexé revu porte
+le SHA-256
+`2753E1D76FC6A360D0A911AE0F3D44439D94135CA1FE1A329F7199D8262F1CB2`.
+
+Le présent commit documentaire clôt 7L-B1a localement.
+
+Prochaines actions : publier B1a seulement après autorisation explicite ; ouvrir
+ensuite 7L-B1b Runtime/UX. Les pièces de contenu, leurs coûts et leurs exigences
+ne sont pas décidés par B1a.

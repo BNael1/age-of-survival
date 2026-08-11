@@ -139,3 +139,31 @@ Aucune nouvelle dépendance n'est ajoutée ; `THIRD_PARTY.md` reste inchangé.
 - `BaiSunTeam/UnityCraftingSystem` : travail récent sur recettes en 2026, mais architecture directement couplée à Unity et absence de licence racine exploitable lors de l'audit ; non intégré.
 
 Décision : zéro nouvelle dépendance tierce. `THIRD_PARTY.md` reste inchangé.
+
+<!-- LOT7LB_REUSE -->
+## Recherche du lot 7L-B — projection et interaction de construction
+
+### APIs Unity officielles
+
+- Grid, GridLayout et Tilemap sont utilisées comme adaptateurs Runtime, jamais
+  comme source de vérité logique ;
+- l'Input System est déjà présent et pertinent pour B1b, mais B1a n'ajoute aucun
+  nouveau contrôle ;
+- UI Toolkit est déjà utilisé par le projet et constitue le candidat naturel
+  pour B1b sans nouveau package.
+
+### Références externes examinées
+
+- `unity-iso-tools` possède une licence permissive, mais son périmètre est trop
+  large et chevauche l'architecture propriétaire ;
+- `Unity-Grid-Based-Terrain-Building-System` est un projet WIP dont le statut de
+  licence est insuffisant pour une adoption sûre ;
+- `Unity-Grid-and-Tiles-System` est sous licence MIT, mais son architecture est
+  trop centrée sur les GameObjects pour le Core propriétaire ;
+- l'ancien système de construction Asset Store examiné est trop ancien et trop
+  orienté 3D pour justifier la dépendance.
+
+Project Zomboid et les solutions d'autres moteurs restent des références
+conceptuelles seulement. Aucun code tiers n'est copié ou adapté.
+
+**7L-B1a ajoute zéro dépendance tierce. `THIRD_PARTY.md` reste inchangé.**
