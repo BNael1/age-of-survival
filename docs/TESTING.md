@@ -9,8 +9,8 @@
 
 ## Référence actuelle
 
-Résultat final validé le 11 août 2026 sous Unity
-`6000.3.19f1_7689f4515d75` : **757/757 EditMode** et **19/19 PlayMode**, zéro
+Résultat validé pour le lot 7L-C1 corrigé le 11 août 2026 sous Unity
+`6000.3.19f1_7689f4515d75` : **786/786 EditMode** et **20/20 PlayMode**, zéro
 échec, zéro test ignoré et zéro test inconclusif. Les journaux ne contiennent
 aucune erreur C# ni aucun warning C#.
 
@@ -847,3 +847,35 @@ Un lancement PlayMode avec `-nographics` a provoqué un crash natif Unity/URP da
 un ancien test qui appelle explicitement `Camera.Render`; cette configuration
 n'est pas compatible avec ce test de capture. La relance avec le rendu Metal
 normal a produit le XML final **19/19** sans modification du produit.
+
+<!-- LOT7LC1_TESTING -->
+## Lot 7L-C1 — validation AOSSAVE V4 Construction
+
+La baseline est **757 EditMode / 19 PlayMode**. Le lot corrigé ajoute **29
+EditMode** et **1 PlayMode**, pour un total de **786/786** et **20/20**.
+
+Les nouveaux cas déterministes couvrent V4 vide, migration V3 vide, chantiers
+vides, matériaux partiels ou complets, travail nul ou partiel, structures
+Surface/Edge, collections simultanées, ordre canonique, conservation des IDs et
+de la séquence, premier placement sans collision et absence de reprise d'une
+action maintenue.
+
+Les rejets couvrent version de section inconnue, catalogue ID/révision inconnus,
+définition inconnue, ID invalide, doublon
+d'ID entre site et structure, occupation contradictoire, matériau/travail hors
+bornes, site encodé comme terminé, topologie en overflow, namespace/forme d'ID
+non canonique et fenêtre de 1024 collisions entièrement occupée. Les cas
+positifs couvrent une collision à la prochaine séquence, plusieurs collisions,
+la borne `long.MaxValue - 1` et le sentinel épuisé `long.MaxValue`.
+
+Le test Runtime d'atomicité installe deux providers témoins, provoque une erreur
+de catalogue pendant la préparation Construction et vérifie que les deux
+références et leurs états logiques restent inchangés. Un test de contrat vérifie
+également que les trois API de sauvegarde courante exigent explicitement la
+Construction.
+
+Les suites historiques V1/V2 et la nouvelle fixture V3 restent lisibles. Le
+round-trip V4 vérifie aussi monde, tick, position, santé, nourriture et
+inventaire. Le scénario PlayMode réalise chantier → sauvegarde → démontage de
+l'état courant → chargement → rechargement de scène, puis vérifie l'identité,
+la topologie, l'absence de travail actif et le renderer reconstruit.

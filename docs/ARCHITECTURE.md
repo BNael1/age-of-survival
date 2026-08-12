@@ -892,3 +892,41 @@ snapping à `DebugIsometricWorld.TryResolveConstructionTarget` et le mapping du
 ghost à `TryMapConstructionSpaceCenter`. Le hit-test synchrone UI Toolkit via
 `RuntimePanelUtils.ScreenToPanel` et `IPanel.Pick` bloque ghost et confirmation
 sur tout élément interactif visible.
+
+<!-- LOT7LC1_ARCHITECTURE -->
+## Construction — persistance V4 et publication Runtime synchrone
+
+`ConstructionSaveSnapshot` est le DTO Core de la section Construction V4. Il
+encode une version de section, l'identité et la révision du catalogue, le
+namespace de l'allocateur, sa prochaine séquence, les sites et les structures.
+`ConstructionSpaceSnapshot` conserve uniquement le kind, l'ancre monde `Int64`
+et l'axe pour une arête ; la clé canonique A1 est reconstruite et revalidée.
+Les matériaux à zéro sont omis et l'état complet d'une structure est dérivé de
+sa définition versionnée.
+
+Le codec binaire écrit V4 et ajoute cette section après les mutations de chunks.
+Pour V1/V2/V3, le décodeur synthétise en mémoire la section vide du catalogue
+prototype révision 1 avec prochaine séquence 1. Il ne modifie jamais les octets
+ou fichiers historiques chargés.
+
+La restauration suit la frontière : codec vers DTO, résolution du catalogue,
+construction d'un nouveau `ConstructionWorldState`, puis création d'un
+`RestoredConstructionState`. Les sites et structures sont injectés par une
+frontière Core dédiée qui réapplique définition, espace, occupation, matériaux,
+travail et distinction incomplet/terminé. Un échec ne touche pas le monde vivant.
+
+`ConstructionInstanceIdSequencePolicy` est la primitive Core partagée par le
+DTO et l'allocateur Runtime. Elle conserve la fenêtre historique de 1024
+tentatives : un ID déjà occupé à `NextSequence` est valide si un candidat
+committable existe dans cette fenêtre. `long.MaxValue` est le sentinel durable
+d'épuisement ; il ne produit jamais de candidat et évite tout overflow.
+
+`PrototypeSaveRuntime.InstallRestoredState` prépare ensuite une nouvelle session
+inventaire et une nouvelle session Construction, allocateur compris, avant de
+confier leur publication à l'unique frontière
+`PrototypeRuntimeSessionInstaller.InstallPreparedState`. Cette installation est
+synchrone, main-thread uniquement, sans validation métier ni callback entre les
+deux affectations ; elle n'est pas une primitive atomique inter-threads. La
+session restaurée ne porte ni sélection, ni preview, ni ghost, ni action de
+travail active. Le `ConstructionWorldPresenter` continue de reconstruire ses
+objets depuis les captures canoniques du monde Core.

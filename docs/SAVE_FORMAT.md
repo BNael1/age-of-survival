@@ -2,7 +2,7 @@
 
 ## Statut
 
-Le format autoritaire courant est `AOSSAVE` V3. Le codec, le stockage atomique et la lecture rétrocompatible V1/V2/V3 sont implémentés dans le Core.
+Le format autoritaire courant est `AOSSAVE` V4. Le codec, le stockage atomique et la lecture rétrocompatible V1/V2/V3/V4 sont implémentés dans le Core.
 
 ## Invariants décidés
 
@@ -263,3 +263,45 @@ elle ne doit pas réutiliser silencieusement la révision `2`.
 Le lot 7K n'ajoute aucune donnée autoritaire persistante : une action de craft en cours est un état Runtime transitoire et n'est jamais sérialisée. Une sauvegarde manuelle ou planifiée attend un safe point tant qu'un craft ou un transfert est actif. Les chemins « sauvegarder et revenir au menu », « sauvegarder et quitter » et la sauvegarde de fermeture annulent explicitement les actions temporisées avant capture, sans perte d'ingrédients.
 
 Les nouveaux objets craftés utilisent le registre d'`ItemDefinition` déjà capturé par le snapshot inventaire V3. Aucune révision V4 n'est requise pour ce slice.
+
+<!-- LOT7LC1_SAVE_FORMAT -->
+## Format binaire V4 — Construction
+
+L'enveloppe, la magie `AOSSAVE\0`, les flags, les entiers little-endian, le
+SHA-256 et les limites historiques restent inchangés. Le codec écrit désormais
+la version `4`. Après les mutations sparse V3, le payload ajoute une section
+Construction dans cet ordre :
+
+1. version de section `u16`, actuellement `1` ;
+2. identifiant de catalogue et révision `i32` ;
+3. namespace d'instances et prochaine séquence `i64` ;
+4. sites canoniques triés par `ConstructionInstanceId` ;
+5. structures terminées canoniques triées par `ConstructionInstanceId`.
+
+Un site encode son ID, sa définition, son espace canonique, ses matériaux
+strictement positifs déjà déposés et son travail. Les matériaux absents valent
+zéro. Une structure terminée encode uniquement ID, définition et espace : coûts
+et travail complets sont dérivés sans ambiguïté du catalogue révisionné.
+
+Un espace encode son `ConstructionSpaceKind`, l'ancre monde `Int64` et, pour
+`Edge` seulement, l'axe canonique. Aucun objet ou repère Unity n'entre dans le
+format. Les limites V4 ajoutent 1 000 000 sites, 1 000 000 structures et 4096
+matériaux déposés par site au maximum, contrôlés avant allocation.
+
+La validation refuse notamment section/catalogue inconnus, ID ou définition
+invalides, doublons globaux, occupation multiple, espace incompatible avec la
+définition, quantités ou travail hors bornes et site déjà complet. Pour une
+séquence active, elle exige qu'un candidat committable existe dans la même
+fenêtre de 1024 tentatives que l'allocateur Runtime ; une collision exactement à
+`NextSequence`, ou plusieurs collisions consécutives, est donc valide. La valeur
+`long.MaxValue` est le sentinel canonique d'épuisement : elle est persistable,
+mais ne peut produire ni candidat ni addition arithmétique.
+
+Les captures Runtime V4 exigent explicitement un
+`ConstructionSaveSnapshot`/`ConstructionRuntimeSession`. Aucune surcharge de
+sauvegarde courante ne synthétise une Construction vide implicitement.
+
+V1, V2 et V3 restent lus selon leurs règles historiques puis reçoivent en
+mémoire le catalogue Construction prototype révision 1, le namespace
+`local-prototype`, zéro site/structure et la prochaine séquence `1`. Le fichier
+historique n'est pas réécrit ou promu implicitement.

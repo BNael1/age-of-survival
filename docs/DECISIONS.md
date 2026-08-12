@@ -749,3 +749,38 @@ plusieurs placements successifs.
 Ces décisions UX sont actives pour B1b ; B1a ne les implémente pas. Elles ne
 valident aucun bouton, raccourci clavier, clic ou autre contrôle, et ne fixent
 aucun coût de construction.
+
+<!-- ADR_0034 -->
+## ADR-0034 — AOSSAVE V4 persiste l'état Construction canonique
+
+**Statut : active**
+**Date : 11 août 2026**
+
+La première évolution de format motivée par Construction est `AOSSAVE V4`. La
+section Construction possède sa propre version et référence un catalogue stable
+révisionné. Elle sauvegarde les faits non dérivables : identités d'instances,
+espaces canoniques, dépôts et travail des sites, structures terminées, namespace
+et prochaine séquence monotone.
+
+Les caches de support, GameObjects, Transforms, sprites, ghosts, sélections et
+actions maintenues ne sont pas persistés. V1/V2/V3 migrent explicitement vers
+une Construction vide et la séquence initiale 1. Une sauvegarde ancienne n'est
+pas réécrite du seul fait de son chargement.
+
+La validation et la reconstruction d'un nouveau monde Construction précèdent
+toute activation Runtime. Les sessions inventaire et Construction préparées
+sont installées par une frontière synchrone unique, main-thread uniquement,
+sans point d'échec métier entre ses deux affectations successives. Cela garantit
+l'absence de demi-installation sur exception attendue, pas une atomicité
+concurrente.
+
+La prochaine allocation reprend la séquence sauvegardée et applique exactement
+la fenêtre historique de 1024 tentatives. Des collisions à partir de cette
+séquence sont donc valides tant qu'un candidat committable reste disponible.
+`long.MaxValue` représente explicitement un allocateur épuisé et ne peut jamais
+être retourné comme ID candidat. Toute évolution save-affecting du catalogue —
+type d'espace, exigences ou travail — exige une nouvelle révision et, si besoin,
+une migration explicite.
+
+Cette décision ne modifie aucune règle gameplay, UX, contrôle, portée, coût,
+temps, récupération, support ou présentation de la tranche jouable.

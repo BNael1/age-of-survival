@@ -11,18 +11,15 @@ Dernière mise à jour : 11 août 2026
 
 ## État actuel
 
-La dernière tête publiée est
-`fd7eed6d8c57ea7f1ed0d0379a190212edda98c2` (`docs: close lot 7lb1a
-construction projection`). `HEAD`, `main` et `origin/main` sont alignés sur
-cette baseline. Le chantier Runtime jouable décrit plus bas reste volontairement
-non commité et non poussé pendant la revue.
+La baseline vérifiée avant le lot 7L-C1 est
+`0e50c226fbca5309cb6d8e3eb699ab6d34ea323c` (`docs: close playable
+construction slice`). `HEAD`, `main` et `origin/main` étaient alignés sur cette
+baseline et l'arbre de travail était propre.
 
-La validation finale de l'arbre de travail sous Unity
-`6000.3.19f1_7689f4515d75` est de **757/757 EditMode** et **19/19 PlayMode**,
-avec zéro échec, zéro test ignoré et zéro test inconclusif. La passe Game View
-réelle en **1280 × 720** couvre en plus le monde, HUD, Inventory, Craft, Pause et
-le cycle Construction complet. Aucun package et aucun format de sauvegarde ne
-sont modifiés.
+La validation finale corrigée du lot 7L-C1 sous Unity
+`6000.3.19f1_7689f4515d75` est de **786/786 EditMode** et **20/20 PlayMode**,
+avec zéro échec, zéro test ignoré et zéro test inconclusif. Aucun package n'est
+ajouté. Le format autoritaire passe de `AOSSAVE V3` à `AOSSAVE V4`.
 
 Lots validés et commités :
 
@@ -74,8 +71,11 @@ Lots validés et commités :
 - `3baf114` — `docs: close lot 7la2 construction lifecycle` ;
 - `bc3d514` — `feat: add derived construction support graph` ;
 - `710ba69` — `docs: close lot 7la3 construction supports` ;
-- `ca6f6a0` — `feat: add construction placement projection`.
-- `fd7eed6` — `docs: close lot 7lb1a construction projection`.
+- `ca6f6a0` — `feat: add construction placement projection` ;
+- `fd7eed6` — `docs: close lot 7lb1a construction projection` ;
+- `3e37546` — `feat: add playable construction vertical slice` ;
+- `8e6083d` — `art: refresh survivor and vegetation prototypes` ;
+- `0e50c22` — `docs: close playable construction slice`.
 
 État validé au commit `26a1a27` :
 
@@ -895,3 +895,40 @@ matériaux, récupération/overflow atomique, rendu au sol, tri central, panneau
 Inventory/Craft/Pause et remplacement visuel joueur/arbre/arbuste. Le client
 Unity Personal a été reconnecté sans modification de compte, de fichier de
 licence ou de trousseau.
+
+<!-- LOT7LC1_PROJECT_STATE -->
+## Lot 7L-C1 — persistance Construction / AOSSAVE V4
+
+Le lot 7L-C1 étend le pipeline unique de sauvegarde à la première tranche
+Construction jouable. `GameSaveSnapshot` porte désormais une section
+Construction canonique et versionnée : identité/révision du catalogue,
+namespace et prochaine séquence de l'allocateur, chantiers incomplets et
+structures terminées. Les chantiers conservent identité, topologie, matériaux
+déposés et travail ; les structures terminées ne dupliquent pas leurs exigences
+dérivables du catalogue.
+
+Le lecteur accepte toujours V1, V2 et V3. Leur migration en mémoire crée une
+Construction vide avec la séquence initiale `1`, sans réécriture du fichier
+source. Une V4 inconnue ou incohérente est rejetée avant activation : identités,
+catalogue, bornes de progression, occupation et continuation de l'allocateur
+sont validés en construisant un nouveau `ConstructionWorldState`.
+
+Le Runtime prépare l'inventaire et la `ConstructionRuntimeSession` restaurés
+avant toute publication. Une frontière unique les installe ensuite de façon
+synchrone sur le thread principal, sans point d'échec métier entre les deux
+affectations ; aucune atomicité inter-threads n'est revendiquée. Mode, sélection,
+ghost et action de travail maintenue restent transitoires. Les présentateurs
+reconstruisent les vues depuis le nouveau monde Core lors du chargement de scène.
+
+La continuation de l'allocateur réutilise sa primitive historique partagée :
+1024 tentatives au plus, collisions autorisées à partir de `NextSequence`, et
+sentinel `long.MaxValue` explicitement épuisé. Les API Runtime autoritaires
+exigent désormais la Construction et ne peuvent plus écrire implicitement une
+V4 vide.
+
+Validation du lot corrigé : **786/786 EditMode** et **20/20 PlayMode**, contre
+**757/757** et **19/19** sur la baseline, soit 29 cas EditMode et un scénario
+PlayMode supplémentaires. Le scénario PlayMode sauvegarde un chantier, détruit
+l'état courant, charge la sauvegarde puis vérifie le site et son renderer
+reconstruit. Aucun contrôle, coût, temps, règle de récupération, rendu ou package
+n'est modifié.

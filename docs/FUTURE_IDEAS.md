@@ -116,8 +116,6 @@ d'implémentation active du lot 7H-A1.
 <!-- CONSTRUCTION_RUNTIME_FUTURE_20260811 -->
 ## Reporté après la première tranche Construction jouable
 
-- sérialiser catalogue/version, sites, structures et prochaine séquence
-  `ConstructionInstanceId` dans une nouvelle version AOSSAVE avec migrations ;
 - remplacer l'allocateur `local-prototype` par une autorité serveur ou un
   namespace de monde sauvegardé lorsque cette autorité existe ;
 - valider les contrôles définitifs, la rotation, l'équilibrage de portée et les
