@@ -240,6 +240,29 @@ namespace AgeOfSurvival.Core.Persistence
             PerishableInventorySnapshot perishables,
             PlayerInventorySnapshot inventory,
             IEnumerable<ChunkMutationState> chunkMutations)
+            : this(
+                world,
+                fixedTick,
+                playerPosition,
+                health,
+                food,
+                perishables,
+                inventory,
+                chunkMutations,
+                ConstructionSaveSnapshot.Empty)
+        {
+        }
+
+        public GameSaveSnapshot(
+            WorldIdentitySnapshot world,
+            long fixedTick,
+            WorldPosition playerPosition,
+            PlayerHealthSnapshot health,
+            PlayerFoodSnapshot food,
+            PerishableInventorySnapshot perishables,
+            PlayerInventorySnapshot inventory,
+            IEnumerable<ChunkMutationState> chunkMutations,
+            ConstructionSaveSnapshot construction)
         {
             if (!world.Generation.Version.IsValid
                 || !world.Generation.ChunkLayout.IsValid
@@ -289,6 +312,8 @@ namespace AgeOfSurvival.Core.Persistence
             Food = food;
             Perishables = perishables;
             Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+            Construction = construction
+                ?? throw new ArgumentNullException(nameof(construction));
             if (chunkMutations == null)
             {
                 throw new ArgumentNullException(nameof(chunkMutations));
@@ -350,6 +375,7 @@ namespace AgeOfSurvival.Core.Persistence
         public PlayerFoodSnapshot Food { get; }
         public PerishableInventorySnapshot Perishables { get; }
         public PlayerInventorySnapshot Inventory { get; }
+        public ConstructionSaveSnapshot Construction { get; }
         public IReadOnlyList<ChunkMutationState> ChunkMutations =>
             _readOnlyChunkMutations;
 
@@ -425,6 +451,40 @@ namespace AgeOfSurvival.Core.Persistence
                 new PlayerHealthSnapshot(health),
                 inventorySnapshot,
                 chunks.CaptureCanonicalMutations());
+        }
+
+        public static GameSaveSnapshot Capture(
+            WorldPopulationSettings world,
+            long fixedTick,
+            WorldPosition playerPosition,
+            PlayerHealthState health,
+            PlayerFoodState food,
+            PerishableInventoryState perishables,
+            PlayerInventoryState inventory,
+            ChunkStateLifecycle chunks,
+            ConstructionSaveSnapshot construction)
+        {
+            if (construction == null)
+                throw new ArgumentNullException(nameof(construction));
+            GameSaveSnapshot snapshot = Capture(
+                world,
+                fixedTick,
+                playerPosition,
+                health,
+                food,
+                perishables,
+                inventory,
+                chunks);
+            return new GameSaveSnapshot(
+                snapshot.World,
+                snapshot.FixedTick,
+                snapshot.PlayerPosition,
+                snapshot.Health,
+                snapshot.Food,
+                snapshot.Perishables,
+                snapshot.Inventory,
+                snapshot.ChunkMutations,
+                construction);
         }
 
         public static GameSaveSnapshot Capture(

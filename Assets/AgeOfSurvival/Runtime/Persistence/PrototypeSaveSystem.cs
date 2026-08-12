@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Core.Construction;
 using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.World.Generation;
 using AgeOfSurvival.Runtime.Frontend;
+using AgeOfSurvival.Runtime.Construction;
 using AgeOfSurvival.Runtime.Inventory;
 using AgeOfSurvival.Runtime.Resources;
 using UnityEngine;
@@ -118,6 +120,32 @@ namespace AgeOfSurvival.Runtime.Persistence
         }
     }
 
+    internal sealed class PrototypeConstructionResolver :
+        IConstructionDefinitionResolver
+    {
+        public bool TryResolveConstructionCatalog(
+            ConstructionSaveSnapshot saved,
+            out ConstructionDefinitionCatalog catalog)
+        {
+            if (saved != null
+                && string.Equals(
+                    saved.CatalogId,
+                    ConstructionSaveDefaults.PrototypeCatalogId,
+                    StringComparison.Ordinal)
+                && saved.CatalogRevision
+                    == ConstructionSaveDefaults.PrototypeCatalogRevision)
+            {
+                catalog = ConstructionPrototypeCatalog
+                    .CreateDefault()
+                    .CoreCatalog;
+                return true;
+            }
+
+            catalog = null;
+            return false;
+        }
+    }
+
     public sealed class PrototypeSaveService
     {
         private readonly AtomicGameSaveStorage _storage;
@@ -130,7 +158,8 @@ namespace AgeOfSurvival.Runtime.Persistence
             _coordinator = new GameSaveCoordinator(
                 _storage,
                 new PrototypeWorldResolver(),
-                new PrototypeInventoryResolver());
+                new PrototypeInventoryResolver(),
+                new PrototypeConstructionResolver());
             _metadata = new SaveSlotMetadataStore(rootDirectory);
         }
 
@@ -182,10 +211,13 @@ namespace AgeOfSurvival.Runtime.Persistence
         public void Save(
             SaveSlotId slot,
             InventoryPrototypeSession session,
+            ConstructionRuntimeSession construction,
             double playedSeconds)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            GameSaveSnapshot snapshot = session.CaptureGameSaveSnapshot();
+            if (construction == null) throw new ArgumentNullException(nameof(construction));
+            GameSaveSnapshot snapshot = session.CaptureGameSaveSnapshot(
+                construction.CaptureSaveSnapshot());
             _storage.Save(slot.StorageKey, snapshot);
             TryWriteMetadata(new SaveSlotMetadata(
                 slot,
@@ -370,6 +402,7 @@ namespace AgeOfSurvival.Runtime.Persistence
             if (pending == PendingGameStart.NewGame)
             {
                 InventoryPrototypeSessionProvider.ResetForNewGame();
+                ConstructionRuntimeSessionProvider.ResetForNewGame();
                 _playedSeconds = 0d;
                 return string.Empty;
             }
@@ -378,7 +411,7 @@ namespace AgeOfSurvival.Runtime.Persistence
                 _selectedSlot,
                 _playedSeconds,
                 out _playedSeconds);
-            InventoryPrototypeSessionProvider.Install(loaded.State);
+            InstallRestoredState(loaded.State);
             return loaded.Source == GameSaveLoadSource.Backup
                 ? "Backup récupéré — sauvegardez pour recréer le fichier principal."
                 : string.Empty;
@@ -405,7 +438,47 @@ namespace AgeOfSurvival.Runtime.Persistence
             Service.Save(
                 _selectedSlot,
                 InventoryPrototypeSessionProvider.Current,
+                ConstructionRuntimeSessionProvider.Current,
                 _playedSeconds);
+        }
+
+        public static void InstallRestoredState(RestoredGameState restored)
+        {
+            if (restored == null) throw new ArgumentNullException(nameof(restored));
+            if (restored.Construction == null)
+                throw new InvalidOperationException("The restored Construction state is missing.");
+
+            // Prepare both owners before publishing either one. Once preparation
+            // succeeds, the two assignments below cannot invoke domain logic.
+            var inventory = new InventoryPrototypeSession(restored);
+            ConstructionRuntimeSession construction =
+                ConstructionRuntimeSessionProvider.PrepareRestored(
+                    restored.Construction,
+                    inventory);
+            PrototypeRuntimeSessionInstaller.InstallPreparedState(
+                inventory,
+                construction);
+        }
+    }
+
+    /// <summary>
+    /// Main-thread-only publication boundary for the prepared Runtime owners.
+    /// Both arguments are fully prepared before entry; this method performs no
+    /// domain validation and invokes no callbacks between its two assignments.
+    /// It is synchronous, but it is not a cross-thread atomic reference swap.
+    /// </summary>
+    internal static class PrototypeRuntimeSessionInstaller
+    {
+        internal static void InstallPreparedState(
+            InventoryPrototypeSession inventory,
+            ConstructionRuntimeSession construction)
+        {
+            if (inventory == null) throw new ArgumentNullException(nameof(inventory));
+            if (construction == null) throw new ArgumentNullException(nameof(construction));
+            InventoryPrototypeSessionProvider.InstallPrepared(inventory);
+            ConstructionRuntimeSessionProvider.InstallPrepared(
+                construction,
+                inventory);
         }
     }
 

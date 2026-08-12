@@ -14,5 +14,8 @@ namespace AgeOfSurvival.Core.Persistence
         public const int MaximumHarvestedResourcesPerChunk = 65536;
         public const int MaximumGroundContainersPerChunk = 65536;
         public const int MaximumGroundItemsPerContainer = 65536;
+        public const int MaximumConstructionSites = 1000000;
+        public const int MaximumCompletedStructures = 1000000;
+        public const int MaximumConstructionMaterialsPerSite = 4096;
     }
 }

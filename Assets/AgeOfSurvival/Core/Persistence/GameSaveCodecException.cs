@@ -21,7 +21,8 @@ namespace AgeOfSurvival.Core.Persistence
         NonCanonicalOrder = 14,
         DuplicateIdentity = 15,
         TrailingPayloadBytes = 16,
-        InvalidDomainValue = 17
+        InvalidDomainValue = 17,
+        UnsupportedSectionVersion = 18
     }
 
     public sealed class GameSaveCodecException : FormatException

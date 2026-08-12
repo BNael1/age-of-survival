@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using AgeOfSurvival.Core.Construction;
 using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Core.Persistence;
 
 namespace AgeOfSurvival.Runtime.Construction
 {
@@ -177,10 +178,20 @@ namespace AgeOfSurvival.Runtime.Construction
         private readonly Dictionary<ConstructionDefinitionId, ConstructionPrototypeDefinition> _byId;
         private readonly IReadOnlyList<ConstructionPrototypeDefinition> _definitions;
 
+        public string PersistenceCatalogId { get; }
+        public int PersistenceCatalogRevision { get; }
+
         public ConstructionPrototypeCatalog(
-            IEnumerable<ConstructionPrototypeDefinition> definitions)
+            IEnumerable<ConstructionPrototypeDefinition> definitions,
+            string persistenceCatalogId,
+            int persistenceCatalogRevision)
         {
             if (definitions == null) throw new ArgumentNullException(nameof(definitions));
+            AgeOfSurvival.Core.World.Generation.StableIdentifierValidation.Validate(
+                persistenceCatalogId,
+                nameof(persistenceCatalogId));
+            if (persistenceCatalogRevision <= 0)
+                throw new ArgumentOutOfRangeException(nameof(persistenceCatalogRevision));
 
             _byId = new Dictionary<ConstructionDefinitionId, ConstructionPrototypeDefinition>();
             var copy = new List<ConstructionPrototypeDefinition>();
@@ -200,6 +211,8 @@ namespace AgeOfSurvival.Runtime.Construction
             copy.Sort((left, right) => left.Core.Id.CompareTo(right.Core.Id));
             _definitions = copy.AsReadOnly();
             CoreCatalog = new ConstructionDefinitionCatalog(CoreDefinitions(copy));
+            PersistenceCatalogId = persistenceCatalogId;
+            PersistenceCatalogRevision = persistenceCatalogRevision;
         }
 
         public IReadOnlyList<ConstructionPrototypeDefinition> Definitions => _definitions;
@@ -227,39 +240,42 @@ namespace AgeOfSurvival.Runtime.Construction
 
         public static ConstructionPrototypeCatalog CreateDefault()
         {
-            return new ConstructionPrototypeCatalog(new[]
-            {
-                Create(
-                    FloorId,
-                    ConstructionSpaceKind.Surface,
-                    30,
-                    "Surfaces",
-                    "Sol en bois",
-                    "Plancher simple sur cellule.",
-                    "construction_floor",
-                    Requirement("branches", 2),
-                    Requirement("stones", 1)),
-                Create(
-                    WallId,
-                    ConstructionSpaceKind.Edge,
-                    45,
-                    "Bords",
-                    "Mur en bois",
-                    "Mur simple sur arête canonique.",
-                    "construction_wall",
-                    Requirement("branches", 3),
-                    Requirement("wood", 1)),
-                Create(
-                    OpeningId,
-                    ConstructionSpaceKind.Edge,
-                    35,
-                    "Bords",
-                    "Cadre d'ouverture",
-                    "Ouverture prototype sur arête canonique.",
-                    "construction_opening",
-                    Requirement("branches", 2),
-                    Requirement("wood", 1))
-            });
+            return new ConstructionPrototypeCatalog(
+                new[]
+                {
+                    Create(
+                        FloorId,
+                        ConstructionSpaceKind.Surface,
+                        30,
+                        "Surfaces",
+                        "Sol en bois",
+                        "Plancher simple sur cellule.",
+                        "construction_floor",
+                        Requirement("branches", 2),
+                        Requirement("stones", 1)),
+                    Create(
+                        WallId,
+                        ConstructionSpaceKind.Edge,
+                        45,
+                        "Bords",
+                        "Mur en bois",
+                        "Mur simple sur arête canonique.",
+                        "construction_wall",
+                        Requirement("branches", 3),
+                        Requirement("wood", 1)),
+                    Create(
+                        OpeningId,
+                        ConstructionSpaceKind.Edge,
+                        35,
+                        "Bords",
+                        "Cadre d'ouverture",
+                        "Ouverture prototype sur arête canonique.",
+                        "construction_opening",
+                        Requirement("branches", 2),
+                        Requirement("wood", 1))
+                },
+                ConstructionSaveDefaults.PrototypeCatalogId,
+                ConstructionSaveDefaults.PrototypeCatalogRevision);
         }
 
         private static ConstructionPrototypeDefinition Create(
@@ -293,6 +309,7 @@ namespace AgeOfSurvival.Runtime.Construction
 
     public interface IConstructionInstanceIdAllocator
     {
+        string InstanceNamespace { get; }
         long NextSequence { get; }
         bool TryPeekNext(
             Func<ConstructionInstanceId, bool> isAvailable,
@@ -324,30 +341,20 @@ namespace AgeOfSurvival.Runtime.Construction
         }
 
         public long NextSequence => _nextSequence;
+        public string InstanceNamespace => _namespace;
 
         public bool TryPeekNext(
             Func<ConstructionInstanceId, bool> isAvailable,
             out ConstructionInstanceId candidate)
         {
-            if (isAvailable == null) throw new ArgumentNullException(nameof(isAvailable));
-
-            long sequence = _nextSequence;
-            for (int attempts = 0; attempts < 1024; attempts++)
-            {
-                candidate = Create(sequence);
-                if (isAvailable(candidate))
-                {
-                    _peeked = candidate;
-                    return true;
-                }
-
-                if (sequence == long.MaxValue) break;
-                sequence++;
-            }
-
-            candidate = default;
-            _peeked = default;
-            return false;
+            bool found = ConstructionInstanceIdSequencePolicy
+                .TryFindCommittableCandidate(
+                    _namespace,
+                    _nextSequence,
+                    isAvailable,
+                    out candidate);
+            _peeked = found ? candidate : default;
+            return found;
         }
 
         public void Commit(ConstructionInstanceId candidate)
@@ -355,28 +362,18 @@ namespace AgeOfSurvival.Runtime.Construction
             if (!candidate.IsValid || !_peeked.Equals(candidate))
                 throw new InvalidOperationException("Only the current allocated candidate can be committed.");
 
-            string prefix = _namespace + ":";
-            if (!candidate.Value.StartsWith(prefix, StringComparison.Ordinal)
-                || !long.TryParse(
-                    candidate.Value.Substring(prefix.Length),
-                    System.Globalization.NumberStyles.None,
-                    System.Globalization.CultureInfo.InvariantCulture,
-                    out long committed)
-                || committed < _nextSequence
-                || committed == long.MaxValue)
+            if (!ConstructionInstanceIdSequencePolicy.TryGetCommittedNextSequence(
+                    _namespace,
+                    _nextSequence,
+                    candidate,
+                    out long committedNextSequence))
             {
                 throw new InvalidOperationException("The allocated construction ID cannot advance this allocator.");
             }
 
-            _nextSequence = checked(committed + 1L);
+            _nextSequence = committedNextSequence;
             _peeked = default;
         }
-
-        private ConstructionInstanceId Create(long sequence) =>
-            new ConstructionInstanceId(
-                _namespace + ":" + sequence.ToString(
-                    "D10",
-                    System.Globalization.CultureInfo.InvariantCulture));
     }
 
     public enum ConstructionRuntimeReason

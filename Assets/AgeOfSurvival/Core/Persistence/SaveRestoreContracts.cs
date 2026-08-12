@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using AgeOfSurvival.Core.Characters;
+using AgeOfSurvival.Core.Construction;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.World.Generation;
@@ -35,6 +36,42 @@ namespace AgeOfSurvival.Core.Persistence
         IReadOnlyList<ItemDefinition> CurrentItemDefinitions { get; }
     }
 
+    public interface IConstructionDefinitionResolver
+    {
+        bool TryResolveConstructionCatalog(
+            ConstructionSaveSnapshot saved,
+            out ConstructionDefinitionCatalog catalog);
+    }
+
+    public sealed class RestoredConstructionState
+    {
+        public RestoredConstructionState(
+            string catalogId,
+            int catalogRevision,
+            string instanceNamespace,
+            long nextInstanceSequence,
+            ConstructionWorldState world)
+        {
+            StableIdentifierValidation.Validate(catalogId, nameof(catalogId));
+            if (catalogRevision <= 0)
+                throw new ArgumentOutOfRangeException(nameof(catalogRevision));
+            StableIdentifierValidation.Validate(instanceNamespace, nameof(instanceNamespace));
+            if (nextInstanceSequence <= 0L)
+                throw new ArgumentOutOfRangeException(nameof(nextInstanceSequence));
+            CatalogId = catalogId;
+            CatalogRevision = catalogRevision;
+            InstanceNamespace = instanceNamespace;
+            NextInstanceSequence = nextInstanceSequence;
+            World = world ?? throw new ArgumentNullException(nameof(world));
+        }
+
+        public string CatalogId { get; }
+        public int CatalogRevision { get; }
+        public string InstanceNamespace { get; }
+        public long NextInstanceSequence { get; }
+        public ConstructionWorldState World { get; }
+    }
+
     public sealed class RestoredGameState
     {
         public RestoredGameState(
@@ -52,7 +89,8 @@ namespace AgeOfSurvival.Core.Persistence
                 CreateDefaultFoodState(fixedTick),
                 new PerishableInventoryState(),
                 inventory,
-                chunks)
+                chunks,
+                null)
         {
         }
 
@@ -65,6 +103,29 @@ namespace AgeOfSurvival.Core.Persistence
             PerishableInventoryState perishables,
             PlayerInventoryState inventory,
             ChunkStateLifecycle chunks)
+            : this(
+                world,
+                fixedTick,
+                playerPosition,
+                health,
+                food,
+                perishables,
+                inventory,
+                chunks,
+                null)
+        {
+        }
+
+        public RestoredGameState(
+            WorldPopulationSettings world,
+            long fixedTick,
+            WorldPosition playerPosition,
+            PlayerHealthState health,
+            PlayerFoodState food,
+            PerishableInventoryState perishables,
+            PlayerInventoryState inventory,
+            ChunkStateLifecycle chunks,
+            RestoredConstructionState construction)
         {
             if (!world.Generation.Version.IsValid
                 || !world.Generation.ChunkLayout.IsValid
@@ -116,6 +177,7 @@ namespace AgeOfSurvival.Core.Persistence
             Food = food;
             Chunks = chunks
                 ?? throw new ArgumentNullException(nameof(chunks));
+            Construction = construction;
         }
 
         private static PlayerFoodState CreateDefaultFoodState(long fixedTick)
@@ -135,5 +197,6 @@ namespace AgeOfSurvival.Core.Persistence
         public PerishableInventoryState Perishables { get; }
         public PlayerInventoryState Inventory { get; }
         public ChunkStateLifecycle Chunks { get; }
+        public RestoredConstructionState Construction { get; }
     }
 }

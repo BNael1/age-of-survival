@@ -438,6 +438,80 @@ namespace AgeOfSurvival.Core.Construction
             return result.ToArray();
         }
 
+        internal void RestoreSite(
+            ConstructionInstanceId instanceId,
+            ConstructionDefinitionId definitionId,
+            ConstructionSpaceKey space,
+            IReadOnlyList<ConstructionMaterialQuantity> depositedMaterials,
+            int workCompletedUnits)
+        {
+            if (depositedMaterials == null)
+                throw new ArgumentNullException(nameof(depositedMaterials));
+            if (!_catalog.TryFind(definitionId, out ConstructionDefinition definition))
+                throw new InvalidOperationException($"Unknown saved construction definition '{definitionId}'.");
+            if (!instanceId.IsValid || !space.IsValid || space.Kind != definition.SpaceKind)
+                throw new InvalidOperationException("The saved construction site identity or topology is invalid.");
+            if (_sites.ContainsKey(instanceId) || _structures.ContainsKey(instanceId))
+                throw new InvalidOperationException("A saved construction instance identifier is duplicated.");
+            if (workCompletedUnits < 0 || workCompletedUnits > definition.RequiredWorkUnits)
+                throw new InvalidOperationException("Saved construction work is outside its requirements.");
+
+            var quantities = new Dictionary<ItemDefinitionId, int>();
+            for (int index = 0; index < depositedMaterials.Count; index++)
+            {
+                ConstructionMaterialQuantity material = depositedMaterials[index];
+                if (!definition.TryFindMaterial(material.DefinitionId, out ConstructionMaterialRequirement requirement)
+                    || material.Quantity > requirement.Quantity
+                    || quantities.ContainsKey(material.DefinitionId))
+                {
+                    throw new InvalidOperationException("Saved construction materials violate the definition requirements.");
+                }
+                quantities.Add(material.DefinitionId, material.Quantity);
+            }
+
+            bool materialsComplete = true;
+            for (int index = 0; index < definition.Materials.Count; index++)
+            {
+                ConstructionMaterialRequirement requirement = definition.Materials[index];
+                if (!quantities.TryGetValue(requirement.DefinitionId, out int quantity)
+                    || quantity != requirement.Quantity)
+                {
+                    materialsComplete = false;
+                    break;
+                }
+            }
+            if (materialsComplete && workCompletedUnits == definition.RequiredWorkUnits)
+                throw new InvalidOperationException("A completed construction cannot be restored as a site.");
+            if (!_occupancy.TryOccupy(space))
+                throw new InvalidOperationException("Saved construction topology is occupied more than once.");
+
+            var site = new ConstructionSiteState(instanceId, definitionId, space)
+            {
+                WorkCompletedUnits = workCompletedUnits
+            };
+            foreach (KeyValuePair<ItemDefinitionId, int> material in quantities)
+                site.AddDeposited(material.Key, material.Value);
+            _sites.Add(instanceId, site);
+        }
+
+        internal void RestoreCompletedStructure(
+            ConstructionInstanceId instanceId,
+            ConstructionDefinitionId definitionId,
+            ConstructionSpaceKey space)
+        {
+            if (!_catalog.TryFind(definitionId, out ConstructionDefinition definition))
+                throw new InvalidOperationException($"Unknown saved construction definition '{definitionId}'.");
+            if (!instanceId.IsValid || !space.IsValid || space.Kind != definition.SpaceKind)
+                throw new InvalidOperationException("The saved completed structure identity or topology is invalid.");
+            if (_sites.ContainsKey(instanceId) || _structures.ContainsKey(instanceId))
+                throw new InvalidOperationException("A saved construction instance identifier is duplicated.");
+            if (!_occupancy.TryOccupy(space))
+                throw new InvalidOperationException("Saved construction topology is occupied more than once.");
+            _structures.Add(
+                instanceId,
+                new CompletedStructureState(instanceId, definitionId, space));
+        }
+
         private static ConstructionRecovery CaptureSiteRecovery(
             ConstructionSiteState site,
             ConstructionDefinition definition)

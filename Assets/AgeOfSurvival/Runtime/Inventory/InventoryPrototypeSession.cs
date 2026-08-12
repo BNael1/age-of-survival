@@ -290,11 +290,9 @@ namespace AgeOfSurvival.Runtime.Inventory
             return _current;
         }
 
-        public static InventoryPrototypeSession Install(
-            RestoredGameState restored)
+        internal static void InstallPrepared(InventoryPrototypeSession session)
         {
-            _current = new InventoryPrototypeSession(restored);
-            return _current;
+            _current = session ?? throw new ArgumentNullException(nameof(session));
         }
 
         public static void ResetForNewGame()

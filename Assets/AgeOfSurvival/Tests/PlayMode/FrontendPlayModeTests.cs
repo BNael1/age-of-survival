@@ -5,6 +5,7 @@ using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.Resources;
 using AgeOfSurvival.Core.World.Generation;
+using AgeOfSurvival.Runtime.Construction;
 using AgeOfSurvival.Runtime.Frontend;
 using AgeOfSurvival.Runtime.Inventory;
 using AgeOfSurvival.Runtime.Persistence;
@@ -309,8 +310,11 @@ namespace AgeOfSurvival.Presentation.PlayMode.Tests
                     expectedGroundQuantity,
                     Is.GreaterThan(0));
 
+                ConstructionRuntimeSession construction =
+                    CreateConstructionSession(session);
                 GameSaveSnapshot expectedSnapshot =
-                    session.CaptureGameSaveSnapshot();
+                    session.CaptureGameSaveSnapshot(
+                        construction.CaptureSaveSnapshot());
                 byte[] expectedBytes =
                     GameSaveBinaryCodec.Encode(expectedSnapshot);
                 Assert.That(
@@ -321,15 +325,17 @@ namespace AgeOfSurvival.Presentation.PlayMode.Tests
                 var service =
                     new PrototypeSaveService(rootDirectory);
                 var slot = new SaveSlotId(1);
-                service.Save(slot, session, 12d);
+                service.Save(slot, session, construction, 12d);
 
                 CoordinatedGameLoadResult loaded = service.Load(
                     slot,
                     0d,
                     out double playedSeconds);
+                PrototypeSaveRuntime.InstallRestoredState(loaded.State);
                 InventoryPrototypeSession restored =
-                    InventoryPrototypeSessionProvider.Install(
-                        loaded.State);
+                    InventoryPrototypeSessionProvider.Current;
+                ConstructionRuntimeSession restoredConstruction =
+                    ConstructionRuntimeSessionProvider.Current;
 
                 resources.Rebuild();
 
@@ -366,20 +372,28 @@ namespace AgeOfSurvival.Presentation.PlayMode.Tests
                     Is.GreaterThan(0));
                 Assert.That(
                     GameSaveBinaryCodec.Encode(
-                        restored.CaptureGameSaveSnapshot()),
+                        restored.CaptureGameSaveSnapshot(
+                            restoredConstruction.CaptureSaveSnapshot())),
                     Is.EqualTo(expectedBytes));
 
-                service.Save(slot, restored, 24d);
+                service.Save(
+                    slot,
+                    restored,
+                    restoredConstruction,
+                    24d);
                 CoordinatedGameLoadResult loadedAgain =
                     service.Load(slot, 0d, out _);
+                PrototypeSaveRuntime.InstallRestoredState(loadedAgain.State);
                 InventoryPrototypeSession restoredAgain =
-                    InventoryPrototypeSessionProvider.Install(
-                        loadedAgain.State);
+                    InventoryPrototypeSessionProvider.Current;
+                ConstructionRuntimeSession restoredAgainConstruction =
+                    ConstructionRuntimeSessionProvider.Current;
                 resources.Rebuild();
 
                 Assert.That(
                     GameSaveBinaryCodec.Encode(
-                        restoredAgain.CaptureGameSaveSnapshot()),
+                        restoredAgain.CaptureGameSaveSnapshot(
+                            restoredAgainConstruction.CaptureSaveSnapshot())),
                     Is.EqualTo(expectedBytes));
                 Assert.That(
                     restoredAgain.FindResource(target.Id)
@@ -452,6 +466,16 @@ namespace AgeOfSurvival.Presentation.PlayMode.Tests
             }
 
             yield return null;
+        }
+
+        private static ConstructionRuntimeSession CreateConstructionSession(
+            InventoryPrototypeSession inventory)
+        {
+            return new ConstructionRuntimeSession(
+                ConstructionPrototypeCatalog.CreateDefault(),
+                new MonotonicConstructionInstanceIdAllocator(
+                    ConstructionSaveDefaults.PrototypeInstanceNamespace),
+                inventory);
         }
 
         private static IEnumerator WaitUntil(

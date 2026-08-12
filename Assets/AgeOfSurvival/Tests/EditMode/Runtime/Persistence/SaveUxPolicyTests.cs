@@ -1,14 +1,17 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using AgeOfSurvival.Core.Characters;
+using AgeOfSurvival.Core.Construction;
 using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.Resources;
 using AgeOfSurvival.Core.World.Generation;
 using AgeOfSurvival.Runtime.Frontend;
+using AgeOfSurvival.Runtime.Construction;
 using AgeOfSurvival.Runtime.Inventory;
 using AgeOfSurvival.Runtime.Persistence;
 using NUnit.Framework;
@@ -204,7 +207,7 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
             var session = new InventoryPrototypeSession();
             SaveSlotId slot = new SaveSlotId(1);
 
-            service.Save(slot, session, 75d);
+            SaveCurrentForTest(service, slot, session, 75d);
             CoordinatedGameLoadResult loaded = service.Load(
                 slot,
                 0d,
@@ -221,6 +224,140 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
             Assert.That(playedSeconds, Is.EqualTo(75d));
         }
 
+        [TestCase("unsupported-construction", ConstructionSaveDefaults.PrototypeCatalogRevision)]
+        [TestCase(ConstructionSaveDefaults.PrototypeCatalogId, 2)]
+        public void PrototypeService_RejectsUnsupportedConstructionCatalog(
+            string catalogId,
+            int catalogRevision)
+        {
+            var session = new InventoryPrototypeSession();
+            var construction = new ConstructionSaveSnapshot(
+                ConstructionSaveDefaults.SectionVersion,
+                catalogId,
+                catalogRevision,
+                ConstructionSaveDefaults.PrototypeInstanceNamespace,
+                ConstructionSaveDefaults.InitialNextInstanceSequence,
+                Array.Empty<ConstructionSiteSnapshot>(),
+                Array.Empty<CompletedStructureSnapshot>());
+            var storage = new AtomicGameSaveStorage(_temporaryDirectory);
+            SaveSlotId slot = new SaveSlotId(1);
+            storage.Save(
+                slot.StorageKey,
+                session.CaptureGameSaveSnapshot(construction));
+            var service = new PrototypeSaveService(_temporaryDirectory);
+
+            Assert.Throws<NotSupportedException>(() =>
+                service.Load(slot, 0d, out _));
+        }
+
+        [Test]
+        public void CurrentSaveApisRequireConstructionExplicitly()
+        {
+            Assert.That(
+                typeof(PrototypeSaveService)
+                    .GetMethods()
+                    .Where(method => method.Name == nameof(PrototypeSaveService.Save))
+                    .All(method => method.GetParameters().Any(parameter =>
+                        parameter.ParameterType == typeof(ConstructionRuntimeSession))),
+                Is.True);
+            Assert.That(
+                typeof(InventoryPrototypeSession)
+                    .GetMethods()
+                    .Where(method => method.Name == nameof(
+                        InventoryPrototypeSession.CaptureGameSaveSnapshot))
+                    .All(method => method.GetParameters().Any(parameter =>
+                        parameter.ParameterType == typeof(ConstructionSaveSnapshot))),
+                Is.True);
+            Assert.That(
+                typeof(GameSaveCoordinator)
+                    .GetMethods()
+                    .Where(method => method.Name == nameof(GameSaveCoordinator.Save))
+                    .All(method => method.GetParameters().Any(parameter =>
+                        parameter.ParameterType == typeof(ConstructionSaveSnapshot))),
+                Is.True);
+        }
+
+        [Test]
+        public void InventoryProviderHasNoPublicRestoredGameStateInstallBypass()
+        {
+            Assert.That(
+                typeof(InventoryPrototypeSessionProvider)
+                    .GetMethods()
+                    .Where(method => method.IsPublic)
+                    .Any(method => method.GetParameters().Any(parameter =>
+                        parameter.ParameterType == typeof(RestoredGameState))),
+                Is.False);
+        }
+
+        [Test]
+        public void FailedConstructionPreparationLeavesBothRuntimeProvidersUntouched()
+        {
+            InventoryPrototypeSessionProvider.ResetForNewGame();
+            ConstructionRuntimeSessionProvider.ResetForNewGame();
+            InventoryPrototypeSession existingInventory =
+                InventoryPrototypeSessionProvider.Current;
+            ConstructionRuntimeSession existingConstruction =
+                ConstructionRuntimeSessionProvider.Current;
+            existingConstruction.Execute(ConstructionCommand.Open());
+            existingConstruction.Execute(ConstructionCommand.Select(
+                ConstructionPrototypeCatalog.FloorId));
+            ConstructionRuntimeResult placed = existingConstruction.TryPlaceSelected(
+                ConstructionSpaceKey.Surface(new WorldCellCoordinate(4L, 4L)));
+            Assert.That(placed.Succeeded, Is.True);
+            int existingSiteCount = existingConstruction.World.SiteCount;
+            long existingTick = existingInventory.CurrentTick;
+
+            try
+            {
+                var service = new PrototypeSaveService(_temporaryDirectory);
+                SaveSlotId slot = new SaveSlotId(1);
+                service.Save(
+                    slot,
+                    existingInventory,
+                    existingConstruction,
+                    0d);
+                RestoredGameState valid = service.Load(slot, 0d, out _).State;
+                var incompatibleConstruction = new RestoredConstructionState(
+                    "unsupported-construction",
+                    valid.Construction.CatalogRevision,
+                    valid.Construction.InstanceNamespace,
+                    valid.Construction.NextInstanceSequence,
+                    valid.Construction.World);
+                var incompatible = new RestoredGameState(
+                    valid.World,
+                    valid.FixedTick,
+                    valid.PlayerPosition,
+                    valid.Health,
+                    valid.Food,
+                    valid.Perishables,
+                    valid.Inventory,
+                    valid.Chunks,
+                    incompatibleConstruction);
+
+                Assert.Throws<NotSupportedException>(() =>
+                    PrototypeSaveRuntime.InstallRestoredState(incompatible));
+
+                Assert.That(
+                    InventoryPrototypeSessionProvider.Current,
+                    Is.SameAs(existingInventory));
+                Assert.That(
+                    ConstructionRuntimeSessionProvider.Current,
+                    Is.SameAs(existingConstruction));
+                Assert.That(existingInventory.CurrentTick, Is.EqualTo(existingTick));
+                Assert.That(
+                    existingConstruction.World.SiteCount,
+                    Is.EqualTo(existingSiteCount));
+                Assert.That(
+                    existingConstruction.World.TryFindSite(placed.InstanceId, out _),
+                    Is.True);
+            }
+            finally
+            {
+                InventoryPrototypeSessionProvider.ResetForNewGame();
+                ConstructionRuntimeSessionProvider.ResetForNewGame();
+            }
+        }
+
         [Test]
         public void PrototypeService_V1LoadInstallsFullHealthOnRestoredTick()
         {
@@ -233,8 +370,9 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
             SaveSlotId slot = new SaveSlotId(1);
             byte[] legacy = ConvertV2ToLegacyV1(
                 ConvertV3ToLegacyV2(
-                    GameSaveBinaryCodec.Encode(
-                        CreateLegacyPrototypeSnapshot(session))));
+                    ConvertV4ToLegacyV3(
+                        GameSaveBinaryCodec.Encode(
+                            CreateLegacyPrototypeSnapshot(session)))));
             var storage =
                 new AtomicGameSaveStorage(_temporaryDirectory);
             Directory.CreateDirectory(_temporaryDirectory);
@@ -249,8 +387,9 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
 
             try
             {
+                PrototypeSaveRuntime.InstallRestoredState(loaded.State);
                 InventoryPrototypeSession restored =
-                    InventoryPrototypeSessionProvider.Install(loaded.State);
+                    InventoryPrototypeSessionProvider.Current;
 
                 Assert.That(restored.CurrentTick, Is.EqualTo(savedTick));
                 Assert.That(restored.Health.CurrentTick, Is.EqualTo(savedTick));
@@ -287,8 +426,9 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
             long savedTick = session.CurrentTick;
             SaveSlotId slot = new SaveSlotId(1);
             byte[] legacy = ConvertV3ToLegacyV2(
-                GameSaveBinaryCodec.Encode(
-                    CreateLegacyPrototypeSnapshot(session)));
+                ConvertV4ToLegacyV3(
+                    GameSaveBinaryCodec.Encode(
+                        CreateLegacyPrototypeSnapshot(session))));
             var storage =
                 new AtomicGameSaveStorage(_temporaryDirectory);
             Directory.CreateDirectory(_temporaryDirectory);
@@ -303,8 +443,9 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
 
             try
             {
+                PrototypeSaveRuntime.InstallRestoredState(loaded.State);
                 InventoryPrototypeSession restored =
-                    InventoryPrototypeSessionProvider.Install(loaded.State);
+                    InventoryPrototypeSessionProvider.Current;
 
                 Assert.That(restored.CurrentTick, Is.EqualTo(savedTick));
                 Assert.That(restored.Health.MaximumHealth, Is.EqualTo(100));
@@ -362,7 +503,7 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
             var service = new PrototypeSaveService(_temporaryDirectory);
             var session = new InventoryPrototypeSession();
             SaveSlotId slot = new SaveSlotId(1);
-            service.Save(slot, session, 75d);
+            SaveCurrentForTest(service, slot, session, 75d);
             File.WriteAllText(
                 Path.Combine(_temporaryDirectory, "slot-1.aosmeta"),
                 "version=1\nslot=2\n");
@@ -381,7 +522,11 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
         {
             var service = new PrototypeSaveService(_temporaryDirectory);
             var slot = new SaveSlotId(1);
-            service.Save(slot, new InventoryPrototypeSession(), 10d);
+            SaveCurrentForTest(
+                service,
+                slot,
+                new InventoryPrototypeSession(),
+                10d);
             string metadata = string.Join("\n", new[]
             {
                 "version=1",
@@ -425,7 +570,8 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
             {
                 var session = new InventoryPrototypeSession();
                 session.BeginSimulationTick(positions[index]);
-                service.Save(
+                SaveCurrentForTest(
+                    service,
                     new SaveSlotId(index + 1),
                     session,
                     10d + index);
@@ -507,7 +653,7 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
             Assert.That(expectedGroundQuantity, Is.GreaterThan(0));
 
             GameSaveSnapshot expectedSnapshot =
-                session.CaptureGameSaveSnapshot();
+                CaptureCurrentForTest(session);
             byte[] expectedBytes =
                 GameSaveBinaryCodec.Encode(expectedSnapshot);
             Assert.That(
@@ -522,15 +668,15 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
                 _temporaryDirectory);
             var slot = new SaveSlotId(1);
 
-            service.Save(slot, session, 12d);
+            SaveCurrentForTest(service, slot, session, 12d);
             CoordinatedGameLoadResult loaded = service.Load(
                 slot,
                 0d,
                 out double playedSeconds);
 
+            PrototypeSaveRuntime.InstallRestoredState(loaded.State);
             InventoryPrototypeSession restored =
-                InventoryPrototypeSessionProvider.Install(
-                    loaded.State);
+                InventoryPrototypeSessionProvider.Current;
             try
             {
                 restored.SynchronizeGeneratedChunkResources(
@@ -561,7 +707,7 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
                     Is.EqualTo(expectedCarriedQuantity));
                 Assert.That(
                     GameSaveBinaryCodec.Encode(
-                        restored.CaptureGameSaveSnapshot()),
+                        CaptureCurrentForTest(restored)),
                     Is.EqualTo(expectedBytes));
             }
             finally
@@ -581,7 +727,11 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
             SaveSlotId slot = new SaveSlotId(1);
 
             Assert.DoesNotThrow(() =>
-                service.Save(slot, new InventoryPrototypeSession(), 10d));
+                SaveCurrentForTest(
+                    service,
+                    slot,
+                    new InventoryPrototypeSession(),
+                    10d));
             Assert.That(service.Exists(slot), Is.True);
         }
 
@@ -692,7 +842,7 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
         private static GameSaveSnapshot CreateLegacyPrototypeSnapshot(
             InventoryPrototypeSession session)
         {
-            GameSaveSnapshot current = session.CaptureGameSaveSnapshot();
+            GameSaveSnapshot current = CaptureCurrentForTest(session);
             return new GameSaveSnapshot(
                 current.World,
                 current.FixedTick,
@@ -700,6 +850,36 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
                 current.Health,
                 CreateLegacyPrototypeInventory().CaptureSnapshot(),
                 current.ChunkMutations);
+        }
+
+        private static GameSaveSnapshot CaptureCurrentForTest(
+            InventoryPrototypeSession session)
+        {
+            return session.CaptureGameSaveSnapshot(
+                CreateConstructionSession(session).CaptureSaveSnapshot());
+        }
+
+        private static void SaveCurrentForTest(
+            PrototypeSaveService service,
+            SaveSlotId slot,
+            InventoryPrototypeSession session,
+            double playedSeconds)
+        {
+            service.Save(
+                slot,
+                session,
+                CreateConstructionSession(session),
+                playedSeconds);
+        }
+
+        private static ConstructionRuntimeSession CreateConstructionSession(
+            InventoryPrototypeSession inventory)
+        {
+            return new ConstructionRuntimeSession(
+                ConstructionPrototypeCatalog.CreateDefault(),
+                new MonotonicConstructionInstanceIdAllocator(
+                    ConstructionSaveDefaults.PrototypeInstanceNamespace),
+                inventory);
         }
 
         private static PlayerInventoryState CreateLegacyPrototypeInventory()
@@ -794,6 +974,31 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
                 encoded.Length - foodOffset - extensionLength);
 
             WriteUInt16(legacy, 8, 2);
+            WriteUInt32(legacy, 12, checked((uint)legacyPayloadLength));
+            RefreshPayloadHash(legacy);
+            return legacy;
+        }
+
+        private static byte[] ConvertV4ToLegacyV3(byte[] encoded)
+        {
+            if (ReadUInt16(encoded, 8) != 4)
+                throw new InvalidDataException("Expected a V4 fixture.");
+
+            int extensionLength = 2
+                + 4 + System.Text.Encoding.UTF8.GetByteCount(
+                    ConstructionSaveDefaults.PrototypeCatalogId)
+                + 4
+                + 4 + System.Text.Encoding.UTF8.GetByteCount(
+                    ConstructionSaveDefaults.PrototypeInstanceNamespace)
+                + 8
+                + 4
+                + 4;
+            int payloadLength = checked((int)ReadUInt32(encoded, 12));
+            int legacyPayloadLength = payloadLength - extensionLength;
+            var legacy = new byte[
+                GameSaveCodecLimits.HeaderLength + legacyPayloadLength];
+            Buffer.BlockCopy(encoded, 0, legacy, 0, legacy.Length);
+            WriteUInt16(legacy, 8, 3);
             WriteUInt32(legacy, 12, checked((uint)legacyPayloadLength));
             RefreshPayloadHash(legacy);
             return legacy;

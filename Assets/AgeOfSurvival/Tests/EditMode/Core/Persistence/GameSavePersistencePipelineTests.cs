@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using AgeOfSurvival.Core.Characters;
+using AgeOfSurvival.Core.Construction;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Persistence;
@@ -78,7 +79,8 @@ namespace AgeOfSurvival.Core.Tests.Persistence
         {
             byte[] legacy = ConvertV2ToLegacyV1(
                 ConvertV3ToLegacyV2(
-                    GameSaveBinaryCodec.Encode(CreateSnapshot(42))));
+                    ConvertV4ToLegacyV3(
+                        GameSaveBinaryCodec.Encode(CreateSnapshot(42)))));
 
             Assert.That(ReadUInt16(legacy, 8), Is.EqualTo(1));
 
@@ -103,14 +105,15 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 ReadUInt16(
                     GameSaveBinaryCodec.Encode(decoded),
                     8),
-                Is.EqualTo(3));
+                Is.EqualTo(4));
         }
 
         [Test]
         public void CodecReadsLegacyV2AsFullFoodAtSavedTick()
         {
             byte[] legacy = ConvertV3ToLegacyV2(
-                GameSaveBinaryCodec.Encode(CreateSnapshot(42)));
+                ConvertV4ToLegacyV3(
+                    GameSaveBinaryCodec.Encode(CreateSnapshot(42))));
 
             Assert.That(ReadUInt16(legacy, 8), Is.EqualTo(2));
             GameSaveSnapshot decoded = GameSaveBinaryCodec.Decode(legacy);
@@ -126,7 +129,8 @@ namespace AgeOfSurvival.Core.Tests.Persistence
         public void CodecRejectsInvalidV2Health()
         {
             byte[] encoded = ConvertV3ToLegacyV2(
-                GameSaveBinaryCodec.Encode(CreateSnapshot(0)));
+                ConvertV4ToLegacyV3(
+                    GameSaveBinaryCodec.Encode(CreateSnapshot(0))));
             int healthOffset = GetHealthOffset(encoded);
             WriteInt32(encoded, healthOffset, 0);
             RefreshPayloadHash(encoded);
@@ -160,7 +164,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             Assert.That(encoded[1], Is.EqualTo((byte)'O'));
             Assert.That(encoded[2], Is.EqualTo((byte)'S'));
             Assert.That(encoded[7], Is.EqualTo(0));
-            Assert.That(ReadUInt16(encoded, 8), Is.EqualTo(3));
+            Assert.That(ReadUInt16(encoded, 8), Is.EqualTo(4));
             Assert.That(ReadUInt16(encoded, 10), Is.EqualTo(0));
             Assert.That(
                 ReadUInt32(encoded, 12),
@@ -210,7 +214,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
         public void CodecRejectsUnsupportedVersion()
         {
             byte[] encoded = GameSaveBinaryCodec.Encode(CreateSnapshot(0));
-            WriteUInt16(encoded, 8, 4);
+            WriteUInt16(encoded, 8, 5);
 
             GameSaveCodecException exception =
                 Assert.Throws<GameSaveCodecException>(() =>
@@ -358,6 +362,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             RestoredGameState restored = GameSaveSnapshotRestorer.Restore(
                 snapshot,
                 resolver,
+                resolver,
                 resolver);
 
             Assert.That(restored.FixedTick, Is.EqualTo(55));
@@ -385,6 +390,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             RestoredGameState restored = GameSaveSnapshotRestorer.Restore(
                 snapshot,
                 resolver,
+                resolver,
                 resolver);
 
             ActiveChunkState active = restored.Chunks.Activate(
@@ -405,6 +411,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 GameSaveSnapshotRestorer.Restore(
                     snapshot,
                     resolver,
+                    catalog,
                     catalog));
         }
 
@@ -427,6 +434,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 GameSaveSnapshotRestorer.Restore(
                     snapshot,
                     resolver,
+                    resolver,
                     resolver));
         }
 
@@ -444,6 +452,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             Assert.Throws<NotSupportedException>(() =>
                 GameSaveSnapshotRestorer.Restore(
                     snapshot,
+                    resolver,
                     resolver,
                     resolver));
         }
@@ -575,6 +584,31 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 encoded.Length - foodOffset - extensionLength);
 
             WriteUInt16(legacy, 8, 2);
+            WriteUInt32(legacy, 12, checked((uint)legacyPayloadLength));
+            RefreshPayloadHash(legacy);
+            return legacy;
+        }
+
+        private static byte[] ConvertV4ToLegacyV3(byte[] encoded)
+        {
+            if (ReadUInt16(encoded, 8) != 4)
+                throw new InvalidDataException("Expected a V4 fixture.");
+
+            int extensionLength = 2
+                + 4 + System.Text.Encoding.UTF8.GetByteCount(
+                    ConstructionSaveDefaults.PrototypeCatalogId)
+                + 4
+                + 4 + System.Text.Encoding.UTF8.GetByteCount(
+                    ConstructionSaveDefaults.PrototypeInstanceNamespace)
+                + 8
+                + 4
+                + 4;
+            int payloadLength = checked((int)ReadUInt32(encoded, 12));
+            int legacyPayloadLength = payloadLength - extensionLength;
+            var legacy = new byte[
+                GameSaveCodecLimits.HeaderLength + legacyPayloadLength];
+            Buffer.BlockCopy(encoded, 0, legacy, 0, legacy.Length);
+            WriteUInt16(legacy, 8, 3);
             WriteUInt32(legacy, 12, checked((uint)legacyPayloadLength));
             RefreshPayloadHash(legacy);
             return legacy;
@@ -731,7 +765,8 @@ namespace AgeOfSurvival.Core.Tests.Persistence
 
         private sealed class CatalogResolver
             : IWorldPopulationSettingsResolver,
-              IInventoryDefinitionResolver
+              IInventoryDefinitionResolver,
+              IConstructionDefinitionResolver
         {
             private readonly WorldPopulationSettings _world;
             private readonly Dictionary<ItemDefinitionId, ItemDefinition> _items;
@@ -777,6 +812,24 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                     new EncumbranceValue(
                         saved.Capacity.Units + _capacityOffset));
                 return true;
+            }
+
+            public bool TryResolveConstructionCatalog(
+                ConstructionSaveSnapshot saved,
+                out ConstructionDefinitionCatalog catalog)
+            {
+                catalog = new ConstructionDefinitionCatalog(new[]
+                {
+                    new ConstructionDefinition(
+                        new ConstructionDefinitionId("test.floor"),
+                        ConstructionSpaceKind.Surface,
+                        1,
+                        new[]
+                        {
+                            new ConstructionMaterialRequirement(Rations.Id, 1)
+                        })
+                });
+                return saved != null;
             }
         }
     }

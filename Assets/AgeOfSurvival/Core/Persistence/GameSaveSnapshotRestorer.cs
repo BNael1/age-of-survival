@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using AgeOfSurvival.Core.Characters;
+using AgeOfSurvival.Core.Construction;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.World.Generation;
@@ -16,11 +17,13 @@ namespace AgeOfSurvival.Core.Persistence
         public static RestoredGameState Restore(
             GameSaveSnapshot snapshot,
             IWorldPopulationSettingsResolver worldResolver,
-            IInventoryDefinitionResolver inventoryResolver)
+            IInventoryDefinitionResolver inventoryResolver,
+            IConstructionDefinitionResolver constructionResolver)
         {
             if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
             if (worldResolver == null) throw new ArgumentNullException(nameof(worldResolver));
             if (inventoryResolver == null) throw new ArgumentNullException(nameof(inventoryResolver));
+            if (constructionResolver == null) throw new ArgumentNullException(nameof(constructionResolver));
 
             if (!worldResolver.TryResolve(
                 snapshot.World,
@@ -39,6 +42,24 @@ namespace AgeOfSurvival.Core.Persistence
             PerishableInventoryState perishables = snapshot.Perishables.RestoreState();
             perishables.ValidateAgainst(inventory);
 
+            if (!constructionResolver.TryResolveConstructionCatalog(
+                    snapshot.Construction,
+                    out ConstructionDefinitionCatalog constructionCatalog)
+                || constructionCatalog == null)
+            {
+                throw new NotSupportedException(
+                    "The saved construction catalog is not supported by this build.");
+            }
+
+            ConstructionWorldState constructionWorld =
+                snapshot.Construction.RestoreState(constructionCatalog);
+            var construction = new RestoredConstructionState(
+                snapshot.Construction.CatalogId,
+                snapshot.Construction.CatalogRevision,
+                snapshot.Construction.InstanceNamespace,
+                snapshot.Construction.NextInstanceSequence,
+                constructionWorld);
+
             var store = new ChunkMutationStore();
             for (int index = 0; index < snapshot.ChunkMutations.Count; index++)
             {
@@ -56,7 +77,8 @@ namespace AgeOfSurvival.Core.Persistence
                 food,
                 perishables,
                 inventory,
-                chunks);
+                chunks,
+                construction);
         }
 
         private static void ValidateResolvedWorld(

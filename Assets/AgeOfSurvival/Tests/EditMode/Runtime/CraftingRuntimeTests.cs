@@ -2,6 +2,7 @@ using System.Linq;
 using AgeOfSurvival.Core.Crafting;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.Resources;
 using AgeOfSurvival.Runtime.Inventory;
 using NUnit.Framework;
@@ -114,7 +115,8 @@ namespace AgeOfSurvival.Runtime.Tests
         public void SaveSnapshotCarriesCraftOutputDefinitions()
         {
             var session = new InventoryPrototypeSession();
-            var snapshot = session.CaptureGameSaveSnapshot();
+            var snapshot = session.CaptureGameSaveSnapshot(
+                ConstructionSaveSnapshot.Empty);
             Assert.That(snapshot.Inventory.Definitions.Any(d => d.Id.Equals(InventoryPrototypeCatalog.Kindling.Id)), Is.True);
             Assert.That(snapshot.Inventory.Definitions.Any(d => d.Id.Equals(InventoryPrototypeCatalog.StoneFlakes.Id)), Is.True);
             Assert.That(snapshot.Inventory.Definitions.Any(d => d.Id.Equals(InventoryPrototypeCatalog.WoodenStakes.Id)), Is.True);

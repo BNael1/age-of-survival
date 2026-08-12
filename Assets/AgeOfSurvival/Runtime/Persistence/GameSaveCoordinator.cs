@@ -39,11 +39,13 @@ namespace AgeOfSurvival.Runtime.Persistence
         private readonly AtomicGameSaveStorage _storage;
         private readonly IWorldPopulationSettingsResolver _worldResolver;
         private readonly IInventoryDefinitionResolver _inventoryResolver;
+        private readonly IConstructionDefinitionResolver _constructionResolver;
 
         public GameSaveCoordinator(
             AtomicGameSaveStorage storage,
             IWorldPopulationSettingsResolver worldResolver,
-            IInventoryDefinitionResolver inventoryResolver)
+            IInventoryDefinitionResolver inventoryResolver,
+            IConstructionDefinitionResolver constructionResolver)
         {
             _storage = storage
                 ?? throw new ArgumentNullException(nameof(storage));
@@ -51,6 +53,8 @@ namespace AgeOfSurvival.Runtime.Persistence
                 ?? throw new ArgumentNullException(nameof(worldResolver));
             _inventoryResolver = inventoryResolver
                 ?? throw new ArgumentNullException(nameof(inventoryResolver));
+            _constructionResolver = constructionResolver
+                ?? throw new ArgumentNullException(nameof(constructionResolver));
         }
 
         public bool Exists(string slot)
@@ -67,7 +71,8 @@ namespace AgeOfSurvival.Runtime.Persistence
             PlayerFoodState food,
             PerishableInventoryState perishables,
             PlayerInventoryState inventory,
-            ChunkStateLifecycle chunks)
+            ChunkStateLifecycle chunks,
+            ConstructionSaveSnapshot construction)
         {
             GameSaveSnapshot snapshot = GameSaveSnapshotCapture.Capture(
                 world,
@@ -77,7 +82,8 @@ namespace AgeOfSurvival.Runtime.Persistence
                 food,
                 perishables,
                 inventory,
-                chunks);
+                chunks,
+                construction);
             _storage.Save(slot, snapshot);
         }
 
@@ -87,7 +93,8 @@ namespace AgeOfSurvival.Runtime.Persistence
             RestoredGameState restored = GameSaveSnapshotRestorer.Restore(
                 loaded.Snapshot,
                 _worldResolver,
-                _inventoryResolver);
+                _inventoryResolver,
+                _constructionResolver);
             return new CoordinatedGameLoadResult(restored, loaded.Source);
         }
     }

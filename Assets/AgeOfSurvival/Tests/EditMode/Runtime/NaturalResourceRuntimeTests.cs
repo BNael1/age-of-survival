@@ -5,6 +5,7 @@ using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.Resources;
 using AgeOfSurvival.Core.World.Generation;
+using AgeOfSurvival.Runtime.Construction;
 using AgeOfSurvival.Runtime.Inventory;
 using AgeOfSurvival.Runtime.Persistence;
 using AgeOfSurvival.Runtime.Rendering;
@@ -188,7 +189,11 @@ namespace AgeOfSurvival.Runtime.Tests
                     _temporaryDirectory);
             var slot = new SaveSlotId(1);
 
-            service.Save(slot, session, 10d);
+            service.Save(
+                slot,
+                session,
+                CreateConstructionSession(session),
+                10d);
             CoordinatedGameLoadResult loaded =
                 service.Load(slot, 0d, out _);
 
@@ -200,7 +205,7 @@ namespace AgeOfSurvival.Runtime.Tests
                 Is.EqualTo(new WorldSeed(42UL)));
             Assert.That(
                 GameSaveBinaryCodec.CurrentVersion,
-                Is.EqualTo(3));
+                Is.EqualTo(4));
         }
 
         [Test]
@@ -249,6 +254,16 @@ namespace AgeOfSurvival.Runtime.Tests
             {
                 UnityEngine.Object.DestroyImmediate(root);
             }
+        }
+
+        private static ConstructionRuntimeSession CreateConstructionSession(
+            InventoryPrototypeSession inventory)
+        {
+            return new ConstructionRuntimeSession(
+                ConstructionPrototypeCatalog.CreateDefault(),
+                new MonotonicConstructionInstanceIdAllocator(
+                    ConstructionSaveDefaults.PrototypeInstanceNamespace),
+                inventory);
         }
     }
 }

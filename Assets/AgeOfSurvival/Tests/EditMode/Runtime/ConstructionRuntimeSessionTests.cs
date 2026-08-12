@@ -2,6 +2,7 @@ using System;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Construction;
 using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.World.Generation;
 using AgeOfSurvival.Runtime.Construction;
 using AgeOfSurvival.Runtime.Inventory;
@@ -60,6 +61,63 @@ namespace AgeOfSurvival.Runtime.Tests
         }
 
         [Test]
+        public void MonotonicAllocator_UsesExplicitExhaustedSentinelWithoutOverflow()
+        {
+            var allocator = new MonotonicConstructionInstanceIdAllocator(
+                "test",
+                long.MaxValue - 1L);
+
+            Assert.That(
+                allocator.TryPeekNext(_ => true, out ConstructionInstanceId candidate),
+                Is.True);
+            Assert.That(
+                candidate.Value,
+                Is.EqualTo("test:9223372036854775806"));
+
+            allocator.Commit(candidate);
+
+            Assert.That(allocator.NextSequence, Is.EqualTo(long.MaxValue));
+            Assert.That(allocator.TryPeekNext(_ => true, out _), Is.False);
+            Assert.Throws<InvalidOperationException>(() => allocator.Commit(candidate));
+        }
+
+        [Test]
+        public void RestoredSessionSkipsCollisionAtPersistedNextSequence()
+        {
+            ConstructionRuntimeSession restored = RestoreWithOccupiedSequences(1);
+
+            Select(restored, ConstructionPrototypeCatalog.FloorId);
+            ConstructionRuntimeResult placed = restored.TryPlaceSelected(
+                Surface(10L, 0L));
+
+            Assert.That(placed.Succeeded, Is.True);
+            Assert.That(
+                placed.InstanceId.Value,
+                Is.EqualTo("local-prototype:0000000002"));
+            Assert.That(
+                restored.CaptureSaveSnapshot().NextInstanceSequence,
+                Is.EqualTo(3L));
+        }
+
+        [Test]
+        public void RestoredSessionSkipsMultipleConsecutivePersistedCollisions()
+        {
+            ConstructionRuntimeSession restored = RestoreWithOccupiedSequences(3);
+
+            Select(restored, ConstructionPrototypeCatalog.FloorId);
+            ConstructionRuntimeResult placed = restored.TryPlaceSelected(
+                Surface(10L, 0L));
+
+            Assert.That(placed.Succeeded, Is.True);
+            Assert.That(
+                placed.InstanceId.Value,
+                Is.EqualTo("local-prototype:0000000004"));
+            Assert.That(
+                restored.CaptureSaveSnapshot().NextInstanceSequence,
+                Is.EqualTo(5L));
+        }
+
+        [Test]
         public void ModeState_SelectsAndClosesWithoutGameplayGateOrWorldMutation()
         {
             ConstructionRuntimeSession session = CreateSession(out _, out _);
@@ -73,6 +131,85 @@ namespace AgeOfSurvival.Runtime.Tests
             Assert.That(session.Mode.SelectedDefinitionId,
                 Is.EqualTo(ConstructionPrototypeCatalog.FloorId));
             Assert.That(session.World.SiteCount, Is.Zero);
+        }
+
+        [Test]
+        public void RestoredSessionResumesAllocatorWithoutCollisionOrHeldWork()
+        {
+            var inventory = new InventoryPrototypeSession(
+                Array.Empty<AgeOfSurvival.Core.Resources.ResourceState>());
+            Clear(inventory.MainContainer, InventoryPrototypeCatalog.Branches);
+            Clear(inventory.MainContainer, InventoryPrototypeCatalog.Stones);
+            Seed(inventory.MainContainer, InventoryPrototypeCatalog.Branches, 2);
+            Seed(inventory.MainContainer, InventoryPrototypeCatalog.Stones, 1);
+            ConstructionPrototypeCatalog catalog =
+                ConstructionPrototypeCatalog.CreateDefault();
+            var original = new ConstructionRuntimeSession(
+                catalog,
+                new MonotonicConstructionInstanceIdAllocator(
+                    ConstructionSaveDefaults.PrototypeInstanceNamespace),
+                inventory);
+            Select(original, ConstructionPrototypeCatalog.FloorId);
+            ConstructionRuntimeResult first = original.TryPlaceSelected(
+                Surface(0L, 0L));
+            Assert.That(first.Succeeded, Is.True);
+            Assert.That(original.DepositAllAvailable(first.InstanceId).Accepted,
+                Is.EqualTo(3));
+            Assert.That(original.BeginWork(first.InstanceId, 0L, Near).Succeeded,
+                Is.True);
+
+            ConstructionSaveSnapshot saved = original.CaptureSaveSnapshot();
+            var restoredState = new RestoredConstructionState(
+                saved.CatalogId,
+                saved.CatalogRevision,
+                saved.InstanceNamespace,
+                saved.NextInstanceSequence,
+                saved.RestoreState(catalog.CoreCatalog));
+            var restoredInventory = new InventoryPrototypeSession(
+                Array.Empty<AgeOfSurvival.Core.Resources.ResourceState>());
+            ConstructionRuntimeSession restored = ConstructionRuntimeSession.Restore(
+                catalog,
+                restoredState,
+                restoredInventory);
+
+            Assert.That(restored.IsWorkActionActive, Is.False);
+            Assert.That(restored.ActiveWorkSite.IsValid, Is.False);
+            Select(restored, ConstructionPrototypeCatalog.FloorId);
+            ConstructionRuntimeResult second = restored.TryPlaceSelected(
+                Surface(1L, 0L));
+            Assert.That(second.Succeeded, Is.True);
+            Assert.That(second.InstanceId.Value,
+                Is.EqualTo("local-prototype:0000000002"));
+            Assert.That(second.InstanceId, Is.Not.EqualTo(first.InstanceId));
+        }
+
+        [Test]
+        public void TwoCapturesOfSameRuntimeWorldAreCanonicallyEquivalent()
+        {
+            ConstructionRuntimeSession session = CreateSession(
+                out _,
+                out _);
+            Select(session, ConstructionPrototypeCatalog.FloorId);
+            Assert.That(session.TryPlaceSelected(Surface(9L, 1L)).Succeeded,
+                Is.True);
+            Assert.That(session.TryPlaceSelected(Surface(-2L, 5L)).Succeeded,
+                Is.True);
+
+            ConstructionSaveSnapshot first = session.CaptureSaveSnapshot();
+            ConstructionSaveSnapshot second = session.CaptureSaveSnapshot();
+
+            Assert.That(second.NextInstanceSequence,
+                Is.EqualTo(first.NextInstanceSequence));
+            Assert.That(second.Sites.Count, Is.EqualTo(first.Sites.Count));
+            for (int index = 0; index < first.Sites.Count; index++)
+            {
+                Assert.That(second.Sites[index].InstanceId,
+                    Is.EqualTo(first.Sites[index].InstanceId));
+                Assert.That(second.Sites[index].Space,
+                    Is.EqualTo(first.Sites[index].Space));
+                Assert.That(second.Sites[index].WorkCompletedUnits,
+                    Is.EqualTo(first.Sites[index].WorkCompletedUnits));
+            }
         }
 
         [Test]
@@ -572,6 +709,45 @@ namespace AgeOfSurvival.Runtime.Tests
                 allocator,
                 inventory,
                 depositMaterial);
+        }
+
+        private static ConstructionRuntimeSession RestoreWithOccupiedSequences(
+            int occupiedSequenceCount)
+        {
+            ConstructionPrototypeCatalog catalog =
+                ConstructionPrototypeCatalog.CreateDefault();
+            var sites = new ConstructionSiteSnapshot[occupiedSequenceCount];
+            for (int index = 0; index < occupiedSequenceCount; index++)
+            {
+                int sequence = index + 1;
+                sites[index] = new ConstructionSiteSnapshot(
+                    new ConstructionInstanceId(
+                        "local-prototype:" + sequence.ToString("D10")),
+                    ConstructionPrototypeCatalog.FloorId,
+                    new ConstructionSpaceSnapshot(Surface(sequence, 0L)),
+                    Array.Empty<ConstructionMaterialSnapshot>(),
+                    0);
+            }
+
+            var saved = new ConstructionSaveSnapshot(
+                ConstructionSaveDefaults.SectionVersion,
+                ConstructionSaveDefaults.PrototypeCatalogId,
+                ConstructionSaveDefaults.PrototypeCatalogRevision,
+                ConstructionSaveDefaults.PrototypeInstanceNamespace,
+                1L,
+                sites,
+                Array.Empty<CompletedStructureSnapshot>());
+            var restored = new RestoredConstructionState(
+                saved.CatalogId,
+                saved.CatalogRevision,
+                saved.InstanceNamespace,
+                saved.NextInstanceSequence,
+                saved.RestoreState(catalog.CoreCatalog));
+            return ConstructionRuntimeSession.Restore(
+                catalog,
+                restored,
+                new InventoryPrototypeSession(
+                    Array.Empty<AgeOfSurvival.Core.Resources.ResourceState>()));
         }
 
         private static ConstructionRuntimeSession SuppliedFloor(

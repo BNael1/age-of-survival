@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using AgeOfSurvival.Core.Inventory;
 
 namespace AgeOfSurvival.Core.Construction
@@ -62,6 +63,122 @@ namespace AgeOfSurvival.Core.Construction
         public override string ToString() => Value ?? string.Empty;
         public static bool operator ==(ConstructionInstanceId left, ConstructionInstanceId right) => left.Equals(right);
         public static bool operator !=(ConstructionInstanceId left, ConstructionInstanceId right) => !left.Equals(right);
+    }
+
+    /// <summary>
+    /// Shared durable sequence policy for construction instance identifiers.
+    /// The terminal sequence is an explicit exhausted sentinel: it is persisted,
+    /// but it never yields a candidate and therefore cannot overflow.
+    /// </summary>
+    public static class ConstructionInstanceIdSequencePolicy
+    {
+        public const int MaximumCollisionAttempts = 1024;
+        public const long InitialSequence = 1L;
+        public const long ExhaustedSequence = long.MaxValue;
+
+        public static bool TryFindCommittableCandidate(
+            string instanceNamespace,
+            long nextSequence,
+            Func<ConstructionInstanceId, bool> isAvailable,
+            out ConstructionInstanceId candidate)
+        {
+            if (string.IsNullOrWhiteSpace(instanceNamespace))
+                throw new ArgumentException("An instance namespace is required.", nameof(instanceNamespace));
+            if (nextSequence <= 0L)
+                throw new ArgumentOutOfRangeException(nameof(nextSequence));
+            if (isAvailable == null) throw new ArgumentNullException(nameof(isAvailable));
+
+            if (nextSequence == ExhaustedSequence)
+            {
+                candidate = default;
+                return false;
+            }
+
+            string normalizedNamespace = instanceNamespace.Trim();
+            long sequence = nextSequence;
+            for (int attempts = 0;
+                 attempts < MaximumCollisionAttempts
+                 && sequence < ExhaustedSequence;
+                 attempts++)
+            {
+                candidate = Create(normalizedNamespace, sequence);
+                if (isAvailable(candidate)) return true;
+                sequence++;
+            }
+
+            candidate = default;
+            return false;
+        }
+
+        public static bool TryGetCommittedNextSequence(
+            string instanceNamespace,
+            long currentNextSequence,
+            ConstructionInstanceId candidate,
+            out long committedNextSequence)
+        {
+            committedNextSequence = default;
+            if (currentNextSequence <= 0L
+                || currentNextSequence == ExhaustedSequence
+                || !TryParseOwnedSequence(
+                    candidate,
+                    instanceNamespace,
+                    out long committed)
+                || committed < currentNextSequence
+                || committed == ExhaustedSequence)
+            {
+                return false;
+            }
+
+            committedNextSequence = committed + 1L;
+            return true;
+        }
+
+        public static bool TryParseOwnedSequence(
+            ConstructionInstanceId instanceId,
+            string instanceNamespace,
+            out long sequence)
+        {
+            sequence = default;
+            if (!instanceId.IsValid || string.IsNullOrWhiteSpace(instanceNamespace))
+                return false;
+
+            string prefix = instanceNamespace.Trim() + ":";
+            if (!instanceId.Value.StartsWith(prefix, StringComparison.Ordinal))
+                return false;
+
+            string suffix = instanceId.Value.Substring(prefix.Length);
+            return long.TryParse(
+                    suffix,
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out sequence)
+                && sequence > 0L
+                && string.Equals(
+                    suffix,
+                    sequence.ToString("D10", CultureInfo.InvariantCulture),
+                    StringComparison.Ordinal);
+        }
+
+        public static bool IsOwnedByNamespace(
+            ConstructionInstanceId instanceId,
+            string instanceNamespace)
+        {
+            if (!instanceId.IsValid || string.IsNullOrWhiteSpace(instanceNamespace))
+                return false;
+            return instanceId.Value.StartsWith(
+                instanceNamespace.Trim() + ":",
+                StringComparison.Ordinal);
+        }
+
+        private static ConstructionInstanceId Create(
+            string instanceNamespace,
+            long sequence)
+        {
+            return new ConstructionInstanceId(
+                instanceNamespace + ":" + sequence.ToString(
+                    "D10",
+                    CultureInfo.InvariantCulture));
+        }
     }
 
     public sealed class ConstructionMaterialRequirement

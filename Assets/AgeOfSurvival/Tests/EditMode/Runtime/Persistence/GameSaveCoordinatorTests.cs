@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using AgeOfSurvival.Core.Characters;
+using AgeOfSurvival.Core.Construction;
 using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Persistence;
@@ -47,6 +48,7 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
             var coordinator = new GameSaveCoordinator(
                 new AtomicGameSaveStorage(_temporaryDirectory),
                 resolver,
+                resolver,
                 resolver);
 
             coordinator.Save(
@@ -59,7 +61,8 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                 new PerishableInventoryState(),
                 CreateInventory(),
                 new ChunkStateLifecycle(
-                    new DeterministicWorldPopulationGenerator(world)));
+                    new DeterministicWorldPopulationGenerator(world)),
+                ConstructionSaveSnapshot.Empty);
             CoordinatedGameLoadResult loaded = coordinator.Load("prototype");
 
             Assert.That(loaded.Source, Is.EqualTo(GameSaveLoadSource.Primary));
@@ -87,6 +90,7 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
             var coordinator = new GameSaveCoordinator(
                 storage,
                 resolver,
+                resolver,
                 resolver);
 
             coordinator.Save(
@@ -99,7 +103,8 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                 new PerishableInventoryState(),
                 CreateInventory(),
                 new ChunkStateLifecycle(
-                    new DeterministicWorldPopulationGenerator(world)));
+                    new DeterministicWorldPopulationGenerator(world)),
+                ConstructionSaveSnapshot.Empty);
             coordinator.Save(
                 "prototype",
                 world,
@@ -110,7 +115,8 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                 new PerishableInventoryState(),
                 CreateInventory(),
                 new ChunkStateLifecycle(
-                    new DeterministicWorldPopulationGenerator(world)));
+                    new DeterministicWorldPopulationGenerator(world)),
+                ConstructionSaveSnapshot.Empty);
             File.WriteAllBytes(
                 storage.GetPrimaryPath("prototype"),
                 new byte[] { 1, 2, 3 });
@@ -172,7 +178,8 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
 
         private sealed class Resolver
             : IWorldPopulationSettingsResolver,
-              IInventoryDefinitionResolver
+              IInventoryDefinitionResolver,
+              IConstructionDefinitionResolver
         {
             private readonly WorldPopulationSettings _world;
             private readonly Dictionary<ItemDefinitionId, ItemDefinition> _items =
@@ -210,6 +217,24 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                     saved.DefinitionKey,
                     saved.Capacity);
                 return true;
+            }
+
+            public bool TryResolveConstructionCatalog(
+                ConstructionSaveSnapshot saved,
+                out ConstructionDefinitionCatalog catalog)
+            {
+                catalog = new ConstructionDefinitionCatalog(new[]
+                {
+                    new ConstructionDefinition(
+                        new ConstructionDefinitionId("test.floor"),
+                        ConstructionSpaceKind.Surface,
+                        1,
+                        new[]
+                        {
+                            new ConstructionMaterialRequirement(Rations.Id, 1)
+                        })
+                });
+                return saved != null;
             }
         }
     }

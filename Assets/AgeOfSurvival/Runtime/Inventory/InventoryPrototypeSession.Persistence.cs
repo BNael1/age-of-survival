@@ -69,8 +69,10 @@ namespace AgeOfSurvival.Runtime.Inventory
         public bool RestoredFromSave => _restoredFromSave;
         public WorldPopulationSettings PersistenceWorld => _persistenceWorld;
 
-        public GameSaveSnapshot CaptureGameSaveSnapshot()
+        public GameSaveSnapshot CaptureGameSaveSnapshot(
+            ConstructionSaveSnapshot construction)
         {
+            if (construction == null) throw new ArgumentNullException(nameof(construction));
             var mutations = new List<ChunkMutationState>();
             var known = new HashSet<ChunkCoordinate>();
             ChunkMutationState[] stored =
@@ -114,7 +116,8 @@ namespace AgeOfSurvival.Runtime.Inventory
                 new PlayerFoodSnapshot(Food),
                 new PerishableInventorySnapshot(PerishableItems),
                 Inventory.CaptureSnapshot(),
-                mutations);
+                mutations,
+                construction);
         }
 
         public bool CancelActiveActionsForSaveAndQuit()

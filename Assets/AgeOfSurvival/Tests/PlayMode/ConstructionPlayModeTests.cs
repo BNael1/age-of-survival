@@ -1,7 +1,10 @@
 using System.Collections;
+using System;
+using System.IO;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Construction;
 using AgeOfSurvival.Core.World.Generation;
+using AgeOfSurvival.Runtime.Persistence;
 using AgeOfSurvival.Runtime.Construction;
 using AgeOfSurvival.Runtime.Frontend;
 using AgeOfSurvival.Runtime.Inventory;
@@ -12,6 +15,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using Object = UnityEngine.Object;
 
 namespace AgeOfSurvival.Presentation.PlayMode.Tests
 {
@@ -229,6 +233,95 @@ namespace AgeOfSurvival.Presentation.PlayMode.Tests
             if (fitting > 0)
                 AddStack(container, InventoryPrototypeCatalog.Branches, fitting);
             Assert.That(container.RemainingCapacity.Units, Is.LessThan(unit));
+        }
+
+        [UnityTest]
+        public IEnumerator SaveLoad_RebuildsCanonicalConstructionPresentation()
+        {
+            InventoryPrototypeSessionProvider.ResetForNewGame();
+            ConstructionRuntimeSessionProvider.ResetForNewGame();
+            yield return SceneManager.LoadSceneAsync(
+                FrontendSceneNames.Gameplay,
+                LoadSceneMode.Single);
+
+            ConstructionRuntimeBehaviour construction = null;
+            float timeout = Time.realtimeSinceStartup + 10f;
+            while (Time.realtimeSinceStartup < timeout)
+            {
+                construction = Object.FindFirstObjectByType<ConstructionRuntimeBehaviour>();
+                if (construction != null
+                    && construction.Session != null
+                    && construction.WorldPresenter != null)
+                    break;
+                yield return null;
+            }
+            Assert.That(construction, Is.Not.Null);
+
+            construction.OpenMode();
+            construction.Session.Execute(ConstructionCommand.Select(
+                ConstructionPrototypeCatalog.FloorId));
+            ConstructionSpaceKey space = ConstructionSpaceKey.Surface(
+                new WorldCellCoordinate(23L, -17L));
+            ConstructionRuntimeResult placed = construction.Session.TryPlaceSelected(space);
+            Assert.That(placed.Succeeded, Is.True);
+            construction.WorldPresenter.Refresh();
+            Assert.That(construction.WorldPresenter.PresentedCount, Is.EqualTo(1));
+
+            string directory = Path.Combine(
+                Path.GetTempPath(),
+                "aos-construction-playmode-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var service = new PrototypeSaveService(directory);
+                var slot = new SaveSlotId(1);
+                service.Save(
+                    slot,
+                    InventoryPrototypeSessionProvider.Current,
+                    construction.Session,
+                    0d);
+
+                Assert.That(construction.Session.TryDismantle(placed.InstanceId).Succeeded,
+                    Is.True);
+                construction.WorldPresenter.Refresh();
+                Assert.That(construction.WorldPresenter.PresentedCount, Is.Zero);
+
+                CoordinatedGameLoadResult loaded = service.Load(slot, 0d, out _);
+                PrototypeSaveRuntime.InstallRestoredState(loaded.State);
+                yield return SceneManager.LoadSceneAsync(
+                    FrontendSceneNames.Gameplay,
+                    LoadSceneMode.Single);
+
+                construction = null;
+                timeout = Time.realtimeSinceStartup + 10f;
+                while (Time.realtimeSinceStartup < timeout)
+                {
+                    construction = Object.FindFirstObjectByType<ConstructionRuntimeBehaviour>();
+                    if (construction != null
+                        && construction.Session != null
+                        && construction.WorldPresenter != null
+                        && construction.WorldPresenter.PresentedCount == 1)
+                        break;
+                    yield return null;
+                }
+
+                Assert.That(construction, Is.Not.Null);
+                Assert.That(construction.Session.World.TryFindSite(
+                    placed.InstanceId,
+                    out ConstructionSiteState restoredSite), Is.True);
+                Assert.That(restoredSite.Space, Is.EqualTo(space));
+                Assert.That(restoredSite.WorkCompletedUnits, Is.Zero);
+                Assert.That(construction.Session.IsWorkActionActive, Is.False);
+                Assert.That(construction.WorldPresenter.TryGetRenderer(
+                    placed.InstanceId,
+                    out SpriteRenderer renderer), Is.True);
+                Assert.That(renderer.gameObject.activeSelf, Is.True);
+            }
+            finally
+            {
+                if (Directory.Exists(directory)) Directory.Delete(directory, true);
+                InventoryPrototypeSessionProvider.ResetForNewGame();
+                ConstructionRuntimeSessionProvider.ResetForNewGame();
+            }
         }
 
         [UnityTest]

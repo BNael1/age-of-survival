@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Construction;
 using AgeOfSurvival.Core.Inventory;
+using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Runtime.Inventory;
 using UnityEngine;
 
@@ -33,12 +34,29 @@ namespace AgeOfSurvival.Runtime.Construction
             InventoryPrototypeSession inventoryOwner,
             Func<ConstructionInstanceId, ItemDefinitionId, int, ConstructionQuantityResult>
                 depositMaterial = null)
+            : this(
+                catalog,
+                idAllocator,
+                inventoryOwner,
+                new ConstructionWorldState(
+                    (catalog ?? throw new ArgumentNullException(nameof(catalog))).CoreCatalog),
+                depositMaterial)
+        {
+        }
+
+        internal ConstructionRuntimeSession(
+            ConstructionPrototypeCatalog catalog,
+            IConstructionInstanceIdAllocator idAllocator,
+            InventoryPrototypeSession inventoryOwner,
+            ConstructionWorldState world,
+            Func<ConstructionInstanceId, ItemDefinitionId, int, ConstructionQuantityResult>
+                depositMaterial = null)
         {
             Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             _idAllocator = idAllocator ?? throw new ArgumentNullException(nameof(idAllocator));
             _inventoryOwner = inventoryOwner ?? throw new ArgumentNullException(nameof(inventoryOwner));
             _carriedInventory = new ConstructionCarriedInventory(_inventoryOwner);
-            World = new ConstructionWorldState(Catalog.CoreCatalog);
+            World = world ?? throw new ArgumentNullException(nameof(world));
             _depositMaterial = depositMaterial ?? World.DepositMaterial;
             Mode = new ConstructionModeState();
         }
@@ -50,6 +68,43 @@ namespace AgeOfSurvival.Runtime.Construction
         public ConstructionInstanceId ActiveWorkSite => _activeWorkSite;
         public bool IsWorkActionActive => _activeWorkSite.IsValid && _workActionHeld;
         public ConstructionCarriedInventory CarriedInventory => _carriedInventory;
+
+        public ConstructionSaveSnapshot CaptureSaveSnapshot()
+        {
+            return ConstructionSaveSnapshot.Capture(
+                Catalog.PersistenceCatalogId,
+                Catalog.PersistenceCatalogRevision,
+                _idAllocator.InstanceNamespace,
+                _idAllocator.NextSequence,
+                World);
+        }
+
+        public static ConstructionRuntimeSession Restore(
+            ConstructionPrototypeCatalog catalog,
+            RestoredConstructionState restored,
+            InventoryPrototypeSession inventory)
+        {
+            if (catalog == null) throw new ArgumentNullException(nameof(catalog));
+            if (restored == null) throw new ArgumentNullException(nameof(restored));
+            if (inventory == null) throw new ArgumentNullException(nameof(inventory));
+            if (!string.Equals(
+                    restored.CatalogId,
+                    catalog.PersistenceCatalogId,
+                    StringComparison.Ordinal)
+                || restored.CatalogRevision != catalog.PersistenceCatalogRevision)
+            {
+                throw new NotSupportedException(
+                    "The restored construction catalog does not match the Runtime catalog.");
+            }
+
+            return new ConstructionRuntimeSession(
+                catalog,
+                new MonotonicConstructionInstanceIdAllocator(
+                    restored.InstanceNamespace,
+                    restored.NextInstanceSequence),
+                inventory,
+                restored.World);
+        }
 
         public bool Execute(ConstructionCommand command)
         {
@@ -687,11 +742,36 @@ namespace AgeOfSurvival.Runtime.Construction
             _current = Create(_inventoryOwner);
         }
 
+        internal static ConstructionRuntimeSession PrepareRestored(
+            RestoredConstructionState restored,
+            InventoryPrototypeSession inventory)
+        {
+            if (restored == null) throw new ArgumentNullException(nameof(restored));
+            if (inventory == null) throw new ArgumentNullException(nameof(inventory));
+            ConstructionPrototypeCatalog catalog =
+                ConstructionPrototypeCatalog.CreateDefault();
+            return ConstructionRuntimeSession.Restore(
+                catalog,
+                restored,
+                inventory);
+        }
+
+        internal static void InstallPrepared(
+            ConstructionRuntimeSession session,
+            InventoryPrototypeSession inventory)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (inventory == null) throw new ArgumentNullException(nameof(inventory));
+            _current = session;
+            _inventoryOwner = inventory;
+        }
+
         private static ConstructionRuntimeSession Create(InventoryPrototypeSession inventory)
         {
             return new ConstructionRuntimeSession(
                 ConstructionPrototypeCatalog.CreateDefault(),
-                new MonotonicConstructionInstanceIdAllocator("local-prototype"),
+                new MonotonicConstructionInstanceIdAllocator(
+                    ConstructionSaveDefaults.PrototypeInstanceNamespace),
                 inventory);
         }
 

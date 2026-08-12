@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using AgeOfSurvival.Core.Characters;
+using AgeOfSurvival.Core.Construction;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Resources;
@@ -11,11 +12,11 @@ namespace AgeOfSurvival.Core.Persistence
 {
     /// <summary>
     /// Deterministic, versioned, in-memory binary codec for canonical saves.
-    /// It performs no disk I/O, writes V3, and reads canonical V1/V2/V3 payloads.
+    /// It performs no disk I/O, writes V4, and reads canonical V1/V2/V3/V4 payloads.
     /// </summary>
     public static class GameSaveBinaryCodec
     {
-        public const ushort CurrentVersion = 3;
+        public const ushort CurrentVersion = 4;
         private const ushort MinimumSupportedVersion = 1;
         private const ushort CurrentFlags = 0;
 
@@ -152,6 +153,14 @@ namespace AgeOfSurvival.Core.Persistence
                 snapshot.ChunkMutations.Count,
                 GameSaveCodecLimits.MaximumChunkMutations,
                 "Chunk mutation count");
+            ValidateCount(
+                snapshot.Construction.Sites.Count,
+                GameSaveCodecLimits.MaximumConstructionSites,
+                "Construction site count");
+            ValidateCount(
+                snapshot.Construction.Structures.Count,
+                GameSaveCodecLimits.MaximumCompletedStructures,
+                "Completed structure count");
 
             using (var writer = new SaveBufferWriter(
                 GameSaveCodecLimits.MaximumPayloadLength))
@@ -165,6 +174,7 @@ namespace AgeOfSurvival.Core.Persistence
                 WritePerishables(writer, snapshot.Perishables);
                 WriteInventory(writer, snapshot.Inventory);
                 WriteChunks(writer, snapshot.ChunkMutations);
+                WriteConstruction(writer, snapshot.Construction);
                 return writer.ToArray();
             }
         }
@@ -197,6 +207,9 @@ namespace AgeOfSurvival.Core.Persistence
                 PlayerInventorySnapshot inventory = ReadInventory(reader);
                 IReadOnlyList<ChunkMutationState> mutations =
                     ReadChunks(reader, world.Generation.ChunkLayout);
+                ConstructionSaveSnapshot construction = version >= 4
+                    ? ReadConstruction(reader)
+                    : ConstructionSaveSnapshot.Empty;
                 reader.RequireEnd();
                 return new GameSaveSnapshot(
                     world,
@@ -206,7 +219,8 @@ namespace AgeOfSurvival.Core.Persistence
                     food,
                     perishables,
                     inventory,
-                    mutations);
+                    mutations,
+                    construction);
             }
             catch (GameSaveCodecException)
             {
@@ -720,6 +734,196 @@ namespace AgeOfSurvival.Core.Persistence
                 displayName,
                 capacity,
                 items);
+        }
+
+        private static void WriteConstruction(
+            SaveBufferWriter writer,
+            ConstructionSaveSnapshot construction)
+        {
+            writer.WriteUInt16(construction.SectionVersion);
+            writer.WriteRequiredString(construction.CatalogId);
+            writer.WriteInt32(construction.CatalogRevision);
+            writer.WriteRequiredString(construction.InstanceNamespace);
+            writer.WriteInt64(construction.NextInstanceSequence);
+
+            writer.WriteUInt32(checked((uint)construction.Sites.Count));
+            for (int siteIndex = 0;
+                 siteIndex < construction.Sites.Count;
+                 siteIndex++)
+            {
+                ConstructionSiteSnapshot site = construction.Sites[siteIndex];
+                ValidateCount(
+                    site.DepositedMaterials.Count,
+                    GameSaveCodecLimits.MaximumConstructionMaterialsPerSite,
+                    "Construction material count");
+                writer.WriteRequiredString(site.InstanceId.Value);
+                writer.WriteRequiredString(site.DefinitionId.Value);
+                WriteConstructionSpace(writer, site.Space);
+                writer.WriteUInt32(checked((uint)site.DepositedMaterials.Count));
+                for (int materialIndex = 0;
+                     materialIndex < site.DepositedMaterials.Count;
+                     materialIndex++)
+                {
+                    ConstructionMaterialSnapshot material =
+                        site.DepositedMaterials[materialIndex];
+                    writer.WriteRequiredString(material.DefinitionId.Value);
+                    writer.WriteInt32(material.Quantity);
+                }
+                writer.WriteInt32(site.WorkCompletedUnits);
+            }
+
+            writer.WriteUInt32(checked((uint)construction.Structures.Count));
+            for (int index = 0; index < construction.Structures.Count; index++)
+            {
+                CompletedStructureSnapshot structure =
+                    construction.Structures[index];
+                writer.WriteRequiredString(structure.InstanceId.Value);
+                writer.WriteRequiredString(structure.DefinitionId.Value);
+                WriteConstructionSpace(writer, structure.Space);
+            }
+        }
+
+        private static ConstructionSaveSnapshot ReadConstruction(
+            SaveBufferReader reader)
+        {
+            ushort sectionVersion = reader.ReadUInt16();
+            if (sectionVersion != ConstructionSaveDefaults.SectionVersion)
+            {
+                throw Violation(
+                    GameSaveCodecViolation.UnsupportedSectionVersion,
+                    $"Construction section version {sectionVersion} is not supported.");
+            }
+
+            string catalogId = reader.ReadRequiredString();
+            int catalogRevision = reader.ReadInt32();
+            string instanceNamespace = reader.ReadRequiredString();
+            long nextSequence = reader.ReadInt64();
+
+            int siteCount = reader.ReadCount(
+                GameSaveCodecLimits.MaximumConstructionSites,
+                "Construction site count");
+            var sites = new List<ConstructionSiteSnapshot>(siteCount);
+            ConstructionInstanceId previousSiteId = default;
+            for (int siteIndex = 0; siteIndex < siteCount; siteIndex++)
+            {
+                var instanceId = new ConstructionInstanceId(
+                    reader.ReadRequiredString());
+                if (siteIndex > 0)
+                {
+                    RequireCanonicalComparison(
+                        previousSiteId.CompareTo(instanceId),
+                        "Construction sites");
+                }
+                previousSiteId = instanceId;
+
+                var definitionId = new ConstructionDefinitionId(
+                    reader.ReadRequiredString());
+                ConstructionSpaceSnapshot space = ReadConstructionSpace(reader);
+                int materialCount = reader.ReadCount(
+                    GameSaveCodecLimits.MaximumConstructionMaterialsPerSite,
+                    "Construction material count");
+                var materials = new List<ConstructionMaterialSnapshot>(materialCount);
+                ItemDefinitionId previousMaterialId = default;
+                for (int materialIndex = 0;
+                     materialIndex < materialCount;
+                     materialIndex++)
+                {
+                    var material = new ConstructionMaterialSnapshot(
+                        new ItemDefinitionId(reader.ReadRequiredString()),
+                        reader.ReadInt32());
+                    if (materialIndex > 0)
+                    {
+                        RequireCanonicalComparison(
+                            previousMaterialId.CompareTo(material.DefinitionId),
+                            "Construction materials");
+                    }
+                    previousMaterialId = material.DefinitionId;
+                    materials.Add(material);
+                }
+
+                sites.Add(new ConstructionSiteSnapshot(
+                    instanceId,
+                    definitionId,
+                    space,
+                    materials,
+                    reader.ReadInt32()));
+            }
+
+            int structureCount = reader.ReadCount(
+                GameSaveCodecLimits.MaximumCompletedStructures,
+                "Completed structure count");
+            var structures = new List<CompletedStructureSnapshot>(structureCount);
+            ConstructionInstanceId previousStructureId = default;
+            for (int index = 0; index < structureCount; index++)
+            {
+                var instanceId = new ConstructionInstanceId(
+                    reader.ReadRequiredString());
+                if (index > 0)
+                {
+                    RequireCanonicalComparison(
+                        previousStructureId.CompareTo(instanceId),
+                        "Completed structures");
+                }
+                previousStructureId = instanceId;
+                structures.Add(new CompletedStructureSnapshot(
+                    instanceId,
+                    new ConstructionDefinitionId(reader.ReadRequiredString()),
+                    ReadConstructionSpace(reader)));
+            }
+
+            return new ConstructionSaveSnapshot(
+                sectionVersion,
+                catalogId,
+                catalogRevision,
+                instanceNamespace,
+                nextSequence,
+                sites,
+                structures);
+        }
+
+        private static void WriteConstructionSpace(
+            SaveBufferWriter writer,
+            ConstructionSpaceSnapshot space)
+        {
+            writer.WriteByte((byte)space.Kind);
+            writer.WriteInt64(space.AnchorX);
+            writer.WriteInt64(space.AnchorY);
+            if (space.Kind == ConstructionSpaceKind.Edge)
+                writer.WriteByte((byte)space.EdgeAxis);
+        }
+
+        private static ConstructionSpaceSnapshot ReadConstructionSpace(
+            SaveBufferReader reader)
+        {
+            byte rawKind = reader.ReadByte();
+            if (rawKind > (byte)ConstructionSpaceKind.Roof)
+            {
+                throw Violation(
+                    GameSaveCodecViolation.UnknownEnumValue,
+                    "Unknown construction space kind.");
+            }
+
+            var kind = (ConstructionSpaceKind)rawKind;
+            long anchorX = reader.ReadInt64();
+            long anchorY = reader.ReadInt64();
+            ConstructionEdgeAxis axis = default;
+            if (kind == ConstructionSpaceKind.Edge)
+            {
+                byte rawAxis = reader.ReadByte();
+                if (rawAxis > (byte)ConstructionEdgeAxis.Vertical)
+                {
+                    throw Violation(
+                        GameSaveCodecViolation.UnknownEnumValue,
+                        "Unknown construction edge axis.");
+                }
+                axis = (ConstructionEdgeAxis)rawAxis;
+            }
+
+            return ConstructionSpaceSnapshot.Restore(
+                kind,
+                anchorX,
+                anchorY,
+                axis);
         }
 
         private static ItemStateKind ReadItemStateKind(

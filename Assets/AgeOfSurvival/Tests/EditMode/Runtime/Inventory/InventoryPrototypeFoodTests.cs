@@ -56,12 +56,13 @@ namespace AgeOfSurvival.Runtime.Tests.Inventory
         {
             var session = new InventoryPrototypeSession(System.Array.Empty<AgeOfSurvival.Core.Resources.ResourceState>());
             session.BeginSimulationTick(new WorldPosition(1, 2));
-            GameSaveSnapshot snapshot = session.CaptureGameSaveSnapshot();
+            GameSaveSnapshot snapshot = session.CaptureGameSaveSnapshot(
+                ConstructionSaveSnapshot.Empty);
 
             byte[] data = GameSaveBinaryCodec.Encode(snapshot);
             GameSaveSnapshot decoded = GameSaveBinaryCodec.Decode(data);
 
-            Assert.That(GameSaveBinaryCodec.CurrentVersion, Is.EqualTo(3));
+            Assert.That(GameSaveBinaryCodec.CurrentVersion, Is.EqualTo(4));
             Assert.That(decoded.Food, Is.EqualTo(snapshot.Food));
             Assert.That(decoded.Perishables.Batches.Count, Is.EqualTo(1));
             Assert.That(decoded.Perishables.Batches[0], Is.EqualTo(snapshot.Perishables.Batches[0]));
