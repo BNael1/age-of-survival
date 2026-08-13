@@ -120,7 +120,5 @@ d'implémentation active du lot 7H-A1.
   namespace de monde sauvegardé lorsque cette autorité existe ;
 - valider les contrôles définitifs, la rotation, l'équilibrage de portée et les
   restrictions terrain avec Naël ;
-- construire la géométrie de support des toits à partir des structures sans
-  inventer de règle d'abri ;
 - animations, sons, compétences, outils et coopérations multi-acteurs ;
 - déclinaisons artistiques et atlas final après validation de la direction.

@@ -9,8 +9,8 @@
 
 ## Référence actuelle
 
-Résultat validé pour le lot 7L-C1 corrigé le 11 août 2026 sous Unity
-`6000.3.19f1_7689f4515d75` : **786/786 EditMode** et **20/20 PlayMode**, zéro
+Résultat validé pour le lot 7L-C2 le 12 août 2026 sous Unity
+`6000.3.19f1_7689f4515d75` : **825/825 EditMode** et **20/20 PlayMode**, zéro
 échec, zéro test ignoré et zéro test inconclusif. Les journaux ne contiennent
 aucune erreur C# ni aucun warning C#.
 
@@ -879,3 +879,47 @@ round-trip V4 vérifie aussi monde, tick, position, santé, nourriture et
 inventaire. Le scénario PlayMode réalise chantier → sauvegarde → démontage de
 l'état courant → chargement → rechargement de scène, puis vérifie l'identité,
 la topologie, l'absence de travail actif et le renderer reconstruit.
+
+<!-- LOT7LC2_TESTING -->
+## Lot 7L-C2 — validation de la géométrie Roof ↔ Edge
+
+La baseline est **786/786 EditMode** et **20/20 PlayMode**. Le lot ajoute **39
+cas EditMode**, pour un total final de **825/825 EditMode** ; la suite PlayMode
+historique reste **20/20**. Les deux XML indiquent zéro échec, ignoré ou
+inconclusif.
+
+La fixture Core couvre :
+
+- collection vide et toit sans arête, toujours représenté avec zéro contact ;
+- contacts North, East, South et West, puis les quatre occupants simultanés avec
+  association exacte adresse canonique → identifiant `Edge` ;
+- alias North/South et East/West ;
+- arêtes éloignée et diagonale exclues ;
+- `Surface`, `Interior` et autre `Roof` voisin exclus ;
+- même arête partagée par deux toits, une relation exacte par toit sans doublon ;
+- chantier `Edge` incomplet absent de la capture terminée ;
+- entrée normale, inversée et multi-contacts produisant exactement la même
+  capture, plus ordre canonique de plusieurs toits ;
+- collection/entrée nulles, identifiant dupliqué et occupation dupliquée
+  rejetés séparément ;
+- seam de chunk avec toit et arête propriétaires de chunks différents, et
+  coordonnées négatives ;
+- `ConstructionEdgeAddress.TryCreate` identique à `Create` sur les quatre côtés
+  représentables, rejet d'un enum inconnu et retour sûr sur les quatre
+  débordements extérieurs ;
+- coins `long.MinValue` et `long.MaxValue` : deux côtés extérieurs omis, deux
+  côtés représentables conservés sans overflow ni wrap ;
+- démontage d'une arête puis reconstruction : contact supprimé, toit et
+  occupation Roof conservés ;
+- reconstruction répétée depuis la même capture terminée et reconstruction
+  identique après `ConstructionSaveSnapshot.Capture` / `RestoreState` V4 ;
+- deux définitions `Edge` synthétiques différentes reconnues sans politique de
+  pièce porteuse.
+
+Les scripts officiels `tools/run_editmode_tests.sh` et
+`tools/run_playmode_tests.sh` ont tous deux terminé avec le code `0`. La
+compilation Unity ne relève aucun `error CS` ni `warning CS`. Les journaux
+contiennent le handshake de licence global initial refusé, puis le lancement et
+la connexion réussie du client embarqué `6000.3.19`, ainsi qu'un diagnostic de
+nettoyage `build-server` après la fin réussie des tests ; ces messages
+n'affectent ni les XML ni le code de sortie.

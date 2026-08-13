@@ -1,6 +1,6 @@
 # État du projet
 
-Dernière mise à jour : 11 août 2026
+Dernière mise à jour : 12 août 2026
 
 ## Moteur
 
@@ -11,15 +11,15 @@ Dernière mise à jour : 11 août 2026
 
 ## État actuel
 
-La baseline vérifiée avant le lot 7L-C1 est
-`0e50c226fbca5309cb6d8e3eb699ab6d34ea323c` (`docs: close playable
-construction slice`). `HEAD`, `main` et `origin/main` étaient alignés sur cette
-baseline et l'arbre de travail était propre.
+La baseline vérifiée avant le lot 7L-C2 est
+`85770ed8b12aef261e55c101f4593ca59b3d1a3f` (`docs: document AOSSAVE V4
+construction persistence`). `HEAD`, `main` et `origin/main` étaient alignés sur
+cette baseline et l'arbre de travail était propre.
 
-La validation finale corrigée du lot 7L-C1 sous Unity
-`6000.3.19f1_7689f4515d75` est de **786/786 EditMode** et **20/20 PlayMode**,
+La validation finale du lot 7L-C2 sous Unity
+`6000.3.19f1_7689f4515d75` est de **825/825 EditMode** et **20/20 PlayMode**,
 avec zéro échec, zéro test ignoré et zéro test inconclusif. Aucun package n'est
-ajouté. Le format autoritaire passe de `AOSSAVE V3` à `AOSSAVE V4`.
+ajouté. Le format autoritaire reste `AOSSAVE V4`.
 
 Lots validés et commités :
 
@@ -75,7 +75,9 @@ Lots validés et commités :
 - `fd7eed6` — `docs: close lot 7lb1a construction projection` ;
 - `3e37546` — `feat: add playable construction vertical slice` ;
 - `8e6083d` — `art: refresh survivor and vegetation prototypes` ;
-- `0e50c22` — `docs: close playable construction slice`.
+- `0e50c22` — `docs: close playable construction slice` ;
+- `559199d` — `feat: persist canonical construction state in AOSSAVE V4` ;
+- `85770ed` — `docs: document AOSSAVE V4 construction persistence`.
 
 État validé au commit `26a1a27` :
 
@@ -932,3 +934,38 @@ PlayMode supplémentaires. Le scénario PlayMode sauvegarde un chantier, détrui
 l'état courant, charge la sauvegarde puis vérifie le site et son renderer
 reconstruit. Aucun contrôle, coût, temps, règle de récupération, rendu ou package
 n'est modifié.
+
+<!-- LOT7LC2_PROJECT_STATE -->
+## Lot 7L-C2 — géométrie dérivée de support des toits
+
+Le Core expose désormais `ConstructionRoofBoundaryGeometry`, reconstruite
+uniquement depuis des `CompletedStructureState`. Chaque
+`ConstructionRoofBoundary` conserve l'identifiant et la cellule d'un toit
+terminé, même lorsque son périmètre ne possède aucun occupant. Chaque
+`ConstructionRoofBoundaryContact` identifie ce toit, la structure `Edge`
+terminée rencontrée et la `ConstructionEdgeAddress` canonique exacte.
+
+Les seuls candidats sont North, East, South et West de la cellule Roof. Les
+alias opposés, coordonnées négatives et seams de chunks réutilisent la
+canonicalisation A1 ; aucun filtrage par chunk n'est appliqué. À une limite
+`Int64`, `ConstructionEdgeAddress.TryCreate` classe uniquement le bord extérieur
+comme non représentable et les autres côtés restent évalués, sans overflow ni
+wrap. Les identifiants et occupations dupliqués sont rejetés à la frontière et
+les toits/contacts sont exposés dans un ordre canonique indépendant de l'entrée.
+
+Cette capture représente seulement un fait géométrique. Elle ne sélectionne
+aucune définition porteuse, ne crée aucun `ConstructionSupportLink`, ne choisit
+ni racine ni seuil/arrangement de supports, et ne décide pas si un toit compte
+pour un refuge. `ConstructionSupportGraph` reste l'évaluateur générique séparé.
+Les chantiers incomplets, le Runtime, le catalogue jouable, l'UI, les contrôles
+et les assets Roof ne changent pas.
+
+Les contacts restent dérivés et ne sont pas persistés. `AOSSAVE V4` sauvegarde
+toujours uniquement les sites et structures canoniques nécessaires ; après
+restauration, une capture identique est reconstruite depuis
+`ConstructionWorldState.CaptureCanonicalStructures()`.
+
+Validation : **39 nouveaux cas EditMode**, soit **825/825 EditMode**, et suite
+historique **20/20 PlayMode**, zéro échec, ignoré ou inconclusif. La compilation
+Unity ne produit aucun `error CS` ni `warning CS`. Aucun package ou autre
+dépendance externe n'est ajouté.

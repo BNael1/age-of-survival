@@ -930,3 +930,48 @@ deux affectations ; elle n'est pas une primitive atomique inter-threads. La
 session restaurée ne porte ni sélection, ni preview, ni ghost, ni action de
 travail active. Le `ConstructionWorldPresenter` continue de reconstruire ses
 objets depuis les captures canoniques du monde Core.
+
+<!-- LOT7LC2_ARCHITECTURE -->
+## Construction — géométrie dérivée Roof ↔ Edge 7L-C2
+
+`ConstructionRoofBoundaryGeometry.FromCompletedStructures` est un builder C#
+pur qui consomme exclusivement des `CompletedStructureState`. Il valide sa
+frontière publique — collection et entrées non nulles, identités et espaces
+valides, identifiants et occupations uniques — puis indexe les occupants
+`Edge` par leur `ConstructionEdgeAddress` canonique. Aucun
+`ConstructionSiteState` n'entre dans ce calcul.
+
+La capture immuable est structurée par toit terminé :
+
+```text
+ConstructionRoofBoundaryGeometry
+└─ ConstructionRoofBoundary (RoofInstanceId, RoofCell)
+   └─ ConstructionRoofBoundaryContact
+      (RoofInstanceId, EdgeInstanceId, EdgeAddress)
+```
+
+Un contact signifie uniquement qu'une structure `Roof` terminée occupe une
+cellule et qu'une structure `Edge` terminée occupe exactement l'une des quatre
+arêtes canoniques représentables North, East, South ou West de son périmètre.
+Les toits sans contact restent présents. Les toits sont triés par identifiant ;
+les contacts le sont par toit, adresse d'arête puis identifiant d'occupant.
+L'ordre d'itération des dictionnaires n'est jamais exposé.
+
+`ConstructionEdgeAddress.TryCreate` conserve les invariants stricts de
+`Create`, mais retourne `false` lorsqu'un voisin sortirait du domaine `Int64`.
+Le builder ignore alors ce seul bord et continue les autres. Il n'effectue ni
+comparaison flottante ni conversion Unity. La correspondance est mondiale :
+le toit et l'arête peuvent appartenir à des chunks différents et une même
+arête partagée peut produire un contact distinct pour chacun des deux toits
+adjacents, sans doublon à l'intérieur d'un toit.
+
+Cette géométrie reste séparée de `ConstructionSupportGraph`. Un contact n'est
+pas un `ConstructionSupportLink` : il ne dit pas que l'occupant transmet du
+support, qu'un nombre ou un arrangement de contacts suffit, ni que le toit
+compte pour un refuge. Les racines, liens effectifs, pièces porteuses et règles
+d'abri restent une politique explicite ultérieure.
+
+La capture n'est pas une nouvelle autorité persistante. `AOSSAVE V4` reste
+inchangé et ne contient ni contact, ni bord dérivé, ni lien, ni racine, ni
+évaluation. Après chargement ou démontage, la géométrie est recalculée depuis
+`ConstructionWorldState.CaptureCanonicalStructures()`.

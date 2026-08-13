@@ -586,8 +586,9 @@ contrôles définitifs du jeu.
 - contrôles physiques définitifs, hiérarchie UI finale et présentation du ghost ;
 - coûts, quantités et durées d'équilibrage ;
 - restrictions terrain, rotation et équilibrage final de portée ;
-- persistance complète des sites, structures et prochaine séquence d'ID ;
-- règles géométriques qui construisent les liens de support des toits.
+- politique explicite transformant les contacts géométriques Roof ↔ Edge en
+  liens de support effectifs : pièces porteuses, seuil ou arrangement requis et
+  règle d'abri.
 
 <!-- LOT7J_DECISIONS -->
 ## ADR-0027 — ressources naturelles versionnées et rendements composés
@@ -712,9 +713,10 @@ structures terminées, pas une décision définitive sur les chantiers partiels.
 Une future règle de gameplay pourra fournir d'autres nœuds au graphe générique
 sans modifier son algorithme.
 
-Cette décision ne change ni AOSSAVE V3, ni les contrôles, ni le Runtime. Les
-règles géométriques concrètes de support seront définies dans un lot ultérieur
-avec validation du gameplay.
+Cette décision ne change ni les contrôles ni le Runtime. Le lot 7L-C2 fournit
+désormais les contacts géométriques Roof ↔ Edge comme faits dérivés, sans créer
+les liens du graphe. La sélection des contacts transmettant réellement du
+support et la règle d'abri restent une politique ultérieure à valider.
 
 <!-- ADR-0032 -->
 ## ADR-0032 — projection de placement Runtime indépendante de la simulation
@@ -784,3 +786,31 @@ une migration explicite.
 
 Cette décision ne modifie aucune règle gameplay, UX, contrôle, portée, coût,
 temps, récupération, support ou présentation de la tranche jouable.
+
+<!-- ADR_0035 -->
+## ADR-0035 — contacts géométriques Roof ↔ Edge dérivés sans politique de support
+
+**Statut : active**
+**Date : 12 août 2026**
+
+7L-C2 sépare trois niveaux qui ne doivent pas être confondus :
+
+1. le fait géométrique qu'un occupant `Edge` terminé se trouve sur une arête
+   canonique représentable du périmètre d'un `Roof` terminé ;
+2. la politique structurelle qui décide quels occupants transmettent du support
+   et crée éventuellement des `ConstructionSupportLink` ;
+3. la règle d'abri qui décide si un toit possède assez de support pour compter
+   comme couverture.
+
+Seul le premier niveau est implémenté. La géométrie est reconstruite en C# pur
+depuis les `CompletedStructureState`, conserve les toits sans contact, accepte
+toute définition occupant un espace `Edge` et exclut les chantiers. Les sorties
+sont canoniques et indépendantes de l'ordre d'entrée. Un bord sortant du domaine
+`Int64` est non représentable et ignoré individuellement ; les autres côtés
+restent évalués sans wrap.
+
+Cette capture ne devient ni état monde mutable ni autorité persistante.
+`ConstructionSupportGraph` reste l'évaluateur de propagation à racines et liens
+explicites. `AOSSAVE` reste V4 et ne persiste ni contacts, ni liens, ni racines,
+ni évaluation de support. Aucun toit jouable, contrôle, rendu ou élément d'UI
+n'est ajouté par cette décision.
