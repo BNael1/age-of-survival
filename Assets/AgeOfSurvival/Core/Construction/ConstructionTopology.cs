@@ -100,6 +100,27 @@ namespace AgeOfSurvival.Core.Construction
             }
         }
 
+        /// <summary>
+        /// Attempts to create a canonical edge while treating a neighbour outside the Int64 world domain
+        /// as non-representable. Unknown sides remain programming errors and are rejected.
+        /// </summary>
+        public static bool TryCreate(
+            WorldCellCoordinate cell,
+            ConstructionCellSide side,
+            out ConstructionEdgeAddress edge)
+        {
+            try
+            {
+                edge = Create(cell, side);
+                return true;
+            }
+            catch (OverflowException)
+            {
+                edge = default;
+                return false;
+            }
+        }
+
         public WorldCellCoordinate FirstCell
         {
             get
