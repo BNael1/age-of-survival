@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Security.Cryptography;
 using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Construction;
@@ -22,6 +23,8 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             new ConstructionDefinitionId("prototype.floor.basic");
         private static readonly ConstructionDefinitionId WallId =
             new ConstructionDefinitionId("prototype.wall.basic");
+        private static readonly ConstructionDefinitionId RoofId =
+            new ConstructionDefinitionId("synthetic.roof");
 
         [Test]
         public void EmptyV4RoundTripPreservesEmptyConstructionAndPriorData()
@@ -181,6 +184,74 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             Assert.That(floor.Space, Is.EqualTo(surface));
             Assert.That(wall.Space, Is.EqualTo(edge));
             Assert.That(restored.World.OccupiedSpaceCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void V4RoundTrip_RebuildsTheSameDerivedBoundedRoofSupport()
+        {
+            var saved = new ConstructionSaveSnapshot(
+                ConstructionSaveDefaults.SectionVersion,
+                "synthetic.support.catalog",
+                1,
+                "support",
+                6L,
+                Array.Empty<ConstructionSiteSnapshot>(),
+                new[]
+                {
+                    Structure(
+                        new ConstructionInstanceId("support:0000000001"),
+                        WallId,
+                        ConstructionSpaceKey.Edge(
+                            new WorldCellCoordinate(0L, 0L),
+                            ConstructionCellSide.West)),
+                    Structure(
+                        new ConstructionInstanceId("support:0000000002"),
+                        RoofId,
+                        ConstructionSpaceKey.Roof(new WorldCellCoordinate(0L, 0L))),
+                    Structure(
+                        new ConstructionInstanceId("support:0000000003"),
+                        RoofId,
+                        ConstructionSpaceKey.Roof(new WorldCellCoordinate(1L, 0L))),
+                    Structure(
+                        new ConstructionInstanceId("support:0000000004"),
+                        RoofId,
+                        ConstructionSpaceKey.Roof(new WorldCellCoordinate(2L, 0L))),
+                    Structure(
+                        new ConstructionInstanceId("support:0000000005"),
+                        RoofId,
+                        ConstructionSpaceKey.Roof(new WorldCellCoordinate(3L, 0L)))
+                });
+            ConstructionDefinitionCatalog catalog = CreateSupportCatalog();
+            var policy = new ConstructionRoofSupportPolicy(new[] { WallId }, 2);
+            ConstructionWorldState originalWorld = saved.RestoreState(catalog);
+            ConstructionSupportGraph before = ConstructionRoofSupportGraphBuilder.Build(
+                catalog,
+                originalWorld.CaptureCanonicalStructures(),
+                policy);
+
+            byte[] bytes = GameSaveBinaryCodec.Encode(CreateGameSnapshot(saved));
+            GameSaveSnapshot decoded = GameSaveBinaryCodec.Decode(bytes);
+            ConstructionWorldState restoredWorld = decoded.Construction.RestoreState(catalog);
+            ConstructionSupportGraph after = ConstructionRoofSupportGraphBuilder.Build(
+                catalog,
+                restoredWorld.CaptureCanonicalStructures(),
+                policy);
+
+            Assert.That(GameSaveBinaryCodec.CurrentVersion, Is.EqualTo(4));
+            Assert.That(ReadUInt16(bytes, 8), Is.EqualTo(4));
+            Assert.That(
+                restoredWorld.CaptureCanonicalStructures().Select(
+                    structure => structure.InstanceId),
+                Is.EqualTo(originalWorld.CaptureCanonicalStructures().Select(
+                    structure => structure.InstanceId)));
+            Assert.That(after.NodeIds, Is.EqualTo(before.NodeIds));
+            Assert.That(after.RootIds, Is.EqualTo(before.RootIds));
+            Assert.That(after.Links, Is.EqualTo(before.Links));
+            Assert.That(after.Evaluate().RoofStates,
+                Is.EqualTo(before.Evaluate().RoofStates));
+            Assert.That(after.Evaluate().RequireRoofState(
+                new ConstructionInstanceId("support:0000000005")).IsSupported,
+                Is.False);
         }
 
         [Test]
@@ -607,6 +678,24 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                         new ConstructionMaterialRequirement(Wood.Id, 1)
                     })
             });
+        }
+
+        private static ConstructionDefinitionCatalog CreateSupportCatalog()
+        {
+            var definitions = new List<ConstructionDefinition>(
+                CreateCatalog().Definitions)
+            {
+                new ConstructionDefinition(
+                    RoofId,
+                    ConstructionSpaceKind.Roof,
+                    20,
+                    new[]
+                    {
+                        new ConstructionMaterialRequirement(Branches.Id, 2),
+                        new ConstructionMaterialRequirement(Wood.Id, 1)
+                    })
+            };
+            return new ConstructionDefinitionCatalog(definitions);
         }
 
         private static WorldPopulationSettings CreateWorld() =>

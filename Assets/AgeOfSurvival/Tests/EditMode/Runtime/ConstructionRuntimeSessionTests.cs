@@ -30,6 +30,20 @@ namespace AgeOfSurvival.Runtime.Tests
         }
 
         [Test]
+        public void PrototypeRoofSupportPolicy_UsesWallOpeningAndDistanceTwo()
+        {
+            ConstructionRoofSupportPolicy policy =
+                ConstructionPrototypeCatalog.CreateRoofSupportPolicy();
+
+            Assert.That(policy.SupportingEdgeDefinitionIds, Is.EqualTo(new[]
+            {
+                ConstructionPrototypeCatalog.OpeningId,
+                ConstructionPrototypeCatalog.WallId
+            }));
+            Assert.That(policy.MaximumRoofPropagationDistance, Is.EqualTo(2));
+        }
+
+        [Test]
         public void MonotonicAllocator_AdvancesOnlyAfterCommittedSuccess()
         {
             var allocator = new MonotonicConstructionInstanceIdAllocator("test", 7L);

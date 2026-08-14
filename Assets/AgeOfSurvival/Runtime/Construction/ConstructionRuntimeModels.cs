@@ -278,6 +278,13 @@ namespace AgeOfSurvival.Runtime.Construction
                 ConstructionSaveDefaults.PrototypeCatalogRevision);
         }
 
+        public static ConstructionRoofSupportPolicy CreateRoofSupportPolicy()
+        {
+            return new ConstructionRoofSupportPolicy(
+                new[] { WallId, OpeningId },
+                2);
+        }
+
         private static ConstructionPrototypeDefinition Create(
             ConstructionDefinitionId id,
             ConstructionSpaceKind kind,
