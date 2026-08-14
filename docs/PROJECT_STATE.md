@@ -1,6 +1,6 @@
 # État du projet
 
-Dernière mise à jour : 12 août 2026
+Dernière mise à jour : 14 août 2026
 
 ## Moteur
 
@@ -11,13 +11,13 @@ Dernière mise à jour : 12 août 2026
 
 ## État actuel
 
-La baseline vérifiée avant le lot 7L-C2 est
-`85770ed8b12aef261e55c101f4593ca59b3d1a3f` (`docs: document AOSSAVE V4
-construction persistence`). `HEAD`, `main` et `origin/main` étaient alignés sur
-cette baseline et l'arbre de travail était propre.
+La baseline vérifiée avant le lot 7L-C3 est
+`d0e4e5a92649b8a29bc947a8e2e320fec240ae09` (`docs: document roof boundary
+geometry`). `HEAD`, `main` et `origin/main` étaient alignés sur cette baseline et
+l'arbre de travail était propre.
 
-La validation finale du lot 7L-C2 sous Unity
-`6000.3.19f1_7689f4515d75` est de **825/825 EditMode** et **20/20 PlayMode**,
+La validation finale du lot 7L-C3 sous Unity
+`6000.3.19f1_7689f4515d75` est de **872/872 EditMode** et **20/20 PlayMode**,
 avec zéro échec, zéro test ignoré et zéro test inconclusif. Aucun package n'est
 ajouté. Le format autoritaire reste `AOSSAVE V4`.
 
@@ -966,6 +966,39 @@ restauration, une capture identique est reconstruite depuis
 `ConstructionWorldState.CaptureCanonicalStructures()`.
 
 Validation : **39 nouveaux cas EditMode**, soit **825/825 EditMode**, et suite
+historique **20/20 PlayMode**, zéro échec, ignoré ou inconclusif. La compilation
+Unity ne produit aucun `error CS` ni `warning CS`. Aucun package ou autre
+dépendance externe n'est ajouté.
+
+<!-- LOT7LC3_PROJECT_STATE -->
+## Lot 7L-C3 — politique structurelle bornée des toits
+
+Le Core expose désormais `ConstructionRoofSupportPolicy` et
+`ConstructionRoofSupportGraphBuilder`. La politique configure explicitement les
+définitions `Edge` porteuses et la distance maximale de propagation entre toits.
+Le builder valide le catalogue et l'état terminé, reconstruit lui-même la
+géométrie 7L-C2, puis transforme les contacts porteurs en racines et liens du
+`ConstructionSupportGraph` existant.
+
+Tous les toits en contact avec un `Edge` terminé configuré commencent à distance
+zéro. Une BFS multi-source calcule ensuite le plus court chemin parmi les seules
+cellules Roof terminées cardinalement adjacentes. Les liens Roof -> Roof sont
+émis uniquement d'une distance `d` vers `d + 1` lorsque `d` est strictement
+inférieure à la portée. Le graphe générique reste donc non borné ; c'est le
+sous-graphe produit par la politique qui interdit naturellement `d2 -> d3`.
+
+Le prototype Runtime raccorde `ConstructionPrototypeCatalog.WallId` et
+`OpeningId` avec une portée `2`, sans ajouter de Roof au catalogue jouable. Un
+toit devenu non supporté reste une `CompletedStructureState`, ne transmet plus
+de support et ne compte plus pour le refuge ; aucune destruction, action Runtime
+ou cascade physique n'est déclenchée.
+
+La politique et son évaluation restent entièrement dérivées. `AOSSAVE V4`, sa
+section Construction, la révision du catalogue et le snapshot autoritaire sont
+inchangés. Un aller-retour V4 conserve les structures terminées, puis reconstruit
+exactement les mêmes nœuds, racines, liens et états Roof.
+
+Validation : **47 nouveaux cas EditMode**, soit **872/872 EditMode**, et suite
 historique **20/20 PlayMode**, zéro échec, ignoré ou inconclusif. La compilation
 Unity ne produit aucun `error CS` ni `warning CS`. Aucun package ou autre
 dépendance externe n'est ajouté.

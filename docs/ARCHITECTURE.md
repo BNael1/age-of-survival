@@ -975,3 +975,46 @@ La capture n'est pas une nouvelle autorité persistante. `AOSSAVE V4` reste
 inchangé et ne contient ni contact, ni bord dérivé, ni lien, ni racine, ni
 évaluation. Après chargement ou démontage, la géométrie est recalculée depuis
 `ConstructionWorldState.CaptureCanonicalStructures()`.
+
+<!-- LOT7LC3_ARCHITECTURE -->
+## Construction — politique structurelle bornée Roof 7L-C3
+
+`ConstructionRoofSupportPolicy` est une configuration Core immuable. Elle
+canonicalise une liste explicite de `ConstructionDefinitionId` devant occuper
+un espace `Edge` et porte une distance maximale Roof -> Roof non négative. Elle
+ne modifie pas le schéma universel de `ConstructionDefinition` et ne connaît
+aucune constante du catalogue Runtime.
+
+`ConstructionRoofSupportGraphBuilder.Build` est la frontière publique entre les
+faits terminés et le graphe effectif. Elle valide catalogue, entrées, identités,
+occupations, définitions et correspondances de `ConstructionSpaceKind`, puis
+vérifie que chaque définition porteuse configurée existe et occupe `Edge`. Elle
+appelle ensuite `ConstructionRoofBoundaryGeometry.FromCompletedStructures` au
+lieu de reproduire la détection Roof ↔ Edge.
+
+Pour chaque contact dont l'occupant `Edge` possède une définition porteuse, cet
+occupant devient racine et un lien `Edge -> Roof` est créé. Le toit adjacent
+reçoit la distance zéro. Une BFS multi-source déterministe calcule les distances
+minimales sur les seules cellules Roof terminées cardinalement adjacentes. Le
+voisin est obtenu via `ConstructionEdgeAddress.TryCreate`; une direction hors
+du domaine `Int64` est simplement non traversable.
+
+Après calcul, tous les liens de racine sont conservés. Un lien
+`Roof provider -> Roof dependent` est ajouté pour chaque chemin minimal vérifiant
+`dependentDistance == providerDistance + 1` et
+`providerDistance < MaximumRoofPropagationDistance`. Plusieurs parents minimaux
+sont conservés, puis racines et liens sont canonicalisés. Une case manquante ou
+une simple diagonale ne transmet aucun support ; ni mur intermédiaire, ni
+Surface, Floor ou Interior ne sont requis entre deux toits adjacents.
+
+Le résultat est construit avec
+`ConstructionSupportGraph.FromCompletedStructures`. Son `Evaluate()` reste un
+évaluateur générique de reachability sans portée globale. Le bornage appartient
+exclusivement à la politique qui omet les liens sortant de la portée. Le factory
+Runtime `ConstructionPrototypeCatalog.CreateRoofSupportPolicy()` sélectionne
+`WallId`, `OpeningId` et la portée `2`; la dépendance reste Runtime -> Core.
+
+Cette couche est dérivée et sans cache autoritaire. Un démontage reconstruit la
+géométrie puis le sous-graphe ; les Roofs terminés restent physiquement présents
+même lorsqu'ils deviennent `Unsupported`. La détection d'une pièce, la validité
+d'un refuge, la familiarité et le foyer principal restent des domaines séparés.

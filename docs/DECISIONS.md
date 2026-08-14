@@ -814,3 +814,41 @@ Cette capture ne devient ni état monde mutable ni autorité persistante.
 explicites. `AOSSAVE` reste V4 et ne persiste ni contacts, ni liens, ni racines,
 ni évaluation de support. Aucun toit jouable, contrôle, rendu ou élément d'UI
 n'est ajouté par cette décision.
+
+<!-- ADR_0036 -->
+## ADR-0036 — support Roof borné par politique explicite
+
+**Statut : active, validée par Naël**
+**Date : 14 août 2026**
+
+Dans le prototype, les structures terminées `Wall`
+(`ConstructionPrototypeCatalog.WallId`) et `OpeningFrame`
+(`ConstructionPrototypeCatalog.OpeningId`) transmettent du support lorsqu'elles
+occupent un contact géométrique Roof ↔ Edge fourni par 7L-C2. Un chantier ne
+transmet jamais de support. La liste porteuse est une politique Core explicite
+configurée par le Runtime ; elle n'est pas une propriété générique de toutes les
+`ConstructionDefinition`.
+
+Un contact direct donne au Roof adjacent une distance de support `0`. Le support
+se propage ensuite uniquement entre cellules Roof terminées cardinalement
+adjacentes. Chaque traversée ajoute `1`; diagonales, cases manquantes, Surface,
+Floor et Interior ne créent aucun raccourci. La distance effective est le plus
+court chemin depuis n'importe quel contact porteur, calculé en multi-source. La
+distance maximale du prototype est `2` : `d0`, `d1` et `d2` sont supportés,
+`d3` ne l'est pas.
+
+La portée ne modifie pas l'algorithme générique de `ConstructionSupportGraph`.
+La politique construit un sous-graphe qui conserve les liens
+`Edge porteur -> Roof d0`, puis seulement les liens Roof -> Roof de `d` vers
+`d + 1` avec `d < 2`. Aucun lien `d2 -> d3` n'existe. Tous les parents minimaux
+valides peuvent être conservés en ordre canonique.
+
+Lorsqu'un support disparaît, le Roof reste une structure terminée autoritaire.
+Son état dérivé devient `Unsupported`, il cesse de compter vers la couverture ou
+le refuge et ne transmet plus de support aux Roofs suivants. Aucun effondrement,
+suppression, dégât, matériau au sol ou cascade physique n'est déclenché.
+
+Racines, liens, distances et états de support sont reconstruits et ne sont pas
+persistés. `AOSSAVE` reste V4. Cette décision traite uniquement le support
+structurel : elle ne détecte ni pièce, ni refuge valide, ni familiarité, ni foyer
+principal.

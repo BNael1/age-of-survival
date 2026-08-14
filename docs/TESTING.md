@@ -9,8 +9,8 @@
 
 ## Référence actuelle
 
-Résultat validé pour le lot 7L-C2 le 12 août 2026 sous Unity
-`6000.3.19f1_7689f4515d75` : **825/825 EditMode** et **20/20 PlayMode**, zéro
+Résultat validé pour le lot 7L-C3 le 14 août 2026 sous Unity
+`6000.3.19f1_7689f4515d75` : **872/872 EditMode** et **20/20 PlayMode**, zéro
 échec, zéro test ignoré et zéro test inconclusif. Les journaux ne contiennent
 aucune erreur C# ni aucun warning C#.
 
@@ -923,3 +923,44 @@ contiennent le handshake de licence global initial refusé, puis le lancement et
 la connexion réussie du client embarqué `6000.3.19`, ainsi qu'un diagnostic de
 nettoyage `build-server` après la fin réussie des tests ; ces messages
 n'affectent ni les XML ni le code de sortie.
+
+<!-- LOT7LC3_TESTING -->
+## Lot 7L-C3 — validation de la politique structurelle bornée
+
+Le lot ajoute **47 cas EditMode** à la baseline **825/825**, soit un total
+validé de **872/872 EditMode**. La suite PlayMode historique reste à
+**20/20** : le lot n'ajoute ni Roof jouable, ni UI, rendu, contrôle ou action
+Runtime.
+
+La couverture ajoutée vérifie :
+
+- construction et canonicalisation de la politique, distance négative,
+  identifiants nuls/invalides/dupliqués, définition porteuse inconnue ou non
+  `Edge`, et factory Runtime exactement `OpeningId + WallId + 2` ;
+- frontière du builder : arguments/entrées nulles, instance ou occupation
+  dupliquée, définition de structure inconnue et incompatibilité définition ↔
+  espace ;
+- monde vide, Roof isolé, contacts Wall/OpeningFrame, autre Edge, mur distant et
+  chantier Wall incomplet ;
+- portée exacte unilatérale `d0` à `d3`, configurations `maxDistance=0` et `1`,
+  puis chaînes de six et sept Roofs soutenues aux deux extrémités ;
+- plus court chemin multi-source, plusieurs contacts racines sur un même Roof et
+  conservation de tous les parents minimaux valides ;
+- diagonale, trou, branche en L, Edge partagée par deux Roofs, seam de chunks,
+  coordonnées négatives et bornes `Int64` sans overflow/wrap ;
+- démontage du support sans suppression des Roofs, absence explicite du lien
+  `d2 -> d3`, retrait d'un Roof intermédiaire, réapparition du support et absence
+  de cache obsolète ;
+- égalité canonique de `NodeIds`, `RootIds`, `Links` et `RoofStates` pour des
+  structures et listes de définitions porteuses inversées ;
+- contrat `CountsTowardShelter == IsSupported` ;
+- aller-retour binaire `AOSSAVE V4` d'un état synthétique compatible, conservation
+  des `CompletedStructureState`, puis reconstruction des mêmes racines, liens et
+  états dérivés sans champ de sauvegarde supplémentaire.
+
+La compilation diagnostique utilise les response files Roslyn produits par
+Unity pour les assemblies Core, Core.Tests, Runtime et Runtime.Tests ; elle ne
+produit aucun `error CS` ni `warning CS`. Les scripts officiels
+`tools/run_editmode_tests.sh` et `tools/run_playmode_tests.sh` terminent avec le
+code `0`. Les XML finaux indiquent respectivement **872/872** et **20/20**, zéro
+échec, ignoré ou inconclusif.
