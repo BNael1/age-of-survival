@@ -852,3 +852,28 @@ Racines, liens, distances et états de support sont reconstruits et ne sont pas
 persistés. `AOSSAVE` reste V4. Cette décision traite uniquement le support
 structurel : elle ne détecte ni pièce, ni refuge valide, ni familiarité, ni foyer
 principal.
+
+<!-- ADR_0037 -->
+## ADR-0037 — enclosure prouvée uniquement dans un scope fini explicite
+
+**Statut : active**
+**Date : 15 août 2026**
+
+7L-C4 retient une implémentation propriétaire minimale en C# pur, fondée sur les
+primitives canoniques de grille existantes. Un BFS cardinal partitionne le scope
+fourni selon les `ConstructionEdgeAddress` bloquantes ; les entrées dupliquées
+sont canonicalisées et les sorties sont triées indépendamment de l’ordre
+d’entrée.
+
+La fermeture est une preuve locale au scope, pas une affirmation d’ouverture
+vers un extérieur global. Une composante est fermée seulement si chaque sortie
+est bloquée ou rejoint une cellule de la même composante dans le scope. Une
+sortie non bloquée hors scope, y compris une direction non représentable à une
+borne `Int64`, marque `TouchesAnalysisBoundary` et interdit `IsEnclosed`. Une
+arête bloquante valide à la frontière peut en revanche fermer sa sortie même si
+l’autre cellule n’appartient pas au scope.
+
+Le résultat est immuable, dérivé et entièrement reconstructible. Aucun
+`RoomId`, cache autoritaire ou état sauvegardé n’est créé ; `AOSSAVE` reste V4.
+Cette décision ne choisit pas quelles constructions bloquent, ne définit aucune
+pièce gameplay ni refuge et n’ajoute aucun comportement Runtime.

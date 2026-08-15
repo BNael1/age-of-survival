@@ -1018,3 +1018,29 @@ Cette couche est dérivée et sans cache autoritaire. Un démontage reconstruit 
 géométrie puis le sous-graphe ; les Roofs terminés restent physiquement présents
 même lorsqu'ils deviennent `Unsupported`. La détection d'une pièce, la validité
 d'un refuge, la familiarité et le foyer principal restent des domaines séparés.
+
+<!-- LOT7LC4_ARCHITECTURE -->
+## Construction — fondation d’analyse d’enclosure bornée par scope 7L-C4
+
+`ConstructionEnclosureAnalyzer.Analyze` est une primitive C# pure qui reçoit un
+scope fini de `WorldCellCoordinate` et des `ConstructionEdgeAddress` bloquantes.
+Elle canonicalise les doublons, parcourt uniquement North/East/South/West et
+partitionne le scope en composantes connexes sans jamais traverser une arête
+bloquante. Le flood-fill reste borné aux cellules fournies et ne construit ni
+bounding box ni représentation du monde infini.
+
+Le résultat immuable `ConstructionEnclosureAnalysis` expose des
+`ConstructionEnclosureRegion` triées par leur première cellule canonique ; les
+cellules de chaque région suivent `WorldCellCoordinate.CompareTo`. Une région
+est `IsEnclosed` uniquement lorsque chaque direction de chacune de ses cellules
+est soit bloquée, soit reliée par une arête non bloquée à une cellule du scope.
+Toute sortie non bloquée hors scope positionne `TouchesAnalysisBoundary` et
+interdit la preuve de fermeture. Une arête bloquante située sur la frontière du
+scope ferme cependant cette sortie.
+
+Lorsque `ConstructionEdgeAddress.TryCreate` échoue à une limite `Int64`, la
+direction reste non résolue : elle ne devient jamais une fermeture implicite.
+L’analyse est dérivée, reconstructible et sans identifiant persistant. Elle ne
+définit ni pièce gameplay, ni refuge, ni politique Wall/OpeningFrame, porte,
+fenêtre, Roof, familiarité ou foyer. Le Runtime et `AOSSAVE V4` restent
+inchangés.

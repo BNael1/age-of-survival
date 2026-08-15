@@ -1,6 +1,6 @@
 # État du projet
 
-Dernière mise à jour : 14 août 2026
+Dernière mise à jour : 15 août 2026
 
 ## Moteur
 
@@ -11,15 +11,16 @@ Dernière mise à jour : 14 août 2026
 
 ## État actuel
 
-La baseline vérifiée avant le lot 7L-C3 est
-`d0e4e5a92649b8a29bc947a8e2e320fec240ae09` (`docs: document roof boundary
-geometry`). `HEAD`, `main` et `origin/main` étaient alignés sur cette baseline et
-l'arbre de travail était propre.
+L'état de départ vérifié du lot 7L-C4 est le commit
+`abc1490318ef0eaf777b879752cbe628717c78c0` (`docs: document bounded roof
+support policy`). La branche `lot/7lc4-enclosure-foundation` a été créée depuis
+cette baseline, sur laquelle `main` et `origin/main` étaient alignés et l'arbre
+de travail était propre avant les modifications du lot.
 
-La validation finale du lot 7L-C3 sous Unity
-`6000.3.19f1_7689f4515d75` est de **872/872 EditMode** et **20/20 PlayMode**,
+La validation finale du lot 7L-C4 sous Unity
+`6000.3.19f1_7689f4515d75` est de **891/891 EditMode** et **20/20 PlayMode**,
 avec zéro échec, zéro test ignoré et zéro test inconclusif. Aucun package n'est
-ajouté. Le format autoritaire reste `AOSSAVE V4`.
+ajouté. Le format autoritaire `AOSSAVE V4` reste inchangé.
 
 Lots validés et commités :
 
@@ -1002,3 +1003,26 @@ Validation : **47 nouveaux cas EditMode**, soit **872/872 EditMode**, et suite
 historique **20/20 PlayMode**, zéro échec, ignoré ou inconclusif. La compilation
 Unity ne produit aucun `error CS` ni `warning CS`. Aucun package ou autre
 dépendance externe n'est ajouté.
+
+<!-- LOT7LC4_PROJECT_STATE -->
+## Lot 7L-C4 — fondation d’analyse d’enclosure bornée par scope
+
+Le Core expose désormais `ConstructionEnclosureAnalyzer.Analyze`, qui
+partitionne un ensemble fini de cellules monde en régions connexes selon un
+ensemble explicite d’arêtes canoniques bloquantes. Chaque région expose ses
+cellules triées, `TouchesAnalysisBoundary` et `IsEnclosed`; les régions sont
+elles-mêmes triées par leur première cellule.
+
+La primitive ne quitte jamais le scope fourni. Une sortie non bloquée hors scope
+ou non représentable à une borne `Int64` empêche la preuve de fermeture, tandis
+qu’une arête bloquante sur la frontière ferme correctement cette direction.
+Doublons et ordres d’entrée n’altèrent pas le résultat ; une arête invalide est
+rejetée.
+
+Cette couche est dérivée et sans persistance. Elle n’introduit ni pièce gameplay,
+ni refuge, ni politique de blocage pour Wall/OpeningFrame, ni Runtime, rendu,
+contrôle ou package. `AOSSAVE V4` reste inchangé.
+
+Validation EditMode : **19 nouveaux tests**, portant la suite complète à
+**891/891**, zéro échec, ignoré ou inconclusif. La suite PlayMode historique
+reste **20/20**, sans échec ni test ignoré.

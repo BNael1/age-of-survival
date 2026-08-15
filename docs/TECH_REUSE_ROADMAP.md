@@ -187,3 +187,15 @@ conceptuelles seulement. Aucun code tiers n'est copié ou adapté.
 La stratégie de sortie est immédiate : les sprites et l'UI peuvent être
 remplacés sans migration du Core ; les commandes et l'allocateur sont injectés
 et restent testables hors MonoBehaviour.
+
+<!-- LOT7LC4_REUSE -->
+## Recherche du lot 7L-C4 — composantes et enclosure
+
+| Candidat | Licence / statut | Analyse | Décision |
+|---|---|---|---|
+| Boost.Graph `connected_components` | Boost Software License 1.0, projet maintenu | DFS en `O(V+E)`, mais dépendance C++ très large et intégration disproportionnée pour quatre voisins par cellule. | **Rejeté** |
+| CGAL `Arrangement_2` | module sous GPL | Modèle robuste de faces bornées/non bornées, mais architecture géométrique et obligations incompatibles avec cette primitive de grille. | **Rejeté** |
+| QuikGraph 2.5.0 | MS-PL, release GitHub du 4 juillet 2022 | Bibliothèque .NET/Unity généraliste largement surdimensionnée pour un flood-fill cardinal borné. | **Rejeté** |
+| BFS propriétaire sur `WorldCellCoordinate` / `ConstructionEdgeAddress` | Core Age of Survival | Réutilise l’identité canonique et `TryCreate`, reste petit, déterministe, testable et reconstructible. | **Adopté** |
+
+7L-C4 n’ajoute aucune dépendance ; `THIRD_PARTY.md` reste inchangé.

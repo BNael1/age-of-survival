@@ -964,3 +964,22 @@ produit aucun `error CS` ni `warning CS`. Les scripts officiels
 `tools/run_editmode_tests.sh` et `tools/run_playmode_tests.sh` terminent avec le
 code `0`. Les XML finaux indiquent respectivement **872/872** et **20/20**, zéro
 échec, ignoré ou inconclusif.
+
+<!-- LOT7LC4_TESTING -->
+## Lot 7L-C4 — validation de l’enclosure bornée par scope
+
+La baseline est **872/872 EditMode** et **20/20 PlayMode**. Le lot ajoute **19
+tests EditMode**, pour un total validé de **891/891 EditMode**, zéro échec,
+ignoré ou inconclusif.
+
+La fixture couvre les arguments nuls, arêtes invalides, scope vide, cellule
+ouverte ou fermée, arête manquante, connexion et séparation de deux cellules,
+contournement d’une barrière interne, coordonnées négatives, seam 31/32,
+invariance aux ordres et doublons, blockers de frontière, sortie hors scope,
+bounds `Int64`, coexistence de régions fermées et non résolues, ordre canonique
+et collections publiques en lecture seule.
+
+Le lot reste Core-only et n’ajoute aucun scénario PlayMode. Les scripts officiels
+`tools/run_editmode_tests.sh` et `tools/run_playmode_tests.sh` terminent avec le
+code `0`; la suite PlayMode historique complète reste **20/20**, zéro échec et
+zéro test ignoré.
