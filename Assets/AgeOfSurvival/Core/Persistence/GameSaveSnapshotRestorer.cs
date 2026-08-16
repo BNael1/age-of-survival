@@ -59,6 +59,8 @@ namespace AgeOfSurvival.Core.Persistence
                 snapshot.Construction.InstanceNamespace,
                 snapshot.Construction.NextInstanceSequence,
                 constructionWorld);
+            AgeOfSurvival.Core.Shelter.ShelterHomeState shelters =
+                snapshot.Shelters.RestoreState();
 
             var store = new ChunkMutationStore();
             for (int index = 0; index < snapshot.ChunkMutations.Count; index++)
@@ -78,7 +80,8 @@ namespace AgeOfSurvival.Core.Persistence
                 perishables,
                 inventory,
                 chunks,
-                construction);
+                construction,
+                shelters);
         }
 
         private static void ValidateResolvedWorld(

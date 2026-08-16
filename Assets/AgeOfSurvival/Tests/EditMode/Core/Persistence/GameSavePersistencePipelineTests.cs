@@ -79,7 +79,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
         {
             byte[] legacy = ConvertV2ToLegacyV1(
                 ConvertV3ToLegacyV2(
-                    ConvertV4ToLegacyV3(
+                    ConvertCurrentToLegacyV3(
                         GameSaveBinaryCodec.Encode(CreateSnapshot(42)))));
 
             Assert.That(ReadUInt16(legacy, 8), Is.EqualTo(1));
@@ -105,14 +105,14 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 ReadUInt16(
                     GameSaveBinaryCodec.Encode(decoded),
                     8),
-                Is.EqualTo(4));
+                Is.EqualTo(5));
         }
 
         [Test]
         public void CodecReadsLegacyV2AsFullFoodAtSavedTick()
         {
             byte[] legacy = ConvertV3ToLegacyV2(
-                ConvertV4ToLegacyV3(
+                ConvertCurrentToLegacyV3(
                     GameSaveBinaryCodec.Encode(CreateSnapshot(42))));
 
             Assert.That(ReadUInt16(legacy, 8), Is.EqualTo(2));
@@ -129,7 +129,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
         public void CodecRejectsInvalidV2Health()
         {
             byte[] encoded = ConvertV3ToLegacyV2(
-                ConvertV4ToLegacyV3(
+                ConvertCurrentToLegacyV3(
                     GameSaveBinaryCodec.Encode(CreateSnapshot(0))));
             int healthOffset = GetHealthOffset(encoded);
             WriteInt32(encoded, healthOffset, 0);
@@ -164,7 +164,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             Assert.That(encoded[1], Is.EqualTo((byte)'O'));
             Assert.That(encoded[2], Is.EqualTo((byte)'S'));
             Assert.That(encoded[7], Is.EqualTo(0));
-            Assert.That(ReadUInt16(encoded, 8), Is.EqualTo(4));
+            Assert.That(ReadUInt16(encoded, 8), Is.EqualTo(5));
             Assert.That(ReadUInt16(encoded, 10), Is.EqualTo(0));
             Assert.That(
                 ReadUInt32(encoded, 12),
@@ -214,7 +214,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
         public void CodecRejectsUnsupportedVersion()
         {
             byte[] encoded = GameSaveBinaryCodec.Encode(CreateSnapshot(0));
-            WriteUInt16(encoded, 8, 5);
+            WriteUInt16(encoded, 8, 6);
 
             GameSaveCodecException exception =
                 Assert.Throws<GameSaveCodecException>(() =>
@@ -589,10 +589,10 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             return legacy;
         }
 
-        private static byte[] ConvertV4ToLegacyV3(byte[] encoded)
+        private static byte[] ConvertCurrentToLegacyV3(byte[] encoded)
         {
-            if (ReadUInt16(encoded, 8) != 4)
-                throw new InvalidDataException("Expected a V4 fixture.");
+            if (ReadUInt16(encoded, 8) != 5)
+                throw new InvalidDataException("Expected a V5 fixture.");
 
             int extensionLength = 2
                 + 4 + System.Text.Encoding.UTF8.GetByteCount(
@@ -602,7 +602,8 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                     ConstructionSaveDefaults.PrototypeInstanceNamespace)
                 + 8
                 + 4
-                + 4;
+                + 4
+                + 5;
             int payloadLength = checked((int)ReadUInt32(encoded, 12));
             int legacyPayloadLength = payloadLength - extensionLength;
             var legacy = new byte[

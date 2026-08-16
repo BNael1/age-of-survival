@@ -6,6 +6,7 @@ using AgeOfSurvival.Core.Construction;
 using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Persistence;
+using AgeOfSurvival.Core.Shelter;
 using AgeOfSurvival.Core.World.Generation;
 using AgeOfSurvival.Runtime.Persistence;
 using NUnit.Framework;
@@ -62,7 +63,8 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                 CreateInventory(),
                 new ChunkStateLifecycle(
                     new DeterministicWorldPopulationGenerator(world)),
-                ConstructionSaveSnapshot.Empty);
+                ConstructionSaveSnapshot.Empty,
+                EmptyShelters());
             CoordinatedGameLoadResult loaded = coordinator.Load("prototype");
 
             Assert.That(loaded.Source, Is.EqualTo(GameSaveLoadSource.Primary));
@@ -79,6 +81,59 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                 loaded.State.PlayerPosition,
                 Is.EqualTo(new WorldPosition(4, 5)));
             Assert.That(loaded.State.Inventory.Containers.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void CoordinatorSaveAndLoadPreservesNonEmptyShelterState()
+        {
+            WorldPopulationSettings world = CreateWorld();
+            var resolver = new Resolver(world);
+            var coordinator = new GameSaveCoordinator(
+                new AtomicGameSaveStorage(_temporaryDirectory),
+                resolver,
+                resolver,
+                resolver);
+            var shelterId = new ShelterId("coordinator-home");
+            var history = new ShelterFamiliarityState(
+                shelterId,
+                120L,
+                20L,
+                2,
+                4,
+                150);
+            var shelters = new ShelterHomeState(
+                new[] { history },
+                shelterId,
+                true);
+
+            coordinator.Save(
+                "shelters",
+                world,
+                33,
+                new WorldPosition(4, 5),
+                CreateHealth(33),
+                CreateFood(33),
+                new PerishableInventoryState(),
+                CreateInventory(),
+                new ChunkStateLifecycle(
+                    new DeterministicWorldPopulationGenerator(world)),
+                ConstructionSaveSnapshot.Empty,
+                shelters);
+            CoordinatedGameLoadResult loaded = coordinator.Load("shelters");
+
+            Assert.That(loaded.State.Shelters.CaptureCanonicalHistories().Count,
+                Is.EqualTo(1));
+            Assert.That(
+                loaded.State.Shelters.TryFind(
+                    shelterId,
+                    out ShelterFamiliarityState restored),
+                Is.True);
+            Assert.That(restored.ShelterId, Is.EqualTo(shelterId));
+            Assert.That(restored.FamiliarityHalfPoints, Is.EqualTo(150));
+            Assert.That(restored.CompletedNightCount, Is.EqualTo(4));
+            Assert.That(loaded.State.Shelters.HasPrimaryShelter, Is.True);
+            Assert.That(loaded.State.Shelters.PrimaryShelterId,
+                Is.EqualTo(shelterId));
         }
 
         [Test]
@@ -104,7 +159,8 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                 CreateInventory(),
                 new ChunkStateLifecycle(
                     new DeterministicWorldPopulationGenerator(world)),
-                ConstructionSaveSnapshot.Empty);
+                ConstructionSaveSnapshot.Empty,
+                EmptyShelters());
             coordinator.Save(
                 "prototype",
                 world,
@@ -116,7 +172,8 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                 CreateInventory(),
                 new ChunkStateLifecycle(
                     new DeterministicWorldPopulationGenerator(world)),
-                ConstructionSaveSnapshot.Empty);
+                ConstructionSaveSnapshot.Empty,
+                EmptyShelters());
             File.WriteAllBytes(
                 storage.GetPrimaryPath("prototype"),
                 new byte[] { 1, 2, 3 });
@@ -175,6 +232,9 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                 new[] { Rations },
                 new[] { main });
         }
+
+        private static ShelterHomeState EmptyShelters() =>
+            new ShelterHomeState(Array.Empty<ShelterFamiliarityState>());
 
         private sealed class Resolver
             : IWorldPopulationSettingsResolver,

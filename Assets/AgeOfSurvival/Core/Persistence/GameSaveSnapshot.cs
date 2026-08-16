@@ -263,6 +263,31 @@ namespace AgeOfSurvival.Core.Persistence
             PlayerInventorySnapshot inventory,
             IEnumerable<ChunkMutationState> chunkMutations,
             ConstructionSaveSnapshot construction)
+            : this(
+                world,
+                fixedTick,
+                playerPosition,
+                health,
+                food,
+                perishables,
+                inventory,
+                chunkMutations,
+                construction,
+                ShelterSaveSnapshot.Empty)
+        {
+        }
+
+        public GameSaveSnapshot(
+            WorldIdentitySnapshot world,
+            long fixedTick,
+            WorldPosition playerPosition,
+            PlayerHealthSnapshot health,
+            PlayerFoodSnapshot food,
+            PerishableInventorySnapshot perishables,
+            PlayerInventorySnapshot inventory,
+            IEnumerable<ChunkMutationState> chunkMutations,
+            ConstructionSaveSnapshot construction,
+            ShelterSaveSnapshot shelters)
         {
             if (!world.Generation.Version.IsValid
                 || !world.Generation.ChunkLayout.IsValid
@@ -314,6 +339,8 @@ namespace AgeOfSurvival.Core.Persistence
             Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
             Construction = construction
                 ?? throw new ArgumentNullException(nameof(construction));
+            Shelters = shelters
+                ?? throw new ArgumentNullException(nameof(shelters));
             if (chunkMutations == null)
             {
                 throw new ArgumentNullException(nameof(chunkMutations));
@@ -376,6 +403,7 @@ namespace AgeOfSurvival.Core.Persistence
         public PerishableInventorySnapshot Perishables { get; }
         public PlayerInventorySnapshot Inventory { get; }
         public ConstructionSaveSnapshot Construction { get; }
+        public ShelterSaveSnapshot Shelters { get; }
         public IReadOnlyList<ChunkMutationState> ChunkMutations =>
             _readOnlyChunkMutations;
 
@@ -485,6 +513,29 @@ namespace AgeOfSurvival.Core.Persistence
                 snapshot.Inventory,
                 snapshot.ChunkMutations,
                 construction);
+        }
+
+        public static GameSaveSnapshot Capture(
+            WorldPopulationSettings world,
+            long fixedTick,
+            WorldPosition playerPosition,
+            PlayerHealthState health,
+            PlayerFoodState food,
+            PerishableInventoryState perishables,
+            PlayerInventoryState inventory,
+            ChunkStateLifecycle chunks,
+            ConstructionSaveSnapshot construction,
+            AgeOfSurvival.Core.Shelter.ShelterHomeState shelters)
+        {
+            if (shelters == null) throw new ArgumentNullException(nameof(shelters));
+            GameSaveSnapshot snapshot = Capture(
+                world, fixedTick, playerPosition, health, food, perishables,
+                inventory, chunks, construction);
+            return new GameSaveSnapshot(
+                snapshot.World, snapshot.FixedTick, snapshot.PlayerPosition,
+                snapshot.Health, snapshot.Food, snapshot.Perishables,
+                snapshot.Inventory, snapshot.ChunkMutations,
+                snapshot.Construction, ShelterSaveSnapshot.Capture(shelters));
         }
 
         public static GameSaveSnapshot Capture(

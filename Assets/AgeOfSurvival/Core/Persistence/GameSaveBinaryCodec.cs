@@ -6,17 +6,18 @@ using AgeOfSurvival.Core.Construction;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Resources;
+using AgeOfSurvival.Core.Shelter;
 using AgeOfSurvival.Core.World.Generation;
 
 namespace AgeOfSurvival.Core.Persistence
 {
     /// <summary>
     /// Deterministic, versioned, in-memory binary codec for canonical saves.
-    /// It performs no disk I/O, writes V4, and reads canonical V1/V2/V3/V4 payloads.
+    /// It performs no disk I/O, writes V5, and reads canonical V1/V2/V3/V4/V5 payloads.
     /// </summary>
     public static class GameSaveBinaryCodec
     {
-        public const ushort CurrentVersion = 4;
+        public const ushort CurrentVersion = 5;
         private const ushort MinimumSupportedVersion = 1;
         private const ushort CurrentFlags = 0;
 
@@ -161,6 +162,10 @@ namespace AgeOfSurvival.Core.Persistence
                 snapshot.Construction.Structures.Count,
                 GameSaveCodecLimits.MaximumCompletedStructures,
                 "Completed structure count");
+            ValidateCount(
+                snapshot.Shelters.Histories.Count,
+                GameSaveCodecLimits.MaximumShelterHistories,
+                "Shelter history count");
 
             using (var writer = new SaveBufferWriter(
                 GameSaveCodecLimits.MaximumPayloadLength))
@@ -175,6 +180,7 @@ namespace AgeOfSurvival.Core.Persistence
                 WriteInventory(writer, snapshot.Inventory);
                 WriteChunks(writer, snapshot.ChunkMutations);
                 WriteConstruction(writer, snapshot.Construction);
+                WriteShelters(writer, snapshot.Shelters);
                 return writer.ToArray();
             }
         }
@@ -210,6 +216,9 @@ namespace AgeOfSurvival.Core.Persistence
                 ConstructionSaveSnapshot construction = version >= 4
                     ? ReadConstruction(reader)
                     : ConstructionSaveSnapshot.Empty;
+                ShelterSaveSnapshot shelters = version >= 5
+                    ? ReadShelters(reader)
+                    : ShelterSaveSnapshot.Empty;
                 reader.RequireEnd();
                 return new GameSaveSnapshot(
                     world,
@@ -220,7 +229,8 @@ namespace AgeOfSurvival.Core.Persistence
                     perishables,
                     inventory,
                     mutations,
-                    construction);
+                    construction,
+                    shelters);
             }
             catch (GameSaveCodecException)
             {
@@ -879,6 +889,54 @@ namespace AgeOfSurvival.Core.Persistence
                 nextSequence,
                 sites,
                 structures);
+        }
+
+        private static void WriteShelters(
+            SaveBufferWriter writer,
+            ShelterSaveSnapshot shelters)
+        {
+            writer.WriteUInt32(checked((uint)shelters.Histories.Count));
+            for (int i = 0; i < shelters.Histories.Count; i++)
+            {
+                ShelterHistorySnapshot history = shelters.Histories[i];
+                writer.WriteRequiredString(history.ShelterId.Value);
+                writer.WriteInt64(history.TotalPresenceTicks);
+                writer.WriteInt64(history.PresenceProgressTicks);
+                writer.WriteInt32(history.CompletedRestCount);
+                writer.WriteInt32(history.CompletedNightCount);
+                writer.WriteInt32(history.FamiliarityHalfPoints);
+            }
+            writer.WriteBoolean(shelters.HasPrimaryShelter);
+            if (shelters.HasPrimaryShelter)
+                writer.WriteRequiredString(shelters.PrimaryShelterId.Value);
+        }
+
+        private static ShelterSaveSnapshot ReadShelters(SaveBufferReader reader)
+        {
+            int count = reader.ReadCount(
+                GameSaveCodecLimits.MaximumShelterHistories,
+                "Shelter history count");
+            var histories = new List<ShelterHistorySnapshot>(count);
+            ShelterId previous = default;
+            for (int i = 0; i < count; i++)
+            {
+                var id = new ShelterId(reader.ReadRequiredString());
+                if (i > 0)
+                    RequireCanonicalComparison(previous.CompareTo(id), "Shelter histories");
+                previous = id;
+                histories.Add(new ShelterHistorySnapshot(
+                    id,
+                    reader.ReadInt64(),
+                    reader.ReadInt64(),
+                    reader.ReadInt32(),
+                    reader.ReadInt32(),
+                    reader.ReadInt32()));
+            }
+            bool hasPrimary = reader.ReadBoolean();
+            ShelterId primary = hasPrimary
+                ? new ShelterId(reader.ReadRequiredString())
+                : default;
+            return new ShelterSaveSnapshot(histories, hasPrimary, primary);
         }
 
         private static void WriteConstructionSpace(

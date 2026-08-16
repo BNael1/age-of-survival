@@ -4,6 +4,7 @@ using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Construction;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Food;
+using AgeOfSurvival.Core.Shelter;
 using AgeOfSurvival.Core.World.Generation;
 
 namespace AgeOfSurvival.Core.Persistence
@@ -126,6 +127,31 @@ namespace AgeOfSurvival.Core.Persistence
             PlayerInventoryState inventory,
             ChunkStateLifecycle chunks,
             RestoredConstructionState construction)
+            : this(
+                world,
+                fixedTick,
+                playerPosition,
+                health,
+                food,
+                perishables,
+                inventory,
+                chunks,
+                construction,
+                new ShelterHomeState(Array.Empty<ShelterFamiliarityState>()))
+        {
+        }
+
+        public RestoredGameState(
+            WorldPopulationSettings world,
+            long fixedTick,
+            WorldPosition playerPosition,
+            PlayerHealthState health,
+            PlayerFoodState food,
+            PerishableInventoryState perishables,
+            PlayerInventoryState inventory,
+            ChunkStateLifecycle chunks,
+            RestoredConstructionState construction,
+            ShelterHomeState shelters)
         {
             if (!world.Generation.Version.IsValid
                 || !world.Generation.ChunkLayout.IsValid
@@ -178,6 +204,7 @@ namespace AgeOfSurvival.Core.Persistence
             Chunks = chunks
                 ?? throw new ArgumentNullException(nameof(chunks));
             Construction = construction;
+            Shelters = shelters ?? throw new ArgumentNullException(nameof(shelters));
         }
 
         private static PlayerFoodState CreateDefaultFoodState(long fixedTick)
@@ -198,5 +225,6 @@ namespace AgeOfSurvival.Core.Persistence
         public PlayerInventoryState Inventory { get; }
         public ChunkStateLifecycle Chunks { get; }
         public RestoredConstructionState Construction { get; }
+        public ShelterHomeState Shelters { get; }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using AgeOfSurvival.Core.Characters;
@@ -9,6 +10,7 @@ using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.World.Generation;
+using AgeOfSurvival.Core.Shelter;
 using NUnit.Framework;
 
 namespace AgeOfSurvival.Core.Tests.Persistence
@@ -27,7 +29,174 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             new ConstructionDefinitionId("synthetic.roof");
 
         [Test]
-        public void EmptyV4RoundTripPreservesEmptyConstructionAndPriorData()
+        public void V5RoundTripPreservesMultipleHistoriesAndIsByteDeterministic()
+        {
+            GameSaveSnapshot baseline = CreateGameSnapshot(ConstructionSaveSnapshot.Empty, tick: 17L);
+            ShelterHomeState homes = ShelterHomeState.CreateInitialCamp(
+                new ShelterId("world-region:camp"));
+            ShelterFamiliarityState second = homes.GetOrCreate(
+                new ShelterId("persistent-area:second"));
+            second.RecordCompletedRest();
+            var snapshot = new GameSaveSnapshot(
+                baseline.World, baseline.FixedTick, baseline.PlayerPosition,
+                baseline.Health, baseline.Food, baseline.Perishables,
+                baseline.Inventory, baseline.ChunkMutations, baseline.Construction,
+                ShelterSaveSnapshot.Capture(homes));
+
+            byte[] bytes = GameSaveBinaryCodec.Encode(snapshot);
+            GameSaveSnapshot decoded = GameSaveBinaryCodec.Decode(bytes);
+            ShelterHomeState restored = decoded.Shelters.RestoreState();
+
+            Assert.That(ReadUInt16(bytes, 8), Is.EqualTo(5));
+            Assert.That(decoded.Shelters.Histories.Select(value => value.ShelterId),
+                Is.EqualTo(new[]
+                {
+                    new ShelterId("persistent-area:second"),
+                    new ShelterId("world-region:camp")
+                }));
+            Assert.That(restored.PrimaryShelterId, Is.EqualTo(new ShelterId("world-region:camp")));
+            Assert.That(
+                restored.CaptureCanonicalHistories().Single(
+                    value => value.ShelterId.Equals(restored.PrimaryShelterId))
+                    .FamiliarityHalfPoints,
+                Is.EqualTo(140));
+            Assert.That(GameSaveBinaryCodec.Encode(decoded), Is.EqualTo(bytes));
+        }
+
+        [Test]
+        public void V5RejectsTruncatedShelterPayloadAndExcessiveCount()
+        {
+            byte[] encoded = EncodeShelters(
+                new[] { History("a") },
+                false,
+                default);
+            var truncated = new byte[encoded.Length - 1];
+            Buffer.BlockCopy(encoded, 0, truncated, 0, truncated.Length);
+            WriteUInt32(
+                truncated,
+                12,
+                checked((uint)(truncated.Length - GameSaveCodecLimits.HeaderLength)));
+            RefreshPayloadHash(truncated);
+            AssertCodecViolation(truncated, GameSaveCodecViolation.UnexpectedEnd);
+
+            byte[] excessive = GameSaveBinaryCodec.Encode(
+                CreateGameSnapshot(ConstructionSaveSnapshot.Empty));
+            int section = excessive.Length - 5;
+            WriteUInt32(
+                excessive,
+                section,
+                checked((uint)GameSaveCodecLimits.MaximumShelterHistories + 1U));
+            RefreshPayloadHash(excessive);
+            AssertCodecViolation(excessive, GameSaveCodecViolation.CountLimitExceeded);
+        }
+
+        [Test]
+        public void V5RejectsInvalidNonCanonicalAndDuplicateShelterIds()
+        {
+            byte[] invalid = EncodeShelters(
+                new[] { History("a") }, false, default);
+            int invalidSection = ShelterSectionOffset(invalid, new[] { "a" }, null);
+            WriteUInt32(invalid, invalidSection + 4, 0U);
+            RefreshPayloadHash(invalid);
+            AssertCodecViolation(invalid, GameSaveCodecViolation.InvalidStringLength);
+
+            byte[] nonCanonical = EncodeShelters(
+                new[] { History("a"), History("b") }, false, default);
+            int section = ShelterSectionOffset(nonCanonical, new[] { "a", "b" }, null);
+            int firstIdByte = section + 8;
+            int secondEntry = section + 4 + ShelterHistoryBinaryLength("a");
+            int secondIdByte = secondEntry + 4;
+            nonCanonical[firstIdByte] = (byte)'b';
+            nonCanonical[secondIdByte] = (byte)'a';
+            RefreshPayloadHash(nonCanonical);
+            AssertCodecViolation(nonCanonical, GameSaveCodecViolation.NonCanonicalOrder);
+
+            byte[] duplicate = EncodeShelters(
+                new[] { History("a"), History("b") }, false, default);
+            section = ShelterSectionOffset(duplicate, new[] { "a", "b" }, null);
+            secondEntry = section + 4 + ShelterHistoryBinaryLength("a");
+            duplicate[secondEntry + 4] = (byte)'a';
+            RefreshPayloadHash(duplicate);
+            AssertCodecViolation(duplicate, GameSaveCodecViolation.DuplicateIdentity);
+        }
+
+        [Test]
+        public void V5RejectsInvalidShelterHistoryNumericFields()
+        {
+            AssertInvalidShelterInt64(HistoryTotalOffset("a"), -1L);
+            AssertInvalidShelterInt64(HistoryProgressOffset("a"), -1L);
+            AssertInvalidShelterInt64(HistoryProgressOffset("a"), 11L);
+            AssertInvalidShelterInt32(HistoryRestOffset("a"), -1);
+            AssertInvalidShelterInt32(HistoryNightOffset("a"), -1);
+            AssertInvalidShelterInt32(HistoryFamiliarityOffset("a"), -1);
+            AssertInvalidShelterInt32(HistoryFamiliarityOffset("a"), 201);
+        }
+
+        [Test]
+        public void V5RejectsInvalidOrUnknownPrimaryShelter()
+        {
+            byte[] missingId = GameSaveBinaryCodec.Encode(
+                CreateGameSnapshot(ConstructionSaveSnapshot.Empty));
+            missingId[missingId.Length - 1] = 1;
+            RefreshPayloadHash(missingId);
+            AssertCodecViolation(missingId, GameSaveCodecViolation.UnexpectedEnd);
+
+            byte[] unknown = EncodeShelters(
+                new[] { History("a") }, true, new ShelterId("a"));
+            int section = ShelterSectionOffset(unknown, new[] { "a" }, "a");
+            int primaryByte = section + 4 + ShelterHistoryBinaryLength("a") + 1 + 4;
+            unknown[primaryByte] = (byte)'b';
+            RefreshPayloadHash(unknown);
+            AssertCodecViolation(unknown, GameSaveCodecViolation.InvalidDomainValue);
+        }
+
+        [Test]
+        public void LegacyV4MigratesToEmptyShelterHistoryWithoutRewritingSource()
+        {
+            byte[] v5 = GameSaveBinaryCodec.Encode(CreateGameSnapshot(ConstructionSaveSnapshot.Empty));
+            byte[] v4 = ConvertEmptyV5ToV4(v5);
+            GameSaveSnapshot decoded = GameSaveBinaryCodec.Decode(v4);
+
+            Assert.That(ReadUInt16(v4, 8), Is.EqualTo(4));
+            Assert.That(decoded.Shelters.Histories, Is.Empty);
+            Assert.That(decoded.Shelters.HasPrimaryShelter, Is.False);
+            Assert.That(ReadUInt16(v4, 8), Is.EqualTo(4));
+        }
+
+        [Test]
+        public void V5ReloadDoesNotInventAFirstPrimaryHome()
+        {
+            GameSaveSnapshot baseline = CreateGameSnapshot(ConstructionSaveSnapshot.Empty);
+            var a = new ShelterFamiliarityState(new ShelterId("a"), 0, 0, 0, 3, 80);
+            var b = new ShelterFamiliarityState(new ShelterId("b"), 0, 0, 0, 3, 80);
+            var homes = new ShelterHomeState(new[] { b, a });
+            var snapshot = new GameSaveSnapshot(
+                baseline.World, baseline.FixedTick, baseline.PlayerPosition,
+                baseline.Health, baseline.Food, baseline.Perishables,
+                baseline.Inventory, baseline.ChunkMutations, baseline.Construction,
+                ShelterSaveSnapshot.Capture(homes));
+
+            ShelterHomeState restored = GameSaveBinaryCodec.Decode(
+                GameSaveBinaryCodec.Encode(snapshot)).Shelters.RestoreState();
+            Assert.That(
+                restored.RecalculatePrimary(new[] { b.ShelterId, a.ShelterId }),
+                Is.False);
+            Assert.That(restored.HasPrimaryShelter, Is.False);
+        }
+
+        [Test]
+        public void ShelterSnapshotRejectsDuplicatesAndCanonicalizesOrder()
+        {
+            var a = new ShelterHistorySnapshot(new ShelterId("a"), 0, 0, 0, 0, 0);
+            var b = new ShelterHistorySnapshot(new ShelterId("b"), 0, 0, 0, 0, 0);
+            Assert.That(new ShelterSaveSnapshot(new[] { b, a }, false, default)
+                .Histories.Select(value => value.ShelterId), Is.EqualTo(new[] { a.ShelterId, b.ShelterId }));
+            Assert.Throws<ArgumentException>(() => new ShelterSaveSnapshot(new[] { a, a }, false, default));
+            Assert.Throws<ArgumentException>(() => new ShelterSaveSnapshot(new[] { a }, true, b.ShelterId));
+        }
+
+        [Test]
+        public void EmptyV5RoundTripPreservesEmptyConstructionAndPriorData()
         {
             GameSaveSnapshot original = CreateGameSnapshot(
                 ConstructionSaveSnapshot.Empty,
@@ -36,7 +205,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             byte[] bytes = GameSaveBinaryCodec.Encode(original);
             GameSaveSnapshot decoded = GameSaveBinaryCodec.Decode(bytes);
 
-            Assert.That(ReadUInt16(bytes, 8), Is.EqualTo(4));
+            Assert.That(ReadUInt16(bytes, 8), Is.EqualTo(5));
             Assert.That(decoded.Construction.Sites, Is.Empty);
             Assert.That(decoded.Construction.Structures, Is.Empty);
             Assert.That(decoded.Construction.NextInstanceSequence, Is.EqualTo(1L));
@@ -51,9 +220,9 @@ namespace AgeOfSurvival.Core.Tests.Persistence
         [Test]
         public void LegacyV3MigratesToEmptyConstructionInMemory()
         {
-            byte[] v4 = GameSaveBinaryCodec.Encode(CreateGameSnapshot(
+            byte[] current = GameSaveBinaryCodec.Encode(CreateGameSnapshot(
                 ConstructionSaveSnapshot.Empty));
-            byte[] v3 = ConvertEmptyV4ToV3(v4);
+            byte[] v3 = ConvertEmptyCurrentToV3(current);
 
             GameSaveSnapshot migrated = GameSaveBinaryCodec.Decode(v3);
 
@@ -187,7 +356,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
         }
 
         [Test]
-        public void V4RoundTrip_RebuildsTheSameDerivedBoundedRoofSupport()
+        public void V5RoundTrip_RebuildsTheSameDerivedBoundedRoofSupport()
         {
             var saved = new ConstructionSaveSnapshot(
                 ConstructionSaveDefaults.SectionVersion,
@@ -237,8 +406,8 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 restoredWorld.CaptureCanonicalStructures(),
                 policy);
 
-            Assert.That(GameSaveBinaryCodec.CurrentVersion, Is.EqualTo(4));
-            Assert.That(ReadUInt16(bytes, 8), Is.EqualTo(4));
+            Assert.That(GameSaveBinaryCodec.CurrentVersion, Is.EqualTo(5));
+            Assert.That(ReadUInt16(bytes, 8), Is.EqualTo(5));
             Assert.That(
                 restoredWorld.CaptureCanonicalStructures().Select(
                     structure => structure.InstanceId),
@@ -729,7 +898,81 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             return total;
         }
 
-        private static byte[] ConvertEmptyV4ToV3(byte[] encoded)
+        private static ShelterHistorySnapshot History(string id) =>
+            new ShelterHistorySnapshot(new ShelterId(id), 10L, 2L, 1, 3, 50);
+
+        private static byte[] EncodeShelters(
+            IEnumerable<ShelterHistorySnapshot> histories,
+            bool hasPrimary,
+            ShelterId primary)
+        {
+            GameSaveSnapshot baseline = CreateGameSnapshot(ConstructionSaveSnapshot.Empty);
+            return GameSaveBinaryCodec.Encode(new GameSaveSnapshot(
+                baseline.World,
+                baseline.FixedTick,
+                baseline.PlayerPosition,
+                baseline.Health,
+                baseline.Food,
+                baseline.Perishables,
+                baseline.Inventory,
+                baseline.ChunkMutations,
+                baseline.Construction,
+                new ShelterSaveSnapshot(histories, hasPrimary, primary)));
+        }
+
+        private static int ShelterSectionOffset(
+            byte[] encoded,
+            IEnumerable<string> historyIds,
+            string primaryId)
+        {
+            int length = 4 + 1;
+            foreach (string id in historyIds) length += ShelterHistoryBinaryLength(id);
+            if (primaryId != null)
+                length += 4 + System.Text.Encoding.UTF8.GetByteCount(primaryId);
+            return encoded.Length - length;
+        }
+
+        private static int ShelterHistoryBinaryLength(string id) =>
+            4 + System.Text.Encoding.UTF8.GetByteCount(id) + 8 + 8 + 4 + 4 + 4;
+
+        private static int HistoryTotalOffset(string id) =>
+            4 + 4 + System.Text.Encoding.UTF8.GetByteCount(id);
+
+        private static int HistoryProgressOffset(string id) => HistoryTotalOffset(id) + 8;
+        private static int HistoryRestOffset(string id) => HistoryProgressOffset(id) + 8;
+        private static int HistoryNightOffset(string id) => HistoryRestOffset(id) + 4;
+        private static int HistoryFamiliarityOffset(string id) => HistoryNightOffset(id) + 4;
+
+        private static void AssertInvalidShelterInt64(int relativeOffset, long value)
+        {
+            byte[] encoded = EncodeShelters(
+                new[] { History("a") }, false, default);
+            int section = ShelterSectionOffset(encoded, new[] { "a" }, null);
+            WriteInt64(encoded, section + relativeOffset, value);
+            RefreshPayloadHash(encoded);
+            AssertCodecViolation(encoded, GameSaveCodecViolation.InvalidDomainValue);
+        }
+
+        private static void AssertInvalidShelterInt32(int relativeOffset, int value)
+        {
+            byte[] encoded = EncodeShelters(
+                new[] { History("a") }, false, default);
+            int section = ShelterSectionOffset(encoded, new[] { "a" }, null);
+            WriteUInt32(encoded, section + relativeOffset, unchecked((uint)value));
+            RefreshPayloadHash(encoded);
+            AssertCodecViolation(encoded, GameSaveCodecViolation.InvalidDomainValue);
+        }
+
+        private static void AssertCodecViolation(
+            byte[] encoded,
+            GameSaveCodecViolation expected)
+        {
+            GameSaveCodecException exception = Assert.Throws<GameSaveCodecException>(
+                () => GameSaveBinaryCodec.Decode(encoded));
+            Assert.That(exception.Violation, Is.EqualTo(expected));
+        }
+
+        private static byte[] ConvertEmptyCurrentToV3(byte[] encoded)
         {
             int offset = EmptyConstructionOffset(encoded);
             var legacy = new byte[offset];
@@ -739,6 +982,21 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 legacy,
                 12,
                 checked((uint)(legacy.Length - GameSaveCodecLimits.HeaderLength)));
+            RefreshPayloadHash(legacy);
+            return legacy;
+        }
+
+        private static byte[] ConvertEmptyV5ToV4(byte[] encoded)
+        {
+            if (ReadUInt16(encoded, 8) != 5)
+                throw new InvalidDataException("Expected a V5 fixture.");
+            const int emptyShelterLength = 5;
+            int payloadLength = checked((int)ReadUInt32(encoded, 12));
+            int legacyPayloadLength = payloadLength - emptyShelterLength;
+            var legacy = new byte[GameSaveCodecLimits.HeaderLength + legacyPayloadLength];
+            Buffer.BlockCopy(encoded, 0, legacy, 0, legacy.Length);
+            WriteUInt16(legacy, 8, 4);
+            WriteUInt32(legacy, 12, checked((uint)legacyPayloadLength));
             RefreshPayloadHash(legacy);
             return legacy;
         }
@@ -753,7 +1011,8 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                     ConstructionSaveDefaults.PrototypeInstanceNamespace)
                 + 8
                 + 4
-                + 4;
+                + 4
+                + 5;
             return encoded.Length - extensionLength;
         }
 
@@ -791,6 +1050,13 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             bytes[offset + 1] = (byte)(value >> 8);
             bytes[offset + 2] = (byte)(value >> 16);
             bytes[offset + 3] = (byte)(value >> 24);
+        }
+
+        private static void WriteInt64(byte[] bytes, int offset, long value)
+        {
+            ulong raw = unchecked((ulong)value);
+            for (int index = 0; index < 8; index++)
+                bytes[offset + index] = (byte)(raw >> (index * 8));
         }
 
         private sealed class Resolver :

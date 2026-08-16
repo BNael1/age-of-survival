@@ -3,6 +3,7 @@ using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Persistence;
+using AgeOfSurvival.Core.Shelter;
 using AgeOfSurvival.Core.World.Generation;
 
 namespace AgeOfSurvival.Runtime.Persistence
@@ -72,7 +73,8 @@ namespace AgeOfSurvival.Runtime.Persistence
             PerishableInventoryState perishables,
             PlayerInventoryState inventory,
             ChunkStateLifecycle chunks,
-            ConstructionSaveSnapshot construction)
+            ConstructionSaveSnapshot construction,
+            ShelterHomeState shelters)
         {
             GameSaveSnapshot snapshot = GameSaveSnapshotCapture.Capture(
                 world,
@@ -83,7 +85,8 @@ namespace AgeOfSurvival.Runtime.Persistence
                 perishables,
                 inventory,
                 chunks,
-                construction);
+                construction,
+                shelters);
             _storage.Save(slot, snapshot);
         }
 

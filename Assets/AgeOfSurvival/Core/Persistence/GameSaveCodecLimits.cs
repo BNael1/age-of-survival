@@ -17,5 +17,6 @@ namespace AgeOfSurvival.Core.Persistence
         public const int MaximumConstructionSites = 1000000;
         public const int MaximumCompletedStructures = 1000000;
         public const int MaximumConstructionMaterialsPerSite = 4096;
+        public const int MaximumShelterHistories = 1000000;
     }
 }
