@@ -122,3 +122,34 @@ Construction ci-dessus : leur origine OpenAI est documentée dans le dépôt, sa
 mention directement intégrée aux PNG du prototype. Les conditions applicables
 seront revérifiées avant distribution publique ou commerciale ; elles
 n'ajoutent aucune dépendance Runtime.
+
+<!-- LOT7LD_THIRD_PARTY -->
+## Lot 7L-D — recherche régions dynamiques, sans réutilisation de code
+
+Aucune dépendance, package, source ou asset tiers n'est ajouté. L'implémentation
+est propriétaire, en C# pur, et réutilise exclusivement les primitives Core du
+projet.
+
+Les Javadocs publiques officielles de Project Zomboid ont été consultées comme
+retour d'expérience architectural : `IsoRegions` expose notamment des flags de
+mur/sol/toit, des requêtes chunk/world et une notification `squareChanged`,
+tandis que `IsoChunkRegion` expose enclosure, voisins et comptages Roof. Aucun
+code, nom de structure interne sérialisée ou asset n'a été copié. Références :
+
+- https://projectzomboid.com/modding/zombie/iso/areas/isoregion/IsoRegions.html
+- https://projectzomboid.com/modding/zombie/iso/areas/isoregion/regions/IsoChunkRegion.html
+
+Les publications suivantes ont été lues pour comparer les familles de
+connectivité dynamique et split/merge :
+
+- Holm, de Lichtenberg et Thorup, « Poly-logarithmic deterministic
+  fully-dynamic algorithms for connectivity… », STOC 1998,
+  https://doi.org/10.1145/276698.276715 ;
+- Kistler et Webb, « Connected Components with Split and Merge », IPPS 1991,
+  https://publications.ri.cmu.edu/connected-components-with-split-and-merge.
+
+Ces textes restent des références bibliographiques sous les droits de leurs
+éditeurs/auteurs ; aucun extrait de code ou de texte n'est incorporé. Le lot ne
+transpose pas leurs algorithmes avancés : il retient un regroupement local par
+sommets, des scopes explicitement bornés et un flood-fill C4 existant, solution
+plus petite et vérifiable pour le besoin actuel.

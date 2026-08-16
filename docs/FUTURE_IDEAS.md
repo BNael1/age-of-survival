@@ -122,3 +122,33 @@ d'implémentation active du lot 7H-A1.
   restrictions terrain avec Naël ;
 - animations, sons, compétences, outils et coopérations multi-acteurs ;
 - déclinaisons artistiques et atlas final après validation de la direction.
+
+<!-- LOT7LD_FUTURE_IDEAS -->
+## Question ouverte après le lot 7L-D
+
+- faire valider par Naël les critères réels de qualification : rôle éventuel du
+  sol, du Roof supporté, des limites, des ouvertures, de leur quantité ou de
+  toute source structurelle. Les combinaisons `Interior`/Surface/deux limites
+  utilisées dans les tests sont uniquement des fixtures candidates ;
+- définir la provenance gameplay d'un `ShelterId`. La stratégie candidate par
+  instance Construction n'est pas universelle ;
+- décider comment acquérir un premier foyer après le chargement d'une ancienne
+  sauvegarde qui contient des historiques mais aucun foyer principal ;
+- décider ce que devient le statut d'un foyer détruit ou temporairement
+  invalide ; R2 conserve son identité et son historique sans promotion ;
+- définir, si elle est souhaitée, une politique explicite de remplacement d'un
+  foyer invalide, sans la confondre avec la règle validée du challenger à +15
+  face à un foyer encore valide ;
+- décider explicitement le traitement des splits/merges. Le comportement
+  candidat conservateur garde l'ID du côté de la source, invalide un merge à
+  plusieurs sources et ne transfère aucun historique ; il ne doit pas être
+  promu silencieusement en règle active ;
+- cadrer le domaine de confort matériel : Mémoire — Sillage indique qu'un refuge
+  en possède un, mais les entrées et le calcul ne sont pas assez spécifiés ;
+- activer la seam Runtime dans `SampleScene` seulement après validation d'une
+  policy et de définitions jouables, sans inventer Roof, ancrage, contrôle,
+  recette ou asset dans 7L-D-R1 ;
+- relier les événements de repos et nuit du futur système de sommeil aux
+  méthodes Runtime déjà présentes, sans créer une seconde horloge ;
+- ajouter une visualisation debug des Rooms/refuges uniquement si un besoin de
+  diagnostic en jeu est validé.

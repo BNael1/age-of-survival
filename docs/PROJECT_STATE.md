@@ -1026,3 +1026,45 @@ contrôle ou package. `AOSSAVE V4` reste inchangé.
 Validation EditMode : **19 nouveaux tests**, portant la suite complète à
 **891/891**, zéro échec, ignoré ou inconclusif. La suite PlayMode historique
 reste **20/20**, sans échec ni test ignoré.
+
+<!-- LOT7LD_PROJECT_STATE -->
+## Lot 7L-D-R2 — socle technique Shelter, gameplay de qualification en attente
+
+Le monde Construction autoritaire peut désormais dériver les arêtes fermantes
+selon une politique explicite, des scopes locaux bornés, des Rooms canoniques et
+leur couverture Roof terminée/supportée. Les rectangles, formes en L, murs
+partagés, plusieurs zones distantes, coordonnées négatives, seams de chunks et
+bornes `Int64` ne nécessitent aucun scan du monde global.
+
+Le Core expose ensuite une évaluation de candidats configurable. Les tests
+emploient des définitions synthétiques `Interior`, Surface, Roof et Edge pour
+exercer la chaîne, mais ces fixtures ne qualifient pas le refuge gameplay réel.
+`ShelterId` reste opaque ; seule une stratégie candidate explicitement nommée
+dérive un ID depuis une instance Construction. Qualification réelle, origine de
+l'identité, split/merge et confort matériel restent à valider par Naël.
+Les IDs produits par toute stratégie candidate sont toutefois rejetés
+immédiatement s'ils sont invalides ou dupliqués dans une même évaluation.
+
+`ShelterFamiliarityState`, `ShelterHomeState` et la fonction pure de plafond de
+sommeil portent les règles déjà validées : demi-points, repos, nuits, seuils,
+plafond 100, foyer 3 nuits/+15, camp initial 70/3 et sommeil 75/85/90/100.
+Le remplacement à +15 ne s'applique qu'à un foyer courant encore valide. Aucun
+premier foyer et aucun remplacement d'un foyer invalide ne sont inventés.
+
+Le Runtime contient une seam de composition testée, capable de recalculer après
+une révision Construction et de traiter présence, transitions et crédits au
+tick fixe lorsqu'une policy concrète lui est fournie. Elle n'est pas branchée à
+`SampleScene`. La partie jouable actuelle ne détecte donc pas de refuge et ne
+fait progresser aucune familiarité Shelter. Aucun contrôle, écran, asset,
+recette ou changement UX n'est ajouté.
+
+`AOSSAVE V5` persiste uniquement un `ShelterId` générique, les historiques,
+compteurs nécessaires et le foyer principal ; le codec ne connaît aucune
+provenance Construction. V1–V4 migrent vers un historique vide en mémoire, sans
+réécriture. Rooms, enclosure, couverture et support restent dérivés.
+`GameSaveCoordinator.Save` exige maintenant l'état Shelter explicitement ; son
+round-trip Runtime vérifie qu'une section non vide ne peut pas disparaître.
+
+Validation finale R2 : **944/944 EditMode** et **20/20 PlayMode**, zéro échec,
+zéro test ignoré ou inconclusif et code Unity `0` pour les deux scripts
+officiels. Aucun package, plugin, dépendance ou asset n'est ajouté.

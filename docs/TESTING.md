@@ -983,3 +983,47 @@ Le lot reste Core-only et n’ajoute aucun scénario PlayMode. Les scripts offic
 `tools/run_editmode_tests.sh` et `tools/run_playmode_tests.sh` terminent avec le
 code `0`; la suite PlayMode historique complète reste **20/20**, zéro échec et
 zéro test ignoré.
+
+<!-- LOT7LD_TESTING -->
+## Lot 7L-D-R2 — validation corrective Shelter
+
+La baseline est **891/891 EditMode** et **20/20 PlayMode**. Le lot ajoute
+**53 cas EditMode**, soit **944/944 EditMode** sur l'état R2. La suite PlayMode
+complète reste **20/20**.
+
+La couverture ajoutée vérifie notamment :
+
+- policy de blockers, ordre de policy et d'inputs invariant, ordre canonique,
+  définitions inconnues/non-Edge et structures dupliquées invalides ;
+- 1×1, rectangle, L, plusieurs Rooms, mur partagé, ouverture/fermeture,
+  corner-touching, jonction T, bounding boxes de composantes qui se recouvrent,
+  splits/merges successifs, négatifs, seam 31/32, composantes locales aux bornes
+  `Int64`, limites de scopes/cellules avant allocation et scénario borné 64×64 ;
+- Roof absent, partiel, terminé mais unsupported et entièrement supporté, avec
+  ratios entiers ; les tests C3 existants continuent de couvrir retrait de
+  support et propagation exacte d0/d1/d2/d3 ;
+- policy et identité candidates synthétiques explicitement nommées, stabilité au
+  split et absence de transfert au merge, rejet immédiat des IDs `default` ou
+  dupliqués, sans les déclarer gameplay actif ;
+- progression horaire en demi-points, repos, nuit, plafond sans décroissance,
+  seuils 30/70, plafond sommeil 75/85/90/100, gros elapsed, overflows de
+  compteurs, camp initial, trois nuits, +14,5 refusé, +15 exact accepté,
+  plusieurs challengers, ordres inversés, conservation du foyer et de son
+  historique après invalidation, et absence d'acquisition quand aucun foyer
+  n'existe ;
+- Runtime candidat : entrée/sortie au tick fixe, état entre `Recalculate` et le
+  tick suivant, aucun crédit repos/nuit après invalidation, historique
+  save/load puis recalcul de validité, et refresh exactement une fois par
+  révision Construction ;
+- V5 : payload tronqué, count au-delà de `MaximumShelterHistories`, ID invalide,
+  ordre non canonique, doublon binaire, total/progress/rest/night/familiarité
+  invalides, progress supérieur au total, primary sans ID ou absent des
+  historiques, round-trip multi-histoires et déterminisme byte-for-byte ;
+- fixture V4 sans historique et fixtures V1–V3 historiques toujours lisibles.
+- frontière `GameSaveCoordinator.Save` Shelter-explicite et round-trip d'un
+  historique non vide avec ID, familiarité, nuits et foyer principal.
+
+Validation finale : les scripts officiels `tools/run_editmode_tests.sh` et
+`tools/run_playmode_tests.sh` terminent tous deux avec le code `0`, sans échec,
+test ignoré ou inconclusif. Les journaux finaux ne contiennent aucun `error CS`
+ni `warning CS`.

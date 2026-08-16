@@ -877,3 +877,60 @@ Le résultat est immuable, dérivé et entièrement reconstructible. Aucun
 `RoomId`, cache autoritaire ou état sauvegardé n’est créé ; `AOSSAVE` reste V4.
 Cette décision ne choisit pas quelles constructions bloquent, ne définit aucune
 pièce gameplay ni refuge et n’ajoute aucun comportement Runtime.
+
+<!-- ADR_0038 -->
+## ADR-0038 — règles validées et frontières candidates du domaine Shelter
+
+**Statut : mixte, détaillé ci-dessous**
+**Date : 15 août 2026, corrigée par les revues 7L-D-R1 et 7L-D-R2**
+
+### Décisions gameplay actives validées
+
+La familiarité est stockée en demi-points entiers, bornée à 100 points et sans
+décroissance : +0,5 point par heure de jeu passée dans un refuge, +1 par repos
+terminé et +8 par nuit terminée. Les seuils sont `Unknown` 0–29,5,
+`Familiar` 30–69,5 et `VeryFamiliar` 70–100. La conversion heure → ticks est
+injectée ; la simulation ne consulte jamais `Time.time` ou `DateTime`.
+
+La limite de récupération par sommeil est 75 % dans un refuge inconnu, 85 %
+dans un refuge familier, 90 % dans un refuge très familier et 100 % dans le
+foyer principal. 7L-D-R1 fournit seulement la fonction Core pure qui retourne
+ce plafond ; il ne crée pas le système de sommeil.
+
+Le seul changement automatique validé part d'un foyer courant qui existe et
+reste valide. Un challenger valide doit avoir au moins trois nuits et dépasser
+ce foyer d'au moins 15 points. Une égalité ou un avantage insuffisant conserve
+le foyer courant. Si aucun foyer n'existe, ou si son identité n'est plus valide
+dans le monde dérivé, `RecalculatePrimary` ne crée, ne retire et ne remplace
+rien. Le camp initial validé possède 70 points, trois nuits et le statut de
+foyer principal ; `CreateInitialCamp` reste le seul bootstrap explicite. Feu de
+camp, refuge et foyer principal restent trois concepts distincts.
+
+### Politique technique candidate, non validée comme gameplay
+
+`ShelterCandidateEvaluationPolicy` permet de configurer des définitions de sol,
+de source candidate et de limites, un nombre d'arêtes adjacentes et une exigence
+de couverture. Les tests utilisent synthétiquement `Surface`, `Interior`, Roof
+supporté et deux limites adjacentes pour exercer tout le pipeline. Ces valeurs
+ne définissent pas le vrai refuge du jeu.
+
+`AnchorBasedShelterIdentityCandidateStrategy` dérive, uniquement pour ces
+fixtures, un ID depuis une instance Construction. `ShelterId` reste un contrat
+opaque et générique ; ni son API ni `AOSSAVE V5` n'imposent un préfixe ou une
+provenance Construction.
+
+La frontière `ShelterEvaluator` exige que chaque stratégie candidate retourne
+un `ShelterId` valide et unique sur toute l'évaluation. Le rejet immédiat d'un
+ID `default` ou dupliqué est un invariant technique, pas une règle d'identité
+gameplay.
+
+### Questions gameplay ouvertes
+
+Restent à valider par Naël : les critères réels de qualification d'un refuge,
+la provenance de son identité persistante, le traitement des splits/merges et
+le calcul du confort matériel. L'acquisition d'un premier foyer après chargement
+d'une ancienne sauvegarde, le statut d'un foyer détruit/invalide et une
+éventuelle politique de remplacement sont aussi ouverts. Le comportement
+candidat conservateur actuel garde l'ID du côté de la source et refuse un merge
+à plusieurs sources sans transfert d'historique ; il est isolé et ne constitue
+pas une décision active.

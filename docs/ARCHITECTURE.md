@@ -1044,3 +1044,88 @@ L’analyse est dérivée, reconstructible et sans identifiant persistant. Elle 
 définit ni pièce gameplay, ni refuge, ni politique Wall/OpeningFrame, porte,
 fenêtre, Roof, familiarité ou foyer. Le Runtime et `AOSSAVE V4` restent
 inchangés.
+
+<!-- LOT7LD_ARCHITECTURE -->
+## Lot 7L-D-R1 — dérivation de pièces et seam candidate Shelter
+
+La dérivation reste un pipeline unidirectionnel sans nouvelle autorité Unity :
+
+```text
+ConstructionWorldState / CompletedStructureState
+  -> ConstructionEnclosureBlockingEdgeBuilder
+  -> ConstructionRoomAnalyzer
+  -> ConstructionDerivedRoomBuilder + ConstructionRoofSupportGraphBuilder
+  -> ShelterEvaluator + ShelterCandidateEvaluationPolicy
+  -> ShelterRuntimeSession (seam de composition)
+  -> ShelterHomeState
+```
+
+`ConstructionEnclosureBlockingPolicy` sélectionne explicitement les définitions
+`Edge` terminées qui ferment une enclosure. Le builder valide catalogue,
+identités, occupations et kinds, puis produit des `ConstructionEdgeAddress`
+uniques et triées. Les chantiers et les autres kinds n'entrent jamais dans le
+calcul.
+
+`ConstructionRoomAnalyzer` compose la primitive C4 au lieu de la transformer en
+scan global. Les arêtes sont regroupées en composantes par sommets de grille ;
+chaque composante fournit un rectangle fini contenant les cellules incidentes,
+donc l'intérieur et une couronne extérieure. Les composantes dont les bounding
+boxes se recouvrent sont d'abord fusionnées. `MaximumScopes` est ensuite
+vérifié, et `MaximumCellsPerScope` l'est avant l'allocation des cellules. Deux
+constructions proches des bornes opposées `Int64` ne créent ainsi jamais un
+rectangle mondial. `AnalyzeAffected` filtre les scopes par les arêtes modifiées,
+tandis que les sorties Room restent canoniques et sans identifiant persistant.
+
+`ConstructionDerivedRoomBuilder` appelle le builder C3 existant et son
+`Evaluate()`. Pour chaque pièce, il compte cellules, Roofs terminés et Roofs
+réellement supportés. Le ratio est la fraction entière
+`supportedCells / roomCells`; aucun flottant ni cache de support parallèle n'est
+introduit. Un Roof unsupported reste présent dans Construction mais ne compte
+pas vers la couverture.
+
+Le namespace Core `Shelter` sépare évaluation géométrique, identité,
+familiarité et sélection du foyer. `ShelterCandidateEvaluationPolicy` est une
+policy technique configurable permettant de tester différentes listes de
+définitions et prédicats locaux. Les fixtures `Interior`/sol sous la source/deux
+limites/toit supporté ne sont pas une règle gameplay validée.
+
+`ShelterId` est un identifiant opaque stable. Le codec et les historiques ne
+connaissent pas sa provenance. La stratégie
+`AnchorBasedShelterIdentityCandidateStrategy` est l'unique endroit qui dérive
+un ID depuis une `ConstructionInstanceId`; son nom et son interface signalent
+qu'elle sert aux candidats synthétiques et pourra être remplacée.
+`ShelterEvaluator` contrôle immédiatement que chaque ID retourné est valide et
+unique sur l'évaluation complète ; aucune collision n'est différée vers le
+Runtime, `ShelterHomeState` ou la persistance.
+
+`ShelterFamiliarityState` et `ShelterHomeState` portent les règles déjà validées.
+`ShelterSleepRecoveryLimit.MaximumPercent` est une fonction pure donnant
+75/85/90/100 selon familiarité et foyer principal ; aucun système de sommeil ou
+calcul de confort n'est ajouté. `RecalculatePrimary` ne sait ni acquérir un
+premier foyer, ni supprimer ou remplacer un foyer invalide. Il applique
+uniquement le challenger à trois nuits et +15 contre un foyer courant encore
+valide ; `CreateInitialCamp` reste le bootstrap explicite.
+
+`ShelterRuntimeSession` et `ConstructionShelterRuntimeBridge` forment une seam
+de composition testable. Ils savent recevoir une cellule joueur, des ticks fixes
+et une policy concrète, puis produire entrée/sortie/changement et recalculer une
+fois par révision Construction. Après `Recalculate`, la présence courante est
+réconciliée au tick fixe suivant, seul moment où la cellule joueur est connue ;
+entre-temps, repos et nuit sont refusés si le candidat est devenu invalide.
+
+Cette seam n'est pas instanciée dans `SampleScene` : aucune policy gameplay
+réelle n'étant validée et le catalogue jouable ne contenant ni Roof ni source
+de refuge approuvée, la partie jouable ne progresse actuellement aucune
+familiarité Shelter. Aucun raccourci, écran, asset, recette, GameObject
+autoritaire ou élément visuel n'est ajouté.
+
+`AOSSAVE V5` ne conserve que les historiques génériques non dérivables et le
+foyer courant. Il ne code aucune origine concrète de `ShelterId`. Pièces,
+blockers, scopes, couverture, graphe de support, évaluations candidates et
+présence courante sont reconstruits ou transitoires.
+
+La frontière autoritaire `GameSaveCoordinator.Save` exige l'état
+`ShelterHomeState` en plus du snapshot Construction et le transmet à la capture
+complète. Le chemin jouable `PrototypeSaveService` capture pareillement
+`InventoryPrototypeSession.Shelters`; aucune écriture Runtime V5 ne substitue
+implicitement une section Shelter vide.

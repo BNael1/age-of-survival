@@ -305,3 +305,45 @@ V1, V2 et V3 restent lus selon leurs règles historiques puis reçoivent en
 mémoire le catalogue Construction prototype révision 1, le namespace
 `local-prototype`, zéro site/structure et la prochaine séquence `1`. Le fichier
 historique n'est pas réécrit ou promu implicitement.
+
+<!-- LOT7LD_SAVE_FORMAT -->
+## Format binaire V5 — historique des refuges
+
+Le codec écrit désormais exclusivement `AOSSAVE` version `5`. L'enveloppe,
+les flags, le SHA-256, l'ordre little-endian et toutes les sections V1–V4
+restent inchangés. Après la section Construction V4, le payload ajoute :
+
+1. nombre d'historiques de refuge `i32` ;
+2. pour chaque historique, trié strictement par `ShelterId` : identifiant,
+   ticks totaux de présence `i64`, reste de progression horaire `i64`, nombre
+   de repos `i32`, nombre de nuits `i32`, familiarité en demi-points `i32` ;
+3. booléen de présence d'un foyer principal ;
+4. son `ShelterId` obligatoire lorsqu'il est présent.
+
+`ShelterId` est une chaîne stable opaque. Le format ne réserve aucun préfixe et
+ne suppose ni `ConstructionInstanceId`, ni Room, ni chunk, ni GameObject comme
+source de l'identité. La stratégie candidate par ancrage des tests n'appartient
+pas au contrat binaire.
+
+`PresenceProgressTicks` est le reste de la conversion d'heures de jeu selon le
+`TicksPerGameHour` injecté lors de la simulation ; ce nombre brut n'est donc pas
+indépendant du tuning temporel. Avant toute activation réelle de Shelter, une
+modification de cette conversion devra soit conserver exactement le même
+contrat, soit introduire une version et une migration explicites.
+
+La limite est de 1 000 000 historiques, contrôlée avant allocation. Les valeurs
+négatives, un reste de progression supérieur au total de présence,
+familiarités hors 0–200 demi-points, identifiants invalides,
+doublons, ordre non strict et foyer absent des historiques sont refusés. La
+capture et la restauration réappliquent les invariants de
+`ShelterFamiliarityState` et `ShelterHomeState`.
+
+V1, V2, V3 et V4 restent lisibles. Leur migration pure en mémoire fournit une
+section Shelter vide et aucun foyer principal. Les octets et le fichier source
+ne sont jamais réécrits à la lecture ; seule une sauvegarde normale ultérieure
+produit V5.
+
+Ne sont pas sérialisés : blockers, scopes, régions, Rooms, couverture Roof,
+graphe ou distance de support, validité actuelle d'un refuge, cellule/refuge
+courant du joueur, GameObjects et présentateurs. Ces faits sont dérivés de la
+Construction V4 ou restent transitoires au Runtime.
