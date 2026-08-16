@@ -68,6 +68,7 @@ namespace AgeOfSurvival.Runtime.Construction
         public ConstructionInstanceId ActiveWorkSite => _activeWorkSite;
         public bool IsWorkActionActive => _activeWorkSite.IsValid && _workActionHeld;
         public ConstructionCarriedInventory CarriedInventory => _carriedInventory;
+        public long CompletedStructureRevision { get; private set; }
 
         public ConstructionSaveSnapshot CaptureSaveSnapshot()
         {
@@ -356,6 +357,7 @@ namespace AgeOfSurvival.Runtime.Construction
                 if (!World.TryComplete(instanceId, out _, out ConstructionOperationReason reason))
                     throw new InvalidOperationException($"A ready construction could not complete: {reason}.");
                 ClearWorkAction();
+                CompletedStructureRevision = checked(CompletedStructureRevision + 1L);
             }
 
             return Store(new ConstructionRuntimeResult(
@@ -426,6 +428,7 @@ namespace AgeOfSurvival.Runtime.Construction
             }
 
             if (_activeWorkSite.Equals(instanceId)) ClearWorkAction();
+            if (!isSite) CompletedStructureRevision = checked(CompletedStructureRevision + 1L);
             return Store(new ConstructionRuntimeResult(
                 ConstructionRuntimeReason.None,
                 instanceId,

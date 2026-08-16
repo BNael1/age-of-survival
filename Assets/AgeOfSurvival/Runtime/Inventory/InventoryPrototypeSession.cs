@@ -5,6 +5,7 @@ using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.Resources;
+using AgeOfSurvival.Core.Shelter;
 using UnityEngine;
 
 namespace AgeOfSurvival.Runtime.Inventory
@@ -19,6 +20,9 @@ namespace AgeOfSurvival.Runtime.Inventory
         private readonly IReadOnlyList<ResourceState> _readOnlyResources;
         private readonly IReadOnlyList<GroundContainerState> _readOnlyGroundContainers;
         private int _nextTransferAction = 1;
+
+        public ShelterHomeState Shelters { get; private set; } =
+            new ShelterHomeState(Array.Empty<ShelterFamiliarityState>());
 
         public InventoryPrototypeSession()
             : this(CreatePrototypeResources())

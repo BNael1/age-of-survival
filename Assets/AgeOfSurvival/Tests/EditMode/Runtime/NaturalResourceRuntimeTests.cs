@@ -205,7 +205,7 @@ namespace AgeOfSurvival.Runtime.Tests
                 Is.EqualTo(new WorldSeed(42UL)));
             Assert.That(
                 GameSaveBinaryCodec.CurrentVersion,
-                Is.EqualTo(4));
+                Is.EqualTo(5));
         }
 
         [Test]

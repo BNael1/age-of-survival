@@ -56,6 +56,7 @@ namespace AgeOfSurvival.Runtime.Inventory
             InstallFoodState(restored.Food, restored.Perishables);
             CurrentPlayerPosition = restored.PlayerPosition;
             _persistenceWorld = restored.World;
+            Shelters = restored.Shelters;
             _restoredFromSave = true;
 
             ChunkMutationState[] mutations =
@@ -117,7 +118,8 @@ namespace AgeOfSurvival.Runtime.Inventory
                 new PerishableInventorySnapshot(PerishableItems),
                 Inventory.CaptureSnapshot(),
                 mutations,
-                construction);
+                construction,
+                ShelterSaveSnapshot.Capture(Shelters));
         }
 
         public bool CancelActiveActionsForSaveAndQuit()

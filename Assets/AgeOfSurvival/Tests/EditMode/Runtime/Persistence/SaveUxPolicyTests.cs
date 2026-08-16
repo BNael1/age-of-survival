@@ -9,6 +9,7 @@ using AgeOfSurvival.Core.Food;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Persistence;
 using AgeOfSurvival.Core.Resources;
+using AgeOfSurvival.Core.Shelter;
 using AgeOfSurvival.Core.World.Generation;
 using AgeOfSurvival.Runtime.Frontend;
 using AgeOfSurvival.Runtime.Construction;
@@ -251,7 +252,7 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
         }
 
         [Test]
-        public void CurrentSaveApisRequireConstructionExplicitly()
+        public void CurrentSaveApisRequireConstructionAndCoordinatorRequiresSheltersExplicitly()
         {
             Assert.That(
                 typeof(PrototypeSaveService)
@@ -274,6 +275,13 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
                     .Where(method => method.Name == nameof(GameSaveCoordinator.Save))
                     .All(method => method.GetParameters().Any(parameter =>
                         parameter.ParameterType == typeof(ConstructionSaveSnapshot))),
+                Is.True);
+            Assert.That(
+                typeof(GameSaveCoordinator)
+                    .GetMethods()
+                    .Where(method => method.Name == nameof(GameSaveCoordinator.Save))
+                    .All(method => method.GetParameters().Any(parameter =>
+                        parameter.ParameterType == typeof(ShelterHomeState))),
                 Is.True);
         }
 
@@ -370,7 +378,7 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
             SaveSlotId slot = new SaveSlotId(1);
             byte[] legacy = ConvertV2ToLegacyV1(
                 ConvertV3ToLegacyV2(
-                    ConvertV4ToLegacyV3(
+                    ConvertCurrentToLegacyV3(
                         GameSaveBinaryCodec.Encode(
                             CreateLegacyPrototypeSnapshot(session)))));
             var storage =
@@ -426,7 +434,7 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
             long savedTick = session.CurrentTick;
             SaveSlotId slot = new SaveSlotId(1);
             byte[] legacy = ConvertV3ToLegacyV2(
-                ConvertV4ToLegacyV3(
+                ConvertCurrentToLegacyV3(
                     GameSaveBinaryCodec.Encode(
                         CreateLegacyPrototypeSnapshot(session))));
             var storage =
@@ -979,10 +987,10 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
             return legacy;
         }
 
-        private static byte[] ConvertV4ToLegacyV3(byte[] encoded)
+        private static byte[] ConvertCurrentToLegacyV3(byte[] encoded)
         {
-            if (ReadUInt16(encoded, 8) != 4)
-                throw new InvalidDataException("Expected a V4 fixture.");
+            if (ReadUInt16(encoded, 8) != 5)
+                throw new InvalidDataException("Expected a V5 fixture.");
 
             int extensionLength = 2
                 + 4 + System.Text.Encoding.UTF8.GetByteCount(
@@ -992,7 +1000,8 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
                     ConstructionSaveDefaults.PrototypeInstanceNamespace)
                 + 8
                 + 4
-                + 4;
+                + 4
+                + 5;
             int payloadLength = checked((int)ReadUInt32(encoded, 12));
             int legacyPayloadLength = payloadLength - extensionLength;
             var legacy = new byte[

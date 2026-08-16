@@ -62,7 +62,7 @@ namespace AgeOfSurvival.Runtime.Tests.Inventory
             byte[] data = GameSaveBinaryCodec.Encode(snapshot);
             GameSaveSnapshot decoded = GameSaveBinaryCodec.Decode(data);
 
-            Assert.That(GameSaveBinaryCodec.CurrentVersion, Is.EqualTo(4));
+            Assert.That(GameSaveBinaryCodec.CurrentVersion, Is.EqualTo(5));
             Assert.That(decoded.Food, Is.EqualTo(snapshot.Food));
             Assert.That(decoded.Perishables.Batches.Count, Is.EqualTo(1));
             Assert.That(decoded.Perishables.Batches[0], Is.EqualTo(snapshot.Perishables.Batches[0]));
