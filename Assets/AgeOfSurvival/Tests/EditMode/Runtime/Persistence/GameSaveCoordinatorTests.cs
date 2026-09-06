@@ -281,9 +281,9 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
 
             public bool TryResolveConstructionCatalog(
                 ConstructionSaveSnapshot saved,
-                out ConstructionDefinitionCatalog catalog)
+                out ConstructionCatalogResolution resolution)
             {
-                catalog = new ConstructionDefinitionCatalog(new[]
+                var catalog = new ConstructionDefinitionCatalog(new[]
                 {
                     new ConstructionDefinition(
                         new ConstructionDefinitionId("test.floor"),
@@ -294,6 +294,7 @@ namespace AgeOfSurvival.Runtime.Tests.Persistence
                             new ConstructionMaterialRequirement(Rations.Id, 1)
                         })
                 });
+                resolution = new ConstructionCatalogResolution(catalog, catalog, saved.CatalogId, saved.CatalogRevision);
                 return saved != null;
             }
         }

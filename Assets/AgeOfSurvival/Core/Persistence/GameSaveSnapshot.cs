@@ -273,7 +273,8 @@ namespace AgeOfSurvival.Core.Persistence
                 inventory,
                 chunkMutations,
                 construction,
-                ShelterSaveSnapshot.Empty)
+                ShelterSaveSnapshot.Empty,
+                DoorSaveSnapshot.Empty)
         {
         }
 
@@ -288,6 +289,24 @@ namespace AgeOfSurvival.Core.Persistence
             IEnumerable<ChunkMutationState> chunkMutations,
             ConstructionSaveSnapshot construction,
             ShelterSaveSnapshot shelters)
+            : this(
+                world, fixedTick, playerPosition, health, food, perishables, inventory,
+                chunkMutations, construction, shelters, DoorSaveSnapshot.Empty)
+        {
+        }
+
+        public GameSaveSnapshot(
+            WorldIdentitySnapshot world,
+            long fixedTick,
+            WorldPosition playerPosition,
+            PlayerHealthSnapshot health,
+            PlayerFoodSnapshot food,
+            PerishableInventorySnapshot perishables,
+            PlayerInventorySnapshot inventory,
+            IEnumerable<ChunkMutationState> chunkMutations,
+            ConstructionSaveSnapshot construction,
+            ShelterSaveSnapshot shelters,
+            DoorSaveSnapshot doors)
         {
             if (!world.Generation.Version.IsValid
                 || !world.Generation.ChunkLayout.IsValid
@@ -341,6 +360,7 @@ namespace AgeOfSurvival.Core.Persistence
                 ?? throw new ArgumentNullException(nameof(construction));
             Shelters = shelters
                 ?? throw new ArgumentNullException(nameof(shelters));
+            Doors = doors ?? throw new ArgumentNullException(nameof(doors));
             if (chunkMutations == null)
             {
                 throw new ArgumentNullException(nameof(chunkMutations));
@@ -404,6 +424,7 @@ namespace AgeOfSurvival.Core.Persistence
         public PlayerInventorySnapshot Inventory { get; }
         public ConstructionSaveSnapshot Construction { get; }
         public ShelterSaveSnapshot Shelters { get; }
+        public DoorSaveSnapshot Doors { get; }
         public IReadOnlyList<ChunkMutationState> ChunkMutations =>
             _readOnlyChunkMutations;
 

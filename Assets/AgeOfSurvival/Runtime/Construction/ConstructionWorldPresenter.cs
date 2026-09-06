@@ -76,7 +76,11 @@ namespace AgeOfSurvival.Runtime.Construction
                 CompletedStructureState structure = structures[index];
                 retained.Add(structure.InstanceId);
                 string asset = CompletedAsset(structure);
-                Present(structure.InstanceId, structure.Space, asset, Color.white);
+                Present(structure.InstanceId, structure.Space, asset,
+                    structure.Space.Kind == ConstructionSpaceKind.Roof
+                        ? new Color32(125, 186, 216, 125)
+                        : structure.DefinitionId.Equals(ConstructionPrototypeCatalog.DoorId)
+                            ? new Color32(235, 185, 110, 255) : Color.white);
             }
 
             var stale = new List<ConstructionInstanceId>();
@@ -129,6 +133,11 @@ namespace AgeOfSurvival.Runtime.Construction
             renderer.sprite = RequireSprite(asset);
             renderer.color = color;
             SynchronizeSorting(id, renderer, asset);
+            if (space.Kind == ConstructionSpaceKind.Roof)
+            {
+                UnregisterSorting(id);
+                renderer.sortingOrder = FlatConstructionSortingOrder + 1;
+            }
         }
 
         private void SynchronizeSorting(
@@ -186,6 +195,8 @@ namespace AgeOfSurvival.Runtime.Construction
         private string CompletedAsset(CompletedStructureState structure)
         {
             string key = _session.Catalog.Require(structure.DefinitionId).VisualKey;
+            if (_session.Doors.TryGet(structure.InstanceId, out ConstructionDoorState door))
+                key = door.IsOpen ? "construction_opening" : "construction_wall";
             if (structure.Space.Kind != ConstructionSpaceKind.Edge) return key;
             return key + (structure.Space.EdgeAddress.Axis == ConstructionEdgeAxis.Vertical
                 ? "_vertical"
@@ -259,7 +270,9 @@ namespace AgeOfSurvival.Runtime.Construction
 
             _renderer.sprite = RequireSprite(asset);
             _renderer.color = technicallyPlaceable
-                ? new Color(0.22f, 0.95f, 0.78f, 0.58f)
+                ? space.Kind == ConstructionSpaceKind.Roof
+                    ? new Color(0.49f, 0.73f, 0.95f, 0.58f)
+                    : new Color(0.22f, 0.95f, 0.78f, 0.58f)
                 : new Color(1f, 0.28f, 0.25f, 0.58f);
             _root.transform.position = new Vector3(position.x, position.y, -0.055f);
             _root.SetActive(_renderer.sprite != null);

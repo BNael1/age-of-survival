@@ -189,6 +189,7 @@ namespace AgeOfSurvival.Runtime.Construction
         {
             target = default;
             if (kind != ConstructionSpaceKind.Surface
+                && kind != ConstructionSpaceKind.Roof
                 && kind != ConstructionSpaceKind.Edge)
             {
                 return false;
@@ -199,11 +200,13 @@ namespace AgeOfSurvival.Runtime.Construction
                 return false;
             }
 
-            if (kind == ConstructionSpaceKind.Surface)
+            if (kind == ConstructionSpaceKind.Surface || kind == ConstructionSpaceKind.Roof)
             {
                 target = new ConstructionPlacementTarget(
                     sample,
-                    ConstructionSpaceKey.Surface(sample.Cell),
+                    kind == ConstructionSpaceKind.Roof
+                        ? ConstructionSpaceKey.Roof(sample.Cell)
+                        : ConstructionSpaceKey.Surface(sample.Cell),
                     null);
                 return true;
             }
@@ -237,7 +240,7 @@ namespace AgeOfSurvival.Runtime.Construction
 
             WorldCellCoordinate anchor;
             ConstructionEdgeAxis? edgeAxis = null;
-            if (space.Kind == ConstructionSpaceKind.Surface)
+            if (space.Kind == ConstructionSpaceKind.Surface || space.Kind == ConstructionSpaceKind.Roof)
             {
                 anchor = space.AnchorCell;
             }

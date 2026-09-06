@@ -13,11 +13,11 @@ namespace AgeOfSurvival.Core.Persistence
 {
     /// <summary>
     /// Deterministic, versioned, in-memory binary codec for canonical saves.
-    /// It performs no disk I/O, writes V5, and reads canonical V1/V2/V3/V4/V5 payloads.
+    /// It performs no disk I/O, writes V6, and reads canonical V1 through V6 payloads.
     /// </summary>
     public static class GameSaveBinaryCodec
     {
-        public const ushort CurrentVersion = 5;
+        public const ushort CurrentVersion = 6;
         private const ushort MinimumSupportedVersion = 1;
         private const ushort CurrentFlags = 0;
 
@@ -166,6 +166,8 @@ namespace AgeOfSurvival.Core.Persistence
                 snapshot.Shelters.Histories.Count,
                 GameSaveCodecLimits.MaximumShelterHistories,
                 "Shelter history count");
+            ValidateCount(snapshot.Doors.States.Count, GameSaveCodecLimits.MaximumDoorStates,
+                "Door state count");
 
             using (var writer = new SaveBufferWriter(
                 GameSaveCodecLimits.MaximumPayloadLength))
@@ -181,6 +183,7 @@ namespace AgeOfSurvival.Core.Persistence
                 WriteChunks(writer, snapshot.ChunkMutations);
                 WriteConstruction(writer, snapshot.Construction);
                 WriteShelters(writer, snapshot.Shelters);
+                WriteDoors(writer, snapshot.Doors);
                 return writer.ToArray();
             }
         }
@@ -219,6 +222,9 @@ namespace AgeOfSurvival.Core.Persistence
                 ShelterSaveSnapshot shelters = version >= 5
                     ? ReadShelters(reader)
                     : ShelterSaveSnapshot.Empty;
+                DoorSaveSnapshot doors = version >= 6
+                    ? ReadDoors(reader)
+                    : DoorSaveSnapshot.Empty;
                 reader.RequireEnd();
                 return new GameSaveSnapshot(
                     world,
@@ -230,7 +236,8 @@ namespace AgeOfSurvival.Core.Persistence
                     inventory,
                     mutations,
                     construction,
-                    shelters);
+                    shelters,
+                    doors);
             }
             catch (GameSaveCodecException)
             {
@@ -937,6 +944,32 @@ namespace AgeOfSurvival.Core.Persistence
                 ? new ShelterId(reader.ReadRequiredString())
                 : default;
             return new ShelterSaveSnapshot(histories, hasPrimary, primary);
+        }
+
+        private static void WriteDoors(SaveBufferWriter writer, DoorSaveSnapshot doors)
+        {
+            writer.WriteUInt32(checked((uint)doors.States.Count));
+            for (int i = 0; i < doors.States.Count; i++)
+            {
+                ConstructionDoorState state = doors.States[i];
+                writer.WriteRequiredString(state.InstanceId.Value);
+                writer.WriteBoolean(state.IsOpen);
+            }
+        }
+
+        private static DoorSaveSnapshot ReadDoors(SaveBufferReader reader)
+        {
+            int count = reader.ReadCount(GameSaveCodecLimits.MaximumDoorStates, "Door state count");
+            var states = new List<ConstructionDoorState>(count);
+            ConstructionInstanceId previous = default;
+            for (int i = 0; i < count; i++)
+            {
+                var id = new ConstructionInstanceId(reader.ReadRequiredString());
+                if (i > 0) RequireCanonicalComparison(previous.CompareTo(id), "Door states");
+                previous = id;
+                states.Add(new ConstructionDoorState(id, reader.ReadBoolean()));
+            }
+            return new DoorSaveSnapshot(states);
         }
 
         private static void WriteConstructionSpace(

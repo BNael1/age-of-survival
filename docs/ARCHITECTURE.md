@@ -1129,3 +1129,16 @@ La frontière autoritaire `GameSaveCoordinator.Save` exige l'état
 complète. Le chemin jouable `PrototypeSaveService` capture pareillement
 `InventoryPrototypeSession.Shelters`; aucune écriture Runtime V5 ne substitue
 implicitement une section Shelter vide.
+
+## Lot 7L-E — boucle refuge runtime
+
+`ConstructionDoorRegistry` est le propriétaire Core de l’état mutable Door.
+Wall bloque toujours ; Door bloque seulement terminée/fermée ; OpeningFrame et
+chantiers restent ouverts. `ConstructionRuntimeSession.ShelterRevision` porte
+l’invalidation dédiée sans détourner la révision des structures terminées.
+
+`PlayableShelterRuntime` compose Construction, Inventory et `ShelterHomeState`.
+Il dérive les Rooms événementiellement, traduit `WorldPosition` vers la cellule
+par `Math.Floor`, puis applique présence et action transitoire Rest/Sleep au
+tick fixe. Rooms, support, couverture, confort, UI et action en cours restent
+dérivés/transitoires. Le panneau Shelter (ordre 240) est sous Pause (1100).

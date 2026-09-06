@@ -151,4 +151,14 @@ d'implémentation active du lot 7H-A1.
 - relier les événements de repos et nuit du futur système de sommeil aux
   méthodes Runtime déjà présentes, sans créer une seconde horloge ;
 - ajouter une visualisation debug des Rooms/refuges uniquement si un besoin de
-  diagnostic en jeu est validé.
+diagnostic en jeu est validé.
+
+## Suite 7L-E
+
+- définir l’acquisition du premier foyer hors camp initial et la succession d’un
+  foyer invalide ;
+- définir une politique de généalogie split/merge et tout transfert partiel de
+  familiarité éventuel ;
+- remplacer le confort baseline par mobilier, isolation et confort matériel ;
+- décider lit, fatigue, sommeil physiologique et calendrier jour/nuit réels ;
+- décider coûts, temps et rendu final Roof/Door.

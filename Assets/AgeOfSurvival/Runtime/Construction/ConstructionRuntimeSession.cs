@@ -59,6 +59,9 @@ namespace AgeOfSurvival.Runtime.Construction
             World = world ?? throw new ArgumentNullException(nameof(world));
             _depositMaterial = depositMaterial ?? World.DepositMaterial;
             Mode = new ConstructionModeState();
+            Doors = new ConstructionDoorRegistry(World, ConstructionPrototypeCatalog.CreateDoorPolicy());
+            foreach (CompletedStructureState structure in World.CaptureCanonicalStructures())
+                if (Doors.IsCompletedDoor(structure.InstanceId)) Doors.TryRegisterClosed(structure.InstanceId);
         }
 
         public ConstructionPrototypeCatalog Catalog { get; }
@@ -69,6 +72,30 @@ namespace AgeOfSurvival.Runtime.Construction
         public bool IsWorkActionActive => _activeWorkSite.IsValid && _workActionHeld;
         public ConstructionCarriedInventory CarriedInventory => _carriedInventory;
         public long CompletedStructureRevision { get; private set; }
+        public ConstructionDoorRegistry Doors { get; }
+        public long ShelterRevision { get; private set; }
+        public ConstructionEdgeAddress? ShelterAffectedEdge { get; private set; }
+        public string ShelterInvalidationReason { get; private set; } = "Load/NewGame";
+        public event Action ShelterInvalidated;
+
+        private void InvalidateShelter(string reason, ConstructionEdgeAddress? edge = null)
+        {
+            ShelterRevision = checked(ShelterRevision + 1);
+            ShelterAffectedEdge = edge;
+            ShelterInvalidationReason = reason;
+            ShelterInvalidated?.Invoke();
+        }
+
+        public bool TryToggleDoor(ConstructionInstanceId id, WorldPosition playerPosition,
+            double maximumDistance = PrototypeMaximumWorkDistance)
+        {
+            if (double.IsNaN(maximumDistance) || double.IsInfinity(maximumDistance) || maximumDistance < 0
+                || !World.TryFindStructure(id, out CompletedStructureState structure)
+                || playerPosition.DistanceSquaredTo(SpacePosition(structure.Space)) > maximumDistance * maximumDistance
+                || !Doors.TryToggle(id)) return false;
+            InvalidateShelter("Door toggled", structure.Space.EdgeAddress);
+            return true;
+        }
 
         public ConstructionSaveSnapshot CaptureSaveSnapshot()
         {
@@ -79,6 +106,8 @@ namespace AgeOfSurvival.Runtime.Construction
                 _idAllocator.NextSequence,
                 World);
         }
+
+        public DoorSaveSnapshot CaptureDoorSaveSnapshot() => DoorSaveSnapshot.Capture(Doors);
 
         public static ConstructionRuntimeSession Restore(
             ConstructionPrototypeCatalog catalog,
@@ -98,13 +127,26 @@ namespace AgeOfSurvival.Runtime.Construction
                     "The restored construction catalog does not match the Runtime catalog.");
             }
 
-            return new ConstructionRuntimeSession(
+            ConstructionRuntimeSession session = new ConstructionRuntimeSession(
                 catalog,
                 new MonotonicConstructionInstanceIdAllocator(
                     restored.InstanceNamespace,
                     restored.NextInstanceSequence),
                 inventory,
                 restored.World);
+            // The constructor registers defaults for a world assembled from current content.
+            // V6 replaces that provisional set only after all Door records have validated.
+            foreach (ConstructionDoorState state in session.Doors.CaptureCanonical())
+                session.Doors.TryRemove(state.InstanceId, out _);
+            restored.Doors.RestoreInto(session.Doors);
+            foreach (CompletedStructureState structure in session.World.CaptureCanonicalStructures())
+                if (session.Doors.IsCompletedDoor(structure.InstanceId)
+                    && !session.Doors.TryGet(structure.InstanceId, out _))
+                {
+                    throw new InvalidOperationException(
+                        "Every restored completed Door requires exactly one durable state.");
+                }
+            return session;
         }
 
         public bool Execute(ConstructionCommand command)
@@ -358,6 +400,9 @@ namespace AgeOfSurvival.Runtime.Construction
                     throw new InvalidOperationException($"A ready construction could not complete: {reason}.");
                 ClearWorkAction();
                 CompletedStructureRevision = checked(CompletedStructureRevision + 1L);
+                if (Doors.IsCompletedDoor(instanceId) && !Doors.TryRegisterClosed(instanceId))
+                    throw new InvalidOperationException("A completed Door must acquire exactly one state.");
+                InvalidateShelter("Construction completed");
             }
 
             return Store(new ConstructionRuntimeResult(
@@ -428,7 +473,13 @@ namespace AgeOfSurvival.Runtime.Construction
             }
 
             if (_activeWorkSite.Equals(instanceId)) ClearWorkAction();
-            if (!isSite) CompletedStructureRevision = checked(CompletedStructureRevision + 1L);
+            if (!isSite)
+            {
+                // State removal happens only after recovery commits: rollback retains the original Door state.
+                Doors.TryRemove(instanceId, out _);
+                CompletedStructureRevision = checked(CompletedStructureRevision + 1L);
+                InvalidateShelter("Construction dismantled");
+            }
             return Store(new ConstructionRuntimeResult(
                 ConstructionRuntimeReason.None,
                 instanceId,

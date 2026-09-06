@@ -47,7 +47,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             GameSaveSnapshot decoded = GameSaveBinaryCodec.Decode(bytes);
             ShelterHomeState restored = decoded.Shelters.RestoreState();
 
-            Assert.That(ReadUInt16(bytes, 8), Is.EqualTo(5));
+            Assert.That(ReadUInt16(bytes, 8), Is.EqualTo(6));
             Assert.That(decoded.Shelters.Histories.Select(value => value.ShelterId),
                 Is.EqualTo(new[]
                 {
@@ -61,6 +61,33 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                     .FamiliarityHalfPoints,
                 Is.EqualTo(140));
             Assert.That(GameSaveBinaryCodec.Encode(decoded), Is.EqualTo(bytes));
+        }
+
+        [Test]
+        public void V6RoundTripPersistsCanonicalDoorStatesAfterShelters()
+        {
+            GameSaveSnapshot baseline = CreateGameSnapshot(ConstructionSaveSnapshot.Empty);
+            var doors = new DoorSaveSnapshot(new[]
+            {
+                new ConstructionDoorState(new ConstructionInstanceId("door-b"), true),
+                new ConstructionDoorState(new ConstructionInstanceId("door-a"), false)
+            });
+            var snapshot = new GameSaveSnapshot(baseline.World, baseline.FixedTick, baseline.PlayerPosition,
+                baseline.Health, baseline.Food, baseline.Perishables, baseline.Inventory,
+                baseline.ChunkMutations, baseline.Construction, baseline.Shelters, doors);
+            byte[] encoded = GameSaveBinaryCodec.Encode(snapshot);
+            GameSaveSnapshot decoded = GameSaveBinaryCodec.Decode(encoded);
+            Assert.That(ReadUInt16(encoded, 8), Is.EqualTo(6));
+            Assert.That(decoded.Doors.States.Select(state => state.InstanceId.Value),
+                Is.EqualTo(new[] { "door-a", "door-b" }));
+            Assert.That(decoded.Doors.States[0].IsOpen, Is.False);
+            Assert.That(decoded.Doors.States[1].IsOpen, Is.True);
+            Assert.That(GameSaveBinaryCodec.Encode(decoded), Is.EqualTo(encoded));
+            Assert.Throws<ArgumentException>(() => new DoorSaveSnapshot(new[]
+            {
+                new ConstructionDoorState(new ConstructionInstanceId("door-a"), false),
+                new ConstructionDoorState(new ConstructionInstanceId("door-a"), true)
+            }));
         }
 
         [Test]
@@ -81,7 +108,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
 
             byte[] excessive = GameSaveBinaryCodec.Encode(
                 CreateGameSnapshot(ConstructionSaveSnapshot.Empty));
-            int section = excessive.Length - 5;
+            int section = excessive.Length - 5 - 4;
             WriteUInt32(
                 excessive,
                 section,
@@ -137,9 +164,9 @@ namespace AgeOfSurvival.Core.Tests.Persistence
         {
             byte[] missingId = GameSaveBinaryCodec.Encode(
                 CreateGameSnapshot(ConstructionSaveSnapshot.Empty));
-            missingId[missingId.Length - 1] = 1;
+            missingId[missingId.Length - 4 - 1] = 1;
             RefreshPayloadHash(missingId);
-            AssertCodecViolation(missingId, GameSaveCodecViolation.UnexpectedEnd);
+            AssertCodecViolation(missingId, GameSaveCodecViolation.InvalidStringLength);
 
             byte[] unknown = EncodeShelters(
                 new[] { History("a") }, true, new ShelterId("a"));
@@ -205,7 +232,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             byte[] bytes = GameSaveBinaryCodec.Encode(original);
             GameSaveSnapshot decoded = GameSaveBinaryCodec.Decode(bytes);
 
-            Assert.That(ReadUInt16(bytes, 8), Is.EqualTo(5));
+            Assert.That(ReadUInt16(bytes, 8), Is.EqualTo(6));
             Assert.That(decoded.Construction.Sites, Is.Empty);
             Assert.That(decoded.Construction.Structures, Is.Empty);
             Assert.That(decoded.Construction.NextInstanceSequence, Is.EqualTo(1L));
@@ -406,8 +433,8 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 restoredWorld.CaptureCanonicalStructures(),
                 policy);
 
-            Assert.That(GameSaveBinaryCodec.CurrentVersion, Is.EqualTo(5));
-            Assert.That(ReadUInt16(bytes, 8), Is.EqualTo(5));
+            Assert.That(GameSaveBinaryCodec.CurrentVersion, Is.EqualTo(6));
+            Assert.That(ReadUInt16(bytes, 8), Is.EqualTo(6));
             Assert.That(
                 restoredWorld.CaptureCanonicalStructures().Select(
                     structure => structure.InstanceId),
@@ -925,7 +952,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             IEnumerable<string> historyIds,
             string primaryId)
         {
-            int length = 4 + 1;
+            int length = 4 + 1 + 4;
             foreach (string id in historyIds) length += ShelterHistoryBinaryLength(id);
             if (primaryId != null)
                 length += 4 + System.Text.Encoding.UTF8.GetByteCount(primaryId);
@@ -988,9 +1015,9 @@ namespace AgeOfSurvival.Core.Tests.Persistence
 
         private static byte[] ConvertEmptyV5ToV4(byte[] encoded)
         {
-            if (ReadUInt16(encoded, 8) != 5)
-                throw new InvalidDataException("Expected a V5 fixture.");
-            const int emptyShelterLength = 5;
+            if (ReadUInt16(encoded, 8) != 6)
+                throw new InvalidDataException("Expected a V6 fixture.");
+            const int emptyShelterLength = 5 + 4;
             int payloadLength = checked((int)ReadUInt32(encoded, 12));
             int legacyPayloadLength = payloadLength - emptyShelterLength;
             var legacy = new byte[GameSaveCodecLimits.HeaderLength + legacyPayloadLength];
@@ -1012,7 +1039,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 + 8
                 + 4
                 + 4
-                + 5;
+                + 5 + 4;
             return encoded.Length - extensionLength;
         }
 
@@ -1108,9 +1135,10 @@ namespace AgeOfSurvival.Core.Tests.Persistence
 
             public bool TryResolveConstructionCatalog(
                 ConstructionSaveSnapshot saved,
-                out ConstructionDefinitionCatalog catalog)
+                out ConstructionCatalogResolution resolution)
             {
-                catalog = _construction;
+                resolution = new ConstructionCatalogResolution(_construction, _construction,
+                    saved.CatalogId, saved.CatalogRevision);
                 return saved != null
                     && string.Equals(
                         saved.CatalogId,

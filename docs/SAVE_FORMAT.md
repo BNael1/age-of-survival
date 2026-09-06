@@ -347,3 +347,13 @@ Ne sont pas sérialisés : blockers, scopes, régions, Rooms, couverture Roof,
 graphe ou distance de support, validité actuelle d'un refuge, cellule/refuge
 courant du joueur, GameObjects et présentateurs. Ces faits sont dérivés de la
 Construction V4 ou restent transitoires au Runtime.
+
+## AOSSAVE V6
+
+V6 conserve les sections V5 puis ajoute, immédiatement après Shelter, un count
+Door et chaque paire canonique `ConstructionInstanceId` / `IsOpen`. Les IDs sont
+strictement croissants, uniques et bornés. Au restore, chaque record doit viser
+exactement une Door terminée du catalogue restauré ; orphelin, chantier,
+mauvais type et état absent d’une Door terminée sont refusés. V1–V4 ont Shelter
+et Door vides ; V5 conserve Shelter et reçoit Door vide. Door ne persiste ni
+Room, ni support, ni validité, ni action Rest/Sleep.

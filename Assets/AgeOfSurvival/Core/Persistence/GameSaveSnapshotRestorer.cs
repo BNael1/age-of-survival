@@ -44,21 +44,23 @@ namespace AgeOfSurvival.Core.Persistence
 
             if (!constructionResolver.TryResolveConstructionCatalog(
                     snapshot.Construction,
-                    out ConstructionDefinitionCatalog constructionCatalog)
-                || constructionCatalog == null)
+                    out ConstructionCatalogResolution resolution)
+                || resolution == null)
             {
                 throw new NotSupportedException(
                     "The saved construction catalog is not supported by this build.");
             }
 
+            snapshot.Construction.RestoreState(resolution.SavedCatalog);
             ConstructionWorldState constructionWorld =
-                snapshot.Construction.RestoreState(constructionCatalog);
+                snapshot.Construction.RestoreState(resolution.RuntimeCatalog);
             var construction = new RestoredConstructionState(
-                snapshot.Construction.CatalogId,
-                snapshot.Construction.CatalogRevision,
+                resolution.RuntimeCatalogId,
+                resolution.RuntimeRevision,
                 snapshot.Construction.InstanceNamespace,
                 snapshot.Construction.NextInstanceSequence,
-                constructionWorld);
+                constructionWorld,
+                snapshot.Doors);
             AgeOfSurvival.Core.Shelter.ShelterHomeState shelters =
                 snapshot.Shelters.RestoreState();
 

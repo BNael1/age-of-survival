@@ -46,6 +46,9 @@ namespace AgeOfSurvival.Runtime.Shelter
         private readonly ShelterCandidateEvaluationPolicy _candidatePolicy;
         private readonly IShelterCandidateIdentityStrategy _candidateIdentityStrategy;
         private readonly ShelterFamiliarityRules _familiarityRules;
+        private readonly IShelterRoomQualificationPolicy _roomPolicy;
+        private readonly IRoomShelterIdentityStrategy _roomIdentity;
+        private readonly ConstructionDefinitionId _floorId;
         private ShelterEvaluation _evaluation = new ShelterEvaluation(Array.Empty<ShelterAssessment>());
 
         public ShelterRuntimeSession(
@@ -70,23 +73,74 @@ namespace AgeOfSurvival.Runtime.Shelter
         }
 
         public ShelterHomeState HomeState { get; }
+        public long FullRecalculations { get; private set; }
+        public long LocalRecalculations { get; private set; }
+        public long ScopesAnalyzed { get; private set; }
+        public long CellsAnalyzed { get; private set; }
+        public int LastScopesAnalyzed { get; private set; }
+        public long LastCellsAnalyzed { get; private set; }
+        public string LastInvalidationReason { get; private set; }
         public ShelterEvaluation Evaluation => _evaluation;
         public bool HasCurrentShelter { get; private set; }
         public ShelterId CurrentShelterId { get; private set; }
 
-        public void Recalculate(IEnumerable<CompletedStructureState> completedStructures)
+        public ShelterRuntimeSession(ConstructionDefinitionCatalog catalog,
+            ConstructionEnclosureBlockingPolicy enclosurePolicy, ConstructionRoomAnalysisLimits limits,
+            ConstructionRoofSupportPolicy roofPolicy, ConstructionDefinitionId floorId,
+            IShelterRoomQualificationPolicy roomPolicy, IRoomShelterIdentityStrategy roomIdentity,
+            ShelterFamiliarityRules familiarityRules, ShelterHomeState homeState)
+        {
+            _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+            _enclosurePolicy = enclosurePolicy ?? throw new ArgumentNullException(nameof(enclosurePolicy));
+            _limits = limits;
+            _roofPolicy = roofPolicy ?? throw new ArgumentNullException(nameof(roofPolicy));
+            _floorId = floorId;
+            if (catalog.Require(floorId).SpaceKind != ConstructionSpaceKind.Surface)
+                throw new ArgumentException("Shelter Floor must occupy Surface space.", nameof(floorId));
+            _roomPolicy = roomPolicy ?? throw new ArgumentNullException(nameof(roomPolicy));
+            _roomIdentity = roomIdentity ?? throw new ArgumentNullException(nameof(roomIdentity));
+            _familiarityRules = familiarityRules ?? throw new ArgumentNullException(nameof(familiarityRules));
+            HomeState = homeState ?? throw new ArgumentNullException(nameof(homeState));
+        }
+
+        public void Recalculate(IEnumerable<CompletedStructureState> completedStructures,
+            ConstructionDoorRegistry doors = null, ConstructionEdgeAddress? affectedEdge = null,
+            string reason = "Construction changed")
         {
             if (completedStructures == null) throw new ArgumentNullException(nameof(completedStructures));
             var structures = new List<CompletedStructureState>();
             foreach (CompletedStructureState structure in completedStructures) structures.Add(structure);
             ConstructionDerivedRooms rooms = ConstructionDerivedRoomBuilder.Build(
-                _catalog, structures, _enclosurePolicy, _limits, _roofPolicy);
-            _evaluation = ShelterEvaluator.Evaluate(
+                _catalog, structures, _enclosurePolicy, _limits, _roofPolicy, doors,
+                affectedEdge.HasValue ? new[] { affectedEdge.Value } : null);
+            ShelterEvaluation updated = _roomPolicy != null
+                ? RoomShelterEvaluator.Evaluate(structures, _floorId, rooms, _roomPolicy, _roomIdentity)
+                : ShelterEvaluator.Evaluate(
                 _catalog,
                 structures,
                 rooms,
                 _candidatePolicy,
                 _candidateIdentityStrategy);
+            if (affectedEdge.HasValue)
+            {
+                // Only adjacent old candidates can change topology when this Edge toggles.
+                // Other rooms returned by the affected scope replace themselves by stable ID.
+                ConstructionEdgeAddress edge = affectedEdge.Value;
+                var merged = new Dictionary<ShelterId, ShelterAssessment>();
+                foreach (ShelterAssessment old in _evaluation.Assessments)
+                    if (!old.Room.Room.Contains(edge.FirstCell) && !old.Room.Room.Contains(edge.SecondCell))
+                        merged.Add(old.Id, old);
+                foreach (ShelterAssessment candidate in updated.Assessments) merged[candidate.Id] = candidate;
+                updated = new ShelterEvaluation(merged.Values);
+                LocalRecalculations++;
+            }
+            else FullRecalculations++;
+            _evaluation = updated;
+            LastInvalidationReason = reason;
+            LastScopesAnalyzed = rooms.ScopesAnalyzed;
+            LastCellsAnalyzed = rooms.CellsAnalyzed;
+            ScopesAnalyzed += rooms.ScopesAnalyzed;
+            CellsAnalyzed += rooms.CellsAnalyzed;
             HomeState.RecalculatePrimary(CaptureValidIds());
             // Current presence is intentionally reconciled by the next fixed tick, where the
             // player's cell is available and an Exited/Changed transition can be emitted. Until
@@ -130,7 +184,7 @@ namespace AgeOfSurvival.Runtime.Shelter
             return true;
         }
 
-        private bool ContainsValid(ShelterId id)
+        public bool ContainsValid(ShelterId id)
         {
             for (int i = 0; i < _evaluation.Assessments.Count; i++)
                 if (_evaluation.Assessments[i].IsValid && _evaluation.Assessments[i].Id.Equals(id)) return true;
@@ -144,6 +198,12 @@ namespace AgeOfSurvival.Runtime.Shelter
                 if (_evaluation.Assessments[i].IsValid) ids.Add(_evaluation.Assessments[i].Id);
             ids.Sort();
             return ids.AsReadOnly();
+        }
+
+        public void ClearPresence()
+        {
+            HasCurrentShelter = false;
+            CurrentShelterId = default;
         }
     }
 
@@ -169,9 +229,11 @@ namespace AgeOfSurvival.Runtime.Shelter
 
         public bool RefreshIfChanged()
         {
-            if (_observedRevision == _construction.CompletedStructureRevision) return false;
-            _shelters.Recalculate(_construction.World.CaptureCanonicalStructures());
-            _observedRevision = _construction.CompletedStructureRevision;
+            if (_observedRevision == _construction.ShelterRevision) return false;
+            bool local = _observedRevision >= 0 && _observedRevision + 1 == _construction.ShelterRevision;
+            _shelters.Recalculate(_construction.World.CaptureCanonicalStructures(), _construction.Doors,
+                local ? _construction.ShelterAffectedEdge : null, _construction.ShelterInvalidationReason);
+            _observedRevision = _construction.ShelterRevision;
             return true;
         }
 

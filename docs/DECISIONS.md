@@ -934,3 +934,15 @@ d'une ancienne sauvegarde, le statut d'un foyer détruit/invalide et une
 candidat conservateur actuel garde l'ID du côté de la source et refuse un merge
 à plusieurs sources sans transfert d'historique ; il est isolé et ne constitue
 pas une décision active.
+
+### Politique prototype 7L-E — non finale
+
+Les coûts Roof (3 branches, 1 wood, 40 travail), Door (2 branches, 2 wood,
+40 travail), la portée Roof 2, Rest 180 ticks, Sleep 360 ticks, le confort
+baseline 1 et la priorité `Door > pile > ressource` sont isolés et marqués
+**PROTOTYPE / NON GAMEPLAY FINAL**. Le refuge prototype est une Room fermée
+avec Floor et Roof supporté complets. Son fingerprint `room-v1-sha256` est
+technique : aucune généalogie ou transmission après split/merge.
+
+Les valeurs validées restent inchangées : +0,5/h, +1 Rest, +8/+1 nuit Sleep,
+seuils 30/70, plafonds 75/85/90/100 et foyer challenger à trois nuits/+15.

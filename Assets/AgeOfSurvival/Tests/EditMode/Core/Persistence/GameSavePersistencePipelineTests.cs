@@ -105,7 +105,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 ReadUInt16(
                     GameSaveBinaryCodec.Encode(decoded),
                     8),
-                Is.EqualTo(5));
+                Is.EqualTo(6));
         }
 
         [Test]
@@ -164,7 +164,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
             Assert.That(encoded[1], Is.EqualTo((byte)'O'));
             Assert.That(encoded[2], Is.EqualTo((byte)'S'));
             Assert.That(encoded[7], Is.EqualTo(0));
-            Assert.That(ReadUInt16(encoded, 8), Is.EqualTo(5));
+            Assert.That(ReadUInt16(encoded, 8), Is.EqualTo(6));
             Assert.That(ReadUInt16(encoded, 10), Is.EqualTo(0));
             Assert.That(
                 ReadUInt32(encoded, 12),
@@ -214,7 +214,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
         public void CodecRejectsUnsupportedVersion()
         {
             byte[] encoded = GameSaveBinaryCodec.Encode(CreateSnapshot(0));
-            WriteUInt16(encoded, 8, 6);
+            WriteUInt16(encoded, 8, 7);
 
             GameSaveCodecException exception =
                 Assert.Throws<GameSaveCodecException>(() =>
@@ -591,8 +591,8 @@ namespace AgeOfSurvival.Core.Tests.Persistence
 
         private static byte[] ConvertCurrentToLegacyV3(byte[] encoded)
         {
-            if (ReadUInt16(encoded, 8) != 5)
-                throw new InvalidDataException("Expected a V5 fixture.");
+            if (ReadUInt16(encoded, 8) != 6)
+                throw new InvalidDataException("Expected a V6 fixture.");
 
             int extensionLength = 2
                 + 4 + System.Text.Encoding.UTF8.GetByteCount(
@@ -603,7 +603,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                 + 8
                 + 4
                 + 4
-                + 5;
+                + 5 + 4;
             int payloadLength = checked((int)ReadUInt32(encoded, 12));
             int legacyPayloadLength = payloadLength - extensionLength;
             var legacy = new byte[
@@ -817,9 +817,9 @@ namespace AgeOfSurvival.Core.Tests.Persistence
 
             public bool TryResolveConstructionCatalog(
                 ConstructionSaveSnapshot saved,
-                out ConstructionDefinitionCatalog catalog)
+                out ConstructionCatalogResolution resolution)
             {
-                catalog = new ConstructionDefinitionCatalog(new[]
+                var catalog = new ConstructionDefinitionCatalog(new[]
                 {
                     new ConstructionDefinition(
                         new ConstructionDefinitionId("test.floor"),
@@ -830,6 +830,7 @@ namespace AgeOfSurvival.Core.Tests.Persistence
                             new ConstructionMaterialRequirement(Rations.Id, 1)
                         })
                 });
+                resolution = new ConstructionCatalogResolution(catalog, catalog, saved.CatalogId, saved.CatalogRevision);
                 return saved != null;
             }
         }

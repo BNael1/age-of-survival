@@ -9,6 +9,7 @@ using AgeOfSurvival.Runtime.Frontend;
 using AgeOfSurvival.Runtime.Construction;
 using AgeOfSurvival.Runtime.Inventory;
 using AgeOfSurvival.Runtime.Resources;
+using AgeOfSurvival.Runtime.Shelter;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
@@ -125,23 +126,25 @@ namespace AgeOfSurvival.Runtime.Persistence
     {
         public bool TryResolveConstructionCatalog(
             ConstructionSaveSnapshot saved,
-            out ConstructionDefinitionCatalog catalog)
+            out ConstructionCatalogResolution resolution)
         {
             if (saved != null
                 && string.Equals(
                     saved.CatalogId,
                     ConstructionSaveDefaults.PrototypeCatalogId,
                     StringComparison.Ordinal)
-                && saved.CatalogRevision
-                    == ConstructionSaveDefaults.PrototypeCatalogRevision)
+                && (saved.CatalogRevision == 1 || saved.CatalogRevision
+                    == ConstructionSaveDefaults.PrototypeCatalogRevision))
             {
-                catalog = ConstructionPrototypeCatalog
-                    .CreateDefault()
-                    .CoreCatalog;
+                ConstructionPrototypeCatalog runtime = ConstructionPrototypeCatalog.CreateDefault();
+                resolution = new ConstructionCatalogResolution(
+                    saved.CatalogRevision == 1 ? ConstructionPrototypeCatalog.CreateRevision1().CoreCatalog
+                        : runtime.CoreCatalog, runtime.CoreCatalog,
+                    runtime.PersistenceCatalogId, runtime.PersistenceCatalogRevision);
                 return true;
             }
 
-            catalog = null;
+            resolution = null;
             return false;
         }
     }
@@ -217,7 +220,7 @@ namespace AgeOfSurvival.Runtime.Persistence
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (construction == null) throw new ArgumentNullException(nameof(construction));
             GameSaveSnapshot snapshot = session.CaptureGameSaveSnapshot(
-                construction.CaptureSaveSnapshot());
+                construction.CaptureSaveSnapshot(), construction.CaptureDoorSaveSnapshot());
             _storage.Save(slot.StorageKey, snapshot);
             TryWriteMetadata(new SaveSlotMetadata(
                 slot,
@@ -603,6 +606,7 @@ namespace AgeOfSurvival.Runtime.Persistence
 
             InventoryPrototypeSessionProvider.Current
                 .CancelActiveActionsForSaveAndQuit();
+            ShelterRuntimeSessionProvider.Current.CancelForSaveAndQuit();
             Request(SaveRequestKind.ReturnToMainMenu);
         }
 
@@ -692,6 +696,7 @@ namespace AgeOfSurvival.Runtime.Persistence
             InventoryPrototypeSession session =
                 InventoryPrototypeSessionProvider.Current;
             return !session.IsCraftActionActive
+                && !ShelterRuntimeSessionProvider.Current.IsActionActive
                 && (session.TransferAction == null
                     || session.TransferAction.Status
                         != TransferActionStatus.Active);
@@ -711,6 +716,7 @@ namespace AgeOfSurvival.Runtime.Persistence
             {
                 InventoryPrototypeSessionProvider.Current
                     .CancelActiveActionsForSaveAndQuit();
+                ShelterRuntimeSessionProvider.Current.CancelForSaveAndQuit();
                 PrototypeSaveRuntime.SaveCurrent();
             }
             catch (Exception exception)

@@ -20,7 +20,10 @@ namespace AgeOfSurvival.Runtime.Tests
         {
             ConstructionPrototypeCatalog catalog = ConstructionPrototypeCatalog.CreateDefault();
 
-            Assert.That(catalog.Definitions, Has.Count.EqualTo(3));
+            Assert.That(catalog.Definitions, Has.Count.EqualTo(5));
+            Assert.That(ConstructionPrototypeCatalog.CreateRevision1().Definitions, Has.Count.EqualTo(3));
+            Assert.That(catalog.Require(ConstructionPrototypeCatalog.RoofId).Core.SpaceKind,
+                Is.EqualTo(ConstructionSpaceKind.Roof));
             Assert.That(catalog.Require(ConstructionPrototypeCatalog.FloorId).Core.SpaceKind,
                 Is.EqualTo(ConstructionSpaceKind.Surface));
             Assert.That(catalog.Require(ConstructionPrototypeCatalog.WallId).Core.SpaceKind,
@@ -37,6 +40,7 @@ namespace AgeOfSurvival.Runtime.Tests
 
             Assert.That(policy.SupportingEdgeDefinitionIds, Is.EqualTo(new[]
             {
+                ConstructionPrototypeCatalog.DoorId,
                 ConstructionPrototypeCatalog.OpeningId,
                 ConstructionPrototypeCatalog.WallId
             }));
@@ -702,6 +706,75 @@ namespace AgeOfSurvival.Runtime.Tests
             Assert.That(Count(inventory.MainContainer, InventoryPrototypeCatalog.Branches), Is.EqualTo(1));
             Assert.That(Count(inventory.MainContainer, InventoryPrototypeCatalog.Stones), Is.Zero,
                 "floor(1 * 70%) must remain zero");
+        }
+
+        [TestCase(false, false)]
+        [TestCase(true, false)]
+        [TestCase(true, true)]
+        public void RoofUsesExistingLifecycleAndRecovery(bool completed, bool overflow)
+        {
+            ConstructionRuntimeSession session = CreateSession(out _, out InventoryPrototypeSession inventory);
+            Seed(inventory.MainContainer, InventoryPrototypeCatalog.Branches, 3);
+            Seed(inventory.MainContainer, InventoryPrototypeCatalog.Wood, 1);
+            Select(session, ConstructionPrototypeCatalog.RoofId);
+            ConstructionRuntimeResult placed = session.TryPlaceSelected(ConstructionSpaceKey.Roof(
+                new WorldCellCoordinate(-16, -1)));
+            Assert.That(placed.Succeeded, Is.True);
+            Assert.That(session.World.CaptureCanonicalSites()[0].WorkCompletedUnits, Is.Zero);
+            Assert.That(session.DepositAllAvailable(placed.InstanceId).Accepted, Is.EqualTo(4));
+            if (completed) Complete(session, placed.InstanceId, new WorldPosition(-16, -1));
+            ConstructionSaveSnapshot snapshot = session.CaptureSaveSnapshot();
+            ConstructionWorldState restored = snapshot.RestoreState(session.Catalog.CoreCatalog);
+            Assert.That(restored.IsOccupied(ConstructionSpaceKey.Roof(new WorldCellCoordinate(-16, -1))), Is.True);
+            Assert.That(restored.StructureCount, Is.EqualTo(completed ? 1 : 0));
+            if (overflow) FillMain(inventory, 250L);
+            ConstructionRuntimeResult result = session.TryDismantle(placed.InstanceId);
+            Assert.That(result.Succeeded, Is.True);
+            Assert.That(result.Accepted, Is.EqualTo(completed ? 2 : 4));
+            Assert.That(result.GroundOverflow, Is.EqualTo(overflow ? 2 : 0));
+            Assert.That(session.World.OccupiedSpaceCount, Is.Zero);
+        }
+
+        [Test]
+        public void DoorStateRequiresCompletionAndSurvivesRejectedDismantle()
+        {
+            ConstructionRuntimeSession session = CreateSession(out _, out InventoryPrototypeSession inventory);
+            Seed(inventory.MainContainer, InventoryPrototypeCatalog.Branches, 2);
+            Seed(inventory.MainContainer, InventoryPrototypeCatalog.Wood, 2);
+            Select(session, ConstructionPrototypeCatalog.DoorId);
+            ConstructionRuntimeResult placed = session.TryPlaceSelected(ConstructionSpaceKey.Edge(
+                new WorldCellCoordinate(0, 0), ConstructionCellSide.East));
+            Assert.That(session.Doors.TryRegisterClosed(placed.InstanceId), Is.False);
+            Assert.That(session.TryToggleDoor(placed.InstanceId, Near), Is.False);
+            Assert.That(session.Doors.TryRegisterClosed(default), Is.False);
+            session.DepositAllAvailable(placed.InstanceId);
+            Complete(session, placed.InstanceId, Near);
+            Assert.That(session.Doors.TryGet(placed.InstanceId, out ConstructionDoorState closed), Is.True);
+            Assert.That(closed.IsOpen, Is.False);
+            Assert.That(session.Doors.TryRestore(closed), Is.False);
+            long completedRevision = session.CompletedStructureRevision;
+            Assert.That(session.TryToggleDoor(placed.InstanceId, Far), Is.False);
+            Assert.That(session.TryToggleDoor(placed.InstanceId, Near), Is.True);
+            Assert.That(session.Doors.TryGet(placed.InstanceId, out ConstructionDoorState opened), Is.True);
+            Assert.That(opened.IsOpen, Is.True);
+            Assert.That(session.CompletedStructureRevision, Is.EqualTo(completedRevision));
+            Assert.That(session.ShelterAffectedEdge.HasValue, Is.True);
+            Assert.That(ConstructionEnclosureBlockingEdgeBuilder.Build(session.Catalog.CoreCatalog,
+                session.World.CaptureCanonicalStructures(), ConstructionPrototypeCatalog.CreateEnclosurePolicy(),
+                session.Doors), Is.Empty);
+            Assert.That(session.TryToggleDoor(placed.InstanceId, Near), Is.True);
+            Assert.That(ConstructionEnclosureBlockingEdgeBuilder.Build(session.Catalog.CoreCatalog,
+                session.World.CaptureCanonicalStructures(), ConstructionPrototypeCatalog.CreateEnclosurePolicy(),
+                session.Doors), Has.Count.EqualTo(1));
+            FillMain(inventory, 250L);
+            Assert.That(inventory.TryRegisterGroundContainer(GroundWith(
+                "construction-recovery-" + placed.InstanceId.Value, InventoryPrototypeCatalog.Branches, 1)), Is.True);
+            Assert.That(session.TryDismantle(placed.InstanceId).Succeeded, Is.False);
+            Assert.That(session.Doors.TryGet(placed.InstanceId, out _), Is.True);
+            Clear(inventory.MainContainer, InventoryPrototypeCatalog.Branches);
+            Assert.That(session.TryDismantle(placed.InstanceId).Succeeded, Is.True);
+            Assert.That(session.Doors.Count, Is.Zero);
+            Assert.That(session.Doors.TryRestore(opened), Is.False);
         }
 
         private static ConstructionRuntimeSession CreateSession(

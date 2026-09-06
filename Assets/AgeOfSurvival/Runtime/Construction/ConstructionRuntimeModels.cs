@@ -174,6 +174,10 @@ namespace AgeOfSurvival.Runtime.Construction
             new ConstructionDefinitionId("prototype.wall.basic");
         public static readonly ConstructionDefinitionId OpeningId =
             new ConstructionDefinitionId("prototype.opening.frame");
+        public static readonly ConstructionDefinitionId RoofId =
+            new ConstructionDefinitionId("prototype.roof.basic");
+        public static readonly ConstructionDefinitionId DoorId =
+            new ConstructionDefinitionId("prototype.door.basic");
 
         private readonly Dictionary<ConstructionDefinitionId, ConstructionPrototypeDefinition> _byId;
         private readonly IReadOnlyList<ConstructionPrototypeDefinition> _definitions;
@@ -240,6 +244,23 @@ namespace AgeOfSurvival.Runtime.Construction
 
         public static ConstructionPrototypeCatalog CreateDefault()
         {
+            var definitions = new List<ConstructionPrototypeDefinition>(CreateRevision1().Definitions)
+            {
+                Create(RoofId, ConstructionSpaceKind.Roof, 40, "Toitures", "Toit en bois",
+                    "Toit prototype : compte pour le refuge seulement s'il est supporté.",
+                    "construction_floor", Requirement("branches", 3), Requirement("wood", 1)),
+                Create(DoorId, ConstructionSpaceKind.Edge, 40, "Bords", "Porte en bois",
+                    "Porte prototype autonome avec cadre. E pour ouvrir/fermer.",
+                    "construction_wall", Requirement("branches", 2), Requirement("wood", 2))
+            };
+            return new ConstructionPrototypeCatalog(definitions,
+                ConstructionSaveDefaults.PrototypeCatalogId,
+                ConstructionSaveDefaults.PrototypeCatalogRevision);
+        }
+
+        /// <summary>Exact historical catalog, used to validate V4/V5 saves before migration.</summary>
+        public static ConstructionPrototypeCatalog CreateRevision1()
+        {
             return new ConstructionPrototypeCatalog(
                 new[]
                 {
@@ -275,15 +296,20 @@ namespace AgeOfSurvival.Runtime.Construction
                         Requirement("wood", 1))
                 },
                 ConstructionSaveDefaults.PrototypeCatalogId,
-                ConstructionSaveDefaults.PrototypeCatalogRevision);
+                1);
         }
 
         public static ConstructionRoofSupportPolicy CreateRoofSupportPolicy()
         {
             return new ConstructionRoofSupportPolicy(
-                new[] { WallId, OpeningId },
+                new[] { WallId, OpeningId, DoorId },
                 2);
         }
+
+        public static ConstructionDoorPolicy CreateDoorPolicy() => new ConstructionDoorPolicy(new[] { DoorId });
+
+        public static ConstructionEnclosureBlockingPolicy CreateEnclosurePolicy() =>
+            new ConstructionEnclosureBlockingPolicy(new[] { WallId }, CreateDoorPolicy());
 
         private static ConstructionPrototypeDefinition Create(
             ConstructionDefinitionId id,

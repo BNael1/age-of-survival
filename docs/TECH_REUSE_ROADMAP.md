@@ -199,3 +199,10 @@ et restent testables hors MonoBehaviour.
 | BFS propriétaire sur `WorldCellCoordinate` / `ConstructionEdgeAddress` | Core Age of Survival | Réutilise l’identité canonique et `TryCreate`, reste petit, déterministe, testable et reconstructible. | **Adopté** |
 
 7L-C4 n’ajoute aucune dépendance ; `THIRD_PARTY.md` reste inchangé.
+
+## Lot 7L-E — réemploi
+
+Roof réemploie lifecycle, projection Surface locale Int64, support existant et
+sprite Floor ; Door réemploie les deux sprites Edge Wall/Opening. Le panneau
+réemploie UI Toolkit runtime et `PanelSettings` existants. Aucune dépendance,
+asset externe ni package n’est ajouté.

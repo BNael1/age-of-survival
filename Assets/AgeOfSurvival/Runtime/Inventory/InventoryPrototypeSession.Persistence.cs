@@ -71,7 +71,8 @@ namespace AgeOfSurvival.Runtime.Inventory
         public WorldPopulationSettings PersistenceWorld => _persistenceWorld;
 
         public GameSaveSnapshot CaptureGameSaveSnapshot(
-            ConstructionSaveSnapshot construction)
+            ConstructionSaveSnapshot construction,
+            DoorSaveSnapshot doors = null)
         {
             if (construction == null) throw new ArgumentNullException(nameof(construction));
             var mutations = new List<ChunkMutationState>();
@@ -119,7 +120,8 @@ namespace AgeOfSurvival.Runtime.Inventory
                 Inventory.CaptureSnapshot(),
                 mutations,
                 construction,
-                ShelterSaveSnapshot.Capture(Shelters));
+                ShelterSaveSnapshot.Capture(Shelters),
+                doors ?? DoorSaveSnapshot.Empty);
         }
 
         public bool CancelActiveActionsForSaveAndQuit()

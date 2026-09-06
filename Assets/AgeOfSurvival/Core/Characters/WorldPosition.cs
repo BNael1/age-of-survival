@@ -27,6 +27,19 @@ namespace AgeOfSurvival.Core.Characters
         public double X { get; }
         public double Y { get; }
 
+        /// <summary>Logical containment uses floor, never Unity sprite bounds or nearest-cell rounding.</summary>
+        public bool TryToWorldCell(out AgeOfSurvival.Core.World.Generation.WorldCellCoordinate cell)
+        {
+            double x = Math.Floor(X);
+            double y = Math.Floor(Y);
+            const double exclusiveMaximum = 9223372036854775808d;
+            cell = default;
+            if (x < -exclusiveMaximum || x >= exclusiveMaximum || y < -exclusiveMaximum || y >= exclusiveMaximum)
+                return false;
+            cell = new AgeOfSurvival.Core.World.Generation.WorldCellCoordinate((long)x, (long)y);
+            return true;
+        }
+
         public WorldPosition Translate(double deltaX, double deltaY)
         {
             if (!IsFinite(deltaX))

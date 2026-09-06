@@ -153,3 +153,11 @@ Ces textes restent des références bibliographiques sous les droits de leurs
 transpose pas leurs algorithmes avancés : il retient un regroupement local par
 sommets, des scopes explicitement bornés et un flood-fill C4 existant, solution
 plus petite et vérifiable pour le besoin actuel.
+
+## Vérification officielle Unity — lot 7L-E
+
+Consultées le 5 septembre 2026 : documentation Unity 6000.0 UI Toolkit Runtime
+UI, Tilemap/GetCellCenterWorld et tri 2D/pivot, plus la documentation locale
+Input System 1.19.0. Auteur : Unity Technologies ; aucune dépendance et aucun
+code copié. Elles confirment l’usage des `PanelSettings` runtime et du sorting
+par pivot ; l’implémentation reste propriétaire.

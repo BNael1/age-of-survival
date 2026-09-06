@@ -241,6 +241,8 @@ namespace AgeOfSurvival.Runtime.Player
                 session.CurrentTick,
                 _player.Position,
                 playerMoved);
+            AgeOfSurvival.Runtime.Shelter.ShelterRuntimeSessionProvider.Current.AdvanceFixedTick(
+                session.CurrentTick, _player.Position, playerMoved);
         }
 
         private void ResolveHealthStep(

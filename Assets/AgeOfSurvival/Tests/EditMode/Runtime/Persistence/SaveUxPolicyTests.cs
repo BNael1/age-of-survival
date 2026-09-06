@@ -226,7 +226,7 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
         }
 
         [TestCase("unsupported-construction", ConstructionSaveDefaults.PrototypeCatalogRevision)]
-        [TestCase(ConstructionSaveDefaults.PrototypeCatalogId, 2)]
+        [TestCase(ConstructionSaveDefaults.PrototypeCatalogId, 3)]
         public void PrototypeService_RejectsUnsupportedConstructionCatalog(
             string catalogId,
             int catalogRevision)
@@ -989,8 +989,8 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
 
         private static byte[] ConvertCurrentToLegacyV3(byte[] encoded)
         {
-            if (ReadUInt16(encoded, 8) != 5)
-                throw new InvalidDataException("Expected a V5 fixture.");
+            if (ReadUInt16(encoded, 8) != 6)
+                throw new InvalidDataException("Expected a V6 fixture.");
 
             int extensionLength = 2
                 + 4 + System.Text.Encoding.UTF8.GetByteCount(
@@ -1001,7 +1001,7 @@ namespace AgeOfSurvival.Tests.EditMode.Runtime.Persistence
                 + 8
                 + 4
                 + 4
-                + 5;
+                + 5 + 4;
             int payloadLength = checked((int)ReadUInt32(encoded, 12));
             int legacyPayloadLength = payloadLength - extensionLength;
             var legacy = new byte[

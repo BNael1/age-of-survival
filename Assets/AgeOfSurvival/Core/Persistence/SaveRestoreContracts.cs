@@ -41,7 +41,26 @@ namespace AgeOfSurvival.Core.Persistence
     {
         bool TryResolveConstructionCatalog(
             ConstructionSaveSnapshot saved,
-            out ConstructionDefinitionCatalog catalog);
+            out ConstructionCatalogResolution resolution);
+    }
+
+    /// <summary>Saved content is validated first; migration then uses the explicit current catalog.</summary>
+    public sealed class ConstructionCatalogResolution
+    {
+        public ConstructionCatalogResolution(ConstructionDefinitionCatalog savedCatalog,
+            ConstructionDefinitionCatalog runtimeCatalog, string runtimeCatalogId, int runtimeRevision)
+        {
+            SavedCatalog = savedCatalog ?? throw new ArgumentNullException(nameof(savedCatalog));
+            RuntimeCatalog = runtimeCatalog ?? throw new ArgumentNullException(nameof(runtimeCatalog));
+            StableIdentifierValidation.Validate(runtimeCatalogId, nameof(runtimeCatalogId));
+            if (runtimeRevision <= 0) throw new ArgumentOutOfRangeException(nameof(runtimeRevision));
+            RuntimeCatalogId = runtimeCatalogId;
+            RuntimeRevision = runtimeRevision;
+        }
+        public ConstructionDefinitionCatalog SavedCatalog { get; }
+        public ConstructionDefinitionCatalog RuntimeCatalog { get; }
+        public string RuntimeCatalogId { get; }
+        public int RuntimeRevision { get; }
     }
 
     public sealed class RestoredConstructionState
@@ -52,6 +71,18 @@ namespace AgeOfSurvival.Core.Persistence
             string instanceNamespace,
             long nextInstanceSequence,
             ConstructionWorldState world)
+            : this(catalogId, catalogRevision, instanceNamespace, nextInstanceSequence, world,
+                DoorSaveSnapshot.Empty)
+        {
+        }
+
+        public RestoredConstructionState(
+            string catalogId,
+            int catalogRevision,
+            string instanceNamespace,
+            long nextInstanceSequence,
+            ConstructionWorldState world,
+            DoorSaveSnapshot doors)
         {
             StableIdentifierValidation.Validate(catalogId, nameof(catalogId));
             if (catalogRevision <= 0)
@@ -64,6 +95,7 @@ namespace AgeOfSurvival.Core.Persistence
             InstanceNamespace = instanceNamespace;
             NextInstanceSequence = nextInstanceSequence;
             World = world ?? throw new ArgumentNullException(nameof(world));
+            Doors = doors ?? throw new ArgumentNullException(nameof(doors));
         }
 
         public string CatalogId { get; }
@@ -71,6 +103,7 @@ namespace AgeOfSurvival.Core.Persistence
         public string InstanceNamespace { get; }
         public long NextInstanceSequence { get; }
         public ConstructionWorldState World { get; }
+        public DoorSaveSnapshot Doors { get; }
     }
 
     public sealed class RestoredGameState

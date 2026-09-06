@@ -666,6 +666,34 @@ namespace AgeOfSurvival.Tests.EditMode.Core
             Assert.That(camp.CaptureCanonicalHistories().Single().CompletedNightCount, Is.EqualTo(3));
         }
 
+        [Test]
+        public void RealRoomQualificationRequiresEveryFloorAndSupportedRoofAndUsesGeometryFingerprint()
+        {
+            ConstructionDefinitionCatalog catalog = CreateCatalog();
+            WorldCellCoordinate[] cells = Rectangle(-1, -1, 2, 1);
+            ConstructionWorldState world = new ConstructionWorldState(catalog);
+            foreach (ConstructionEdgeAddress edge in Boundary(cells))
+                Complete(world, Wall, ConstructionSpaceKey.Edge(edge), "edge-" + edge);
+            foreach (WorldCellCoordinate cell in cells)
+            {
+                Complete(world, Floor, ConstructionSpaceKey.Surface(cell), "floor-" + cell);
+                Complete(world, Roof, ConstructionSpaceKey.Roof(cell), "roof-" + cell);
+            }
+            ConstructionDerivedRooms rooms = ConstructionDerivedRoomBuilder.Build(catalog, world.CaptureCanonicalStructures(),
+                new ConstructionEnclosureBlockingPolicy(new[] { Wall }), Limits(), new ConstructionRoofSupportPolicy(new[] { Wall }, 2));
+            var identity = new RoomFingerprintIdentityStrategy();
+            ShelterEvaluation evaluation = RoomShelterEvaluator.Evaluate(world.CaptureCanonicalStructures(), Floor,
+                rooms, new FullFloorSupportedRoofShelterPolicy(), identity);
+            Assert.That(evaluation.Assessments.Single().IsValid, Is.True);
+            ShelterId id = evaluation.Assessments.Single().Id;
+            Assert.That(id.Value.StartsWith("room-v1-sha256:"), Is.True);
+            Assert.That(identity.CreateId(cells.Reverse()), Is.EqualTo(id));
+            Assert.That(identity.CreateId(new[] { cells[0] }), Is.Not.EqualTo(id));
+            var colliding = new RoomFingerprintIdentityStrategy(_ => new byte[32]);
+            colliding.CreateId(new[] { cells[0] });
+            Assert.Throws<InvalidOperationException>(() => colliding.CreateId(cells));
+        }
+
         private static ConstructionDerivedRooms BuildRooms(
             ConstructionDefinitionCatalog catalog,
             ConstructionWorldState world,

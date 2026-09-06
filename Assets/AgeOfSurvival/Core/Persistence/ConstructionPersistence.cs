@@ -10,7 +10,7 @@ namespace AgeOfSurvival.Core.Persistence
     {
         public const ushort SectionVersion = 1;
         public const string PrototypeCatalogId = "prototype-construction";
-        public const int PrototypeCatalogRevision = 1;
+        public const int PrototypeCatalogRevision = 2;
         public const string PrototypeInstanceNamespace = "local-prototype";
         public const long InitialNextInstanceSequence =
             ConstructionInstanceIdSequencePolicy.InitialSequence;

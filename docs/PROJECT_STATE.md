@@ -1068,3 +1068,17 @@ round-trip Runtime vérifie qu'une section non vide ne peut pas disparaître.
 Validation finale R2 : **944/944 EditMode** et **20/20 PlayMode**, zéro échec,
 zéro test ignoré ou inconclusif et code Unity `0` pour les deux scripts
 officiels. Aucun package, plugin, dépendance ou asset n'est ajouté.
+
+## Lot 7L-E — verticale jouable prototype
+
+La branche de travail ajoute Roof, Door, refuge dérivé, Rest/Sleep et un HUD
+UI Toolkit composés dans `SampleScene`. Roof réutilise le chantier, la
+persistance et le sprite Floor project-owned ; Door est une construction Edge
+avec état Core durable fermé/ouvert. `E` résout distance, puis Door, pile au
+sol, ressource, puis ID ordinal.
+
+La qualification **PROTOTYPE / NON GAMEPLAY FINAL** est : Room fermée, Floor
+terminé dans chaque cellule et Roof terminé/soutenu dans chaque cellule. Son ID
+est `room-v1-sha256:` sur cellules Int64 triées. `AOSSAVE V6` ajoute après
+Shelter les états Door non dérivables ; V1–V5 les migrent vides en mémoire.
+Validation courante : 963/963 EditMode et 22/22 PlayMode.

@@ -58,8 +58,10 @@ namespace AgeOfSurvival.Core.Construction
     {
         internal ConstructionDerivedRooms(
             IEnumerable<ConstructionEdgeAddress> blockingEdges,
-            IEnumerable<ConstructionRoomCoverage> rooms)
+            IEnumerable<ConstructionRoomCoverage> rooms, int scopesAnalyzed = 0, long cellsAnalyzed = 0)
         {
+            ScopesAnalyzed = scopesAnalyzed;
+            CellsAnalyzed = cellsAnalyzed;
             BlockingEdges = new List<ConstructionEdgeAddress>(blockingEdges).AsReadOnly();
             var copy = new List<ConstructionRoomCoverage>(rooms);
             copy.Sort((left, right) => left.Room.CanonicalCell.CompareTo(right.Room.CanonicalCell));
@@ -68,6 +70,8 @@ namespace AgeOfSurvival.Core.Construction
 
         public IReadOnlyList<ConstructionEdgeAddress> BlockingEdges { get; }
         public IReadOnlyList<ConstructionRoomCoverage> Rooms { get; }
+        public int ScopesAnalyzed { get; }
+        public long CellsAnalyzed { get; }
     }
 
     public static class ConstructionDerivedRoomBuilder
@@ -77,7 +81,9 @@ namespace AgeOfSurvival.Core.Construction
             IEnumerable<CompletedStructureState> structures,
             ConstructionEnclosureBlockingPolicy enclosurePolicy,
             ConstructionRoomAnalysisLimits limits,
-            ConstructionRoofSupportPolicy roofSupportPolicy)
+            ConstructionRoofSupportPolicy roofSupportPolicy,
+            ConstructionDoorRegistry doors = null,
+            IEnumerable<ConstructionEdgeAddress> affectedEdges = null)
         {
             if (catalog == null) throw new ArgumentNullException(nameof(catalog));
             if (structures == null) throw new ArgumentNullException(nameof(structures));
@@ -87,8 +93,8 @@ namespace AgeOfSurvival.Core.Construction
             var completed = new List<CompletedStructureState>();
             foreach (CompletedStructureState structure in structures) completed.Add(structure);
             IReadOnlyList<ConstructionEdgeAddress> blockers =
-                ConstructionEnclosureBlockingEdgeBuilder.Build(catalog, completed, enclosurePolicy);
-            ConstructionRoomAnalysis analysis = ConstructionRoomAnalyzer.Analyze(blockers, limits);
+                ConstructionEnclosureBlockingEdgeBuilder.Build(catalog, completed, enclosurePolicy, doors);
+            ConstructionRoomAnalysis analysis = ConstructionRoomAnalyzer.AnalyzeAffected(blockers, affectedEdges, limits);
 
             ConstructionSupportEvaluation support =
                 ConstructionRoofSupportGraphBuilder.Build(catalog, completed, roofSupportPolicy).Evaluate();
@@ -117,7 +123,7 @@ namespace AgeOfSurvival.Core.Construction
                 result.Add(new ConstructionRoomCoverage(room, completedCount, supportedCount));
             }
 
-            return new ConstructionDerivedRooms(blockers, result);
+            return new ConstructionDerivedRooms(blockers, result, analysis.ScopesAnalyzed, analysis.CellsAnalyzed);
         }
     }
 }

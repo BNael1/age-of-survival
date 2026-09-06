@@ -204,7 +204,7 @@ namespace AgeOfSurvival.Runtime.Tests
         }
 
         [Test]
-        public void RoofIsNotAPlacementKindInB1A()
+        public void RoofUsesTheSurfaceCellProjectionIn7LE()
         {
             Assert.That(
                 ConstructionPlacementProjection.TryResolve(
@@ -212,8 +212,24 @@ namespace AgeOfSurvival.Runtime.Tests
                     Vector3.zero,
                     ConstructionSpaceKind.Roof,
                     out ConstructionPlacementTarget target),
-                Is.False);
-            Assert.That(target.IsValid, Is.False);
+                Is.True);
+            Assert.That(target.IsValid, Is.True);
+            Assert.That(target.Space.Kind, Is.EqualTo(ConstructionSpaceKind.Roof));
+        }
+
+        [TestCase(-17L, -16L)]
+        [TestCase(long.MaxValue, long.MinValue)]
+        [TestCase(9007199254740993L, -9007199254740993L)]
+        public void RoofRoundTripKeepsLocalInt64Origin(long x, long y)
+        {
+            var cell = new WorldCellCoordinate(x, y);
+            ConstructionProjectionFrame frame = CreateIdentityFrame(cell);
+            Assert.That(ConstructionPlacementProjection.TryResolve(frame, Vector3.zero,
+                ConstructionSpaceKind.Roof, out ConstructionPlacementTarget target), Is.True);
+            Assert.That(target.Space, Is.EqualTo(ConstructionSpaceKey.Roof(cell)));
+            Assert.That(ConstructionPlacementProjection.TryMapSpaceCenter(frame, target.Space,
+                out Vector3 position), Is.True);
+            Assert.That(position, Is.EqualTo(Vector3.zero));
         }
 
         [Test]

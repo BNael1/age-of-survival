@@ -3,6 +3,7 @@ using AgeOfSurvival.Core.Characters;
 using AgeOfSurvival.Core.Inventory;
 using AgeOfSurvival.Core.Resources;
 using AgeOfSurvival.Runtime.Frontend;
+using AgeOfSurvival.Runtime.Construction;
 using AgeOfSurvival.Runtime.Inventory;
 using AgeOfSurvival.Runtime.Rendering;
 using UnityEngine;
@@ -61,6 +62,7 @@ namespace AgeOfSurvival.Runtime.Resources
         public TransferActionState TransferAction => _session?.TransferAction;
         public InventoryPrototypeSession PrototypeSession => _session;
         public ResourceId? CurrentTargetId { get; private set; }
+        public ContextualInteractionCandidate? CurrentContextualTarget { get; private set; }
         public ResourceInteractionResult? LastInteractionResult { get; private set; }
         public bool UsesPrototypeVisuals { get; private set; }
         public bool InteractionRadiusVisible => _interactionRadiusObject != null
@@ -348,19 +350,11 @@ namespace AgeOfSurvival.Runtime.Resources
             if (_interactionRequested)
             {
                 _interactionRequested = false;
-                TransferActionResult groundTransfer =
-                    _session.StartNearestGroundTransfer(
-                        playerPosition,
-                        interactionRadius,
-                        simulationTick);
-                if (!groundTransfer.Succeeded)
-                {
-                    ResourceYieldResult yield = _session.HarvestAndStartTransfer(
-                        playerPosition,
-                        interactionRadius,
-                        simulationTick);
-                    LastInteractionResult = yield.Interaction;
-                }
+                ConstructionRuntimeSession construction = ConstructionRuntimeSessionProvider.Current;
+                if (ContextualRuntimeInteraction.TryResolve(_session, construction, playerPosition,
+                    interactionRadius, out ContextualInteractionCandidate candidate))
+                    LastInteractionResult = ContextualRuntimeInteraction.Execute(candidate, _session,
+                        construction, playerPosition, interactionRadius, simulationTick);
             }
 
             if (_session.TransferAction != null
@@ -374,10 +368,14 @@ namespace AgeOfSurvival.Runtime.Resources
                 _session.AdvanceCraft(simulationTick, playerMoved);
             }
 
-            ResourceState target = ResourceTargeting.FindNearestAvailable(
-                _session.Resources,
-                playerPosition,
-                interactionRadius);
+            bool hasTarget = ContextualRuntimeInteraction.TryResolve(_session,
+                ConstructionRuntimeSessionProvider.Current, playerPosition, interactionRadius,
+                out ContextualInteractionCandidate resolved);
+            CurrentContextualTarget = hasTarget ? resolved : (ContextualInteractionCandidate?)null;
+            ResourceState target = null;
+            if (hasTarget && resolved.Kind == ContextualInteractionKind.NaturalResource)
+                for (int index = 0; index < _session.Resources.Count; index++)
+                    if (_session.Resources[index].Id.Value == resolved.StableId) { target = _session.Resources[index]; break; }
             CurrentTargetId = target != null ? target.Id : (ResourceId?)null;
             SynchronizeVisuals(target);
         }

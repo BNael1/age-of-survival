@@ -9,8 +9,10 @@ namespace AgeOfSurvival.Core.Construction
         private readonly IReadOnlyList<ConstructionDefinitionId> _definitionIds;
 
         public ConstructionEnclosureBlockingPolicy(
-            IEnumerable<ConstructionDefinitionId> blockingEdgeDefinitionIds)
+            IEnumerable<ConstructionDefinitionId> blockingEdgeDefinitionIds,
+            ConstructionDoorPolicy doorPolicy = null)
         {
+            DoorPolicy = doorPolicy;
             if (blockingEdgeDefinitionIds == null)
                 throw new ArgumentNullException(nameof(blockingEdgeDefinitionIds));
 
@@ -30,6 +32,7 @@ namespace AgeOfSurvival.Core.Construction
         }
 
         public IReadOnlyList<ConstructionDefinitionId> BlockingEdgeDefinitionIds => _definitionIds;
+        public ConstructionDoorPolicy DoorPolicy { get; }
     }
 
     public static class ConstructionEnclosureBlockingEdgeBuilder
@@ -37,7 +40,8 @@ namespace AgeOfSurvival.Core.Construction
         public static IReadOnlyList<ConstructionEdgeAddress> Build(
             ConstructionDefinitionCatalog catalog,
             IEnumerable<CompletedStructureState> structures,
-            ConstructionEnclosureBlockingPolicy policy)
+            ConstructionEnclosureBlockingPolicy policy,
+            ConstructionDoorRegistry doors = null)
         {
             if (catalog == null) throw new ArgumentNullException(nameof(catalog));
             if (structures == null) throw new ArgumentNullException(nameof(structures));
@@ -70,7 +74,9 @@ namespace AgeOfSurvival.Core.Construction
                 ConstructionDefinition definition = catalog.Require(structure.DefinitionId);
                 if (definition.SpaceKind != structure.Space.Kind)
                     throw new ArgumentException("Completed structure space must match its definition.", nameof(structures));
-                if (blockingIds.Contains(structure.DefinitionId))
+                bool closedDoor = policy.DoorPolicy != null && policy.DoorPolicy.IsDoor(structure.DefinitionId)
+                    && doors != null && doors.TryGet(structure.InstanceId, out ConstructionDoorState state) && !state.IsOpen;
+                if (blockingIds.Contains(structure.DefinitionId) || closedDoor)
                     blockers.Add(structure.Space.EdgeAddress);
             }
 
@@ -116,14 +122,18 @@ namespace AgeOfSurvival.Core.Construction
 
     public sealed class ConstructionRoomAnalysis
     {
-        internal ConstructionRoomAnalysis(IEnumerable<ConstructionRoom> rooms)
+        internal ConstructionRoomAnalysis(IEnumerable<ConstructionRoom> rooms, int scopesAnalyzed = 0, long cellsAnalyzed = 0)
         {
+            ScopesAnalyzed = scopesAnalyzed;
+            CellsAnalyzed = cellsAnalyzed;
             var copy = new List<ConstructionRoom>(rooms ?? throw new ArgumentNullException(nameof(rooms)));
             copy.Sort((left, right) => left.CanonicalCell.CompareTo(right.CanonicalCell));
             Rooms = copy.AsReadOnly();
         }
 
         public IReadOnlyList<ConstructionRoom> Rooms { get; }
+        public int ScopesAnalyzed { get; }
+        public long CellsAnalyzed { get; }
     }
 
     /// <summary>
@@ -171,10 +181,12 @@ namespace AgeOfSurvival.Core.Construction
                 scopes.RemoveAll(scope => !scope.IntersectsAny(affected));
 
             var rooms = new List<ConstructionRoom>();
+            long cellsAnalyzed = 0;
             for (int i = 0; i < scopes.Count; i++)
             {
                 Scope scope = scopes[i];
                 IReadOnlyList<WorldCellCoordinate> cells = scope.CreateCells(limits.MaximumCellsPerScope);
+                cellsAnalyzed = checked(cellsAnalyzed + cells.Count);
                 ConstructionEnclosureAnalysis analysis = ConstructionEnclosureAnalyzer.Analyze(cells, blockers);
                 for (int r = 0; r < analysis.Regions.Count; r++)
                 {
@@ -184,7 +196,7 @@ namespace AgeOfSurvival.Core.Construction
                 }
             }
 
-            return new ConstructionRoomAnalysis(rooms);
+            return new ConstructionRoomAnalysis(rooms, scopes.Count, cellsAnalyzed);
         }
 
         private static List<Scope> BuildScopes(ISet<ConstructionEdgeAddress> blockers, int maximumScopes)

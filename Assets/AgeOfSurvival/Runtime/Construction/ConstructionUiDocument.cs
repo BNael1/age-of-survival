@@ -150,7 +150,7 @@ namespace AgeOfSurvival.Runtime.Construction
                 ConstructionPrototypeDefinition definition = definitions[index];
                 string kind = definition.Core.SpaceKind == ConstructionSpaceKind.Surface
                     ? "Surface"
-                    : "Edge";
+                    : definition.Core.SpaceKind == ConstructionSpaceKind.Roof ? "Toit" : "Edge";
                 Button button = Button(
                     definition.DisplayName + "\n" + kind,
                     () =>

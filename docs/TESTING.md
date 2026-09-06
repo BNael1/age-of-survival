@@ -1027,3 +1027,11 @@ Validation finale : les scripts officiels `tools/run_editmode_tests.sh` et
 `tools/run_playmode_tests.sh` terminent tous deux avec le code `0`, sans échec,
 test ignoré ou inconclusif. Les journaux finaux ne contiennent aucun `error CS`
 ni `warning CS`.
+
+## Lot 7L-E
+
+La couverture ajoute cycle Roof/projection Int64, Door fermée/ouverte,
+tie-break contextuel, fingerprint Room/collision, qualification complète,
+Rest/Sleep crédité une seule fois et confort baseline. Les tests V6 couvrent
+round-trip Door canonique ; les fixtures V1–V5 sont relues sans réécriture.
+Checkpoint courant : 963/963 EditMode et 22/22 PlayMode.

@@ -194,6 +194,84 @@ namespace AgeOfSurvival.Presentation.PlayMode.Tests
             Assert.That(construction.WorldPresenter.PresentedCount, Is.Zero);
         }
 
+        [UnityTest]
+        public IEnumerator RoofGhostCompletionAndFlatSortingUseRealRuntime()
+        {
+            InventoryPrototypeSessionProvider.ResetForNewGame();
+            ConstructionRuntimeSessionProvider.ResetForNewGame();
+            yield return SceneManager.LoadSceneAsync(FrontendSceneNames.Gameplay, LoadSceneMode.Single);
+            yield return null;
+            var runtime = Object.FindFirstObjectByType<ConstructionRuntimeBehaviour>();
+            var inventory = InventoryPrototypeSessionProvider.Current;
+            runtime.OpenMode();
+            runtime.Session.Execute(ConstructionCommand.Select(ConstructionPrototypeCatalog.RoofId));
+            Assert.That(runtime.PreviewAtScreenPositionForTests(
+                new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)), Is.True);
+            Assert.That(runtime.Ghost.IsVisible, Is.True);
+            Assert.That(runtime.Session.Mode.Preview.Space.Kind, Is.EqualTo(ConstructionSpaceKind.Roof));
+            ConstructionRuntimeResult placed = runtime.ConfirmCurrentPreview();
+            Assert.That(placed.Succeeded, Is.True);
+            ClearStack(inventory.MainContainer, InventoryPrototypeCatalog.Branches);
+            ClearStack(inventory.MainContainer, InventoryPrototypeCatalog.Wood);
+            AddStack(inventory.MainContainer, InventoryPrototypeCatalog.Branches, 3);
+            AddStack(inventory.MainContainer, InventoryPrototypeCatalog.Wood, 1);
+            Assert.That(runtime.Session.DepositAllAvailable(placed.InstanceId).Accepted, Is.EqualTo(4));
+            Assert.That(runtime.Session.BeginWork(placed.InstanceId, inventory.CurrentTick,
+                inventory.CurrentPlayerPosition).Succeeded, Is.True);
+            runtime.Session.AdvanceToTick(inventory.CurrentTick + 200,
+                inventory.CurrentPlayerPosition, false, true, true);
+            runtime.WorldPresenter.Refresh();
+            Assert.That(runtime.WorldPresenter.TryGetRenderer(placed.InstanceId, out SpriteRenderer roof), Is.True);
+            Assert.That(roof.color.a, Is.LessThan(0.6f));
+            Assert.That(roof.sortingOrder, Is.EqualTo(93));
+            Assert.That(runtime.WorldPresenter.SortingRegistrationCount, Is.Zero);
+            Assert.That(runtime.Session.TryDismantle(placed.InstanceId).Succeeded, Is.True);
+            runtime.CloseMode();
+        }
+
+        [UnityTest]
+        public IEnumerator DoorUsesQueuedContextualEAndChangesBothEdgeSprites()
+        {
+            InventoryPrototypeSessionProvider.ResetForNewGame();
+            ConstructionRuntimeSessionProvider.ResetForNewGame();
+            yield return SceneManager.LoadSceneAsync(FrontendSceneNames.Gameplay, LoadSceneMode.Single);
+            yield return null;
+            var runtime = Object.FindFirstObjectByType<ConstructionRuntimeBehaviour>();
+            var resources = Object.FindFirstObjectByType<DebugResourceInteraction>();
+            Object.FindFirstObjectByType<DebugPlayerController>().enabled = false;
+            var inventory = InventoryPrototypeSessionProvider.Current;
+            runtime.OpenMode();
+            foreach (ConstructionCellSide side in new[] { ConstructionCellSide.East, ConstructionCellSide.North })
+            {
+                runtime.Session.Execute(ConstructionCommand.Select(ConstructionPrototypeCatalog.DoorId));
+                ConstructionSpaceKey space = ConstructionSpaceKey.Edge(new WorldCellCoordinate(0, 0), side);
+                var position = ConstructionRuntimeSession.SpacePosition(space);
+                var placed = runtime.Session.TryPlaceSelected(space);
+                ClearStack(inventory.MainContainer, InventoryPrototypeCatalog.Branches);
+                ClearStack(inventory.MainContainer, InventoryPrototypeCatalog.Wood);
+                AddStack(inventory.MainContainer, InventoryPrototypeCatalog.Branches, 2);
+                AddStack(inventory.MainContainer, InventoryPrototypeCatalog.Wood, 2);
+                runtime.Session.DepositAllAvailable(placed.InstanceId);
+                Assert.That(runtime.Session.BeginWork(placed.InstanceId, inventory.CurrentTick, position).Succeeded, Is.True);
+                runtime.Session.AdvanceToTick(inventory.CurrentTick + 200, position, false, true, true);
+                runtime.WorldPresenter.Refresh();
+                Assert.That(runtime.WorldPresenter.TryGetRenderer(placed.InstanceId, out SpriteRenderer renderer), Is.True);
+                Sprite closed = renderer.sprite;
+                resources.QueueInteraction();
+                resources.SimulateTick(position, false);
+                Assert.That(runtime.Session.Doors.TryGet(placed.InstanceId, out ConstructionDoorState door), Is.True);
+                Assert.That(door.IsOpen, Is.True);
+                runtime.WorldPresenter.Refresh();
+                Assert.That(renderer.sprite, Is.Not.SameAs(closed));
+                resources.QueueInteraction();
+                resources.SimulateTick(position, false);
+                runtime.WorldPresenter.Refresh();
+                Assert.That(renderer.sprite, Is.SameAs(closed));
+                Assert.That(runtime.Session.TryDismantle(placed.InstanceId).Succeeded, Is.True);
+            }
+            runtime.CloseMode();
+        }
+
         private static void EquipBagIfNeeded(InventoryPrototypeSession inventory)
         {
             if (inventory.Inventory.Equipment.Get(EquipmentSlot.Back)
